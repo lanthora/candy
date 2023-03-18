@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DEBUG",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/candy",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "build:debug"
+        },
+        {
+            "name": "RELEASE",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/candy",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "build:release"
+        }
+    ]
+}

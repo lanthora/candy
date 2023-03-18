@@ -1,0 +1,68 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build:cmake:debug",
+            "command": "cmake",
+            "args": [
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "../"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build/"
+            }
+        },
+        {
+            "label": "build:cmake:release",
+            "command": "cmake",
+            "args": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "../"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build/"
+            }
+        },
+        {
+            "label": "build:make:debug",
+            "command": "make",
+            "args": [
+                "-Wfatal-errors"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build/"
+            }
+        },
+        {
+            "label": "build:make:release",
+            "command": "make",
+            "args": [
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build/"
+            }
+        },
+        {
+            "label": "build:debug",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build:cmake:debug",
+                "build:make:debug"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build:release",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build:cmake:release",
+                "build:make:release"
+            ]
+        }
+    ]
+}

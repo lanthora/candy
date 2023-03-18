@@ -1,0 +1,16 @@
+{
+    "C_Cpp.clang_format_fallbackStyle": "LLVM",
+    "C_Cpp.clang_format_sortIncludes": false,
+    "C_Cpp.default.cppStandard": "c++20",
+    "C_Cpp.default.cStandard": "gnu17",
+    "C_Cpp.intelliSenseCacheSize": 0,
+    "C_Cpp.autoAddFileAssociations": false,
+    "editor.detectIndentation": false,
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "files.insertFinalNewline": true,
+    "editor.insertSpaces": true,
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "json.format.enable": true,
+    "editor.formatOnSaveMode": "modifications",
+}
