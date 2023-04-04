@@ -12,6 +12,7 @@ namespace candy {
 class Client {
 public:
     int setWebsocketServer(std::string ws);
+    int setPassword(std::string password);
     int setTun(std::string tun);
     int start();
     void stop();

@@ -15,6 +15,7 @@ struct arguments {
     std::string mode;
     std::string websocket;
     std::string tun;
+    std::string password;
 };
 
 static const struct argp_option options[] = {
@@ -29,6 +30,7 @@ static const struct argp_option options[] = {
      "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
     {"tun", 't', "IP", 0,
      "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
+    {"password", 'p', "TEXT", 0, "Password for simple authentication"},
     {},
 };
 
@@ -61,6 +63,9 @@ static int parseOption(int key, char *arg, struct argp_state *state) {
     case 't':
         arguments->tun = arg;
         break;
+    case 'p':
+        arguments->password = arg;
+        break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
             argp_usage(state);
@@ -83,12 +88,14 @@ int main(int argc, char *argv[]) {
 
     if (arguments.mode == "mixed" || arguments.mode == "server") {
         server = std::make_shared<candy::Server>();
+        server->setPassword(arguments.password);
         server->setWebsocketServer(arguments.websocket);
         std::thread([&]() { server->start(); }).detach();
     }
 
     if (arguments.mode == "mixed" || arguments.mode == "client") {
         client = std::make_shared<candy::Client>();
+        client->setPassword(arguments.password);
         client->setWebsocketServer(arguments.websocket);
         client->setTun(arguments.tun);
         std::thread([&]() { client->start(); }).detach();

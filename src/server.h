@@ -11,6 +11,7 @@ namespace candy {
 class Server {
 public:
     int setWebsocketServer(const std::string &ws);
+    int setPassword(std::string password);
     int start();
     void stop();
 

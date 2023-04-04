@@ -30,6 +30,11 @@ int Server::setWebsocketServer(const std::string &ws) {
     return 0;
 }
 
+int Server::setPassword(std::string password) {
+    _password = password;
+    return 0;
+}
+
 void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr &msg) {
 
     if (msg->str.size() < 1) {
@@ -82,7 +87,7 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
 }
 
 void Server::handleErrorMessage(WebSocket webSocket, const WebSocketMessagePtr &msg) {
-    // TODO: 处理错误消息
+    // TODO: 处理错误
     exit(1);
 }
 

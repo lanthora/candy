@@ -79,6 +79,11 @@ int Client::setWebsocketServer(std::string ws) {
     return 0;
 }
 
+int Client::setPassword(std::string password) {
+    _password = password;
+    return 0;
+}
+
 int Client::setTun(std::string tun) {
     std::string interface_name = "candy";
 
