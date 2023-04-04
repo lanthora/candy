@@ -1,6 +1,7 @@
 #include "client.h"
 #include "server.h"
 #include <spdlog/spdlog.h>
+#include <libconfig.h++>
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
@@ -31,6 +32,7 @@ static const struct argp_option options[] = {
     {"tun", 't', "IP", 0,
      "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
     {"password", 'p', "TEXT", 0, "Password for simple authentication"},
+    {"config", 'c', "PATH", 0, "Configuration file path"},
     {},
 };
 
@@ -50,6 +52,23 @@ static bool needShowUsage(struct arguments *arguments, struct argp_state *state)
     return false;
 }
 
+static void parseConfigFile(struct arguments *arguments, std::string config) {
+    try {
+        libconfig::Config cfg;
+        cfg.readFile(config);
+        cfg.lookupValue("mode", arguments->mode);
+        cfg.lookupValue("websocket", arguments->websocket);
+        cfg.lookupValue("tun", arguments->tun);
+        cfg.lookupValue("password", arguments->password);
+    } catch (const libconfig::FileIOException &fioex) {
+        spdlog::critical("I/O error while reading configuration file");
+        exit(1);
+    } catch (const libconfig::ParseException &pex) {
+        spdlog::critical("Parse error at {0} : {1} - {2}", pex.getFile(), pex.getLine(), pex.getError());
+        exit(1);
+    }
+}
+
 static int parseOption(int key, char *arg, struct argp_state *state) {
     struct arguments *arguments = (struct arguments *)state->input;
 
@@ -65,6 +84,9 @@ static int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 'p':
         arguments->password = arg;
+        break;
+    case 'c':
+        parseConfigFile(arguments, arg);
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))

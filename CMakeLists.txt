@@ -22,10 +22,13 @@ find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(SPDLOG REQUIRED spdlog)
 pkg_check_modules(OPENSSL REQUIRED openssl)
+pkg_check_modules(LIBCONFIGXX REQUIRED libconfig++)
 
 include_directories(${SPDLOG_INCLUDEDIR})
 include_directories(${OPENSSL_INCLUDEDIR})
+include_directories(${LIBCONFIGXX_INCLUDEDIR})
 
 target_link_libraries(${TARGET} ${SPDLOG_LIBRARIES})
 target_link_libraries(${TARGET} ${OPENSSL_LIBRARIES})
+target_link_libraries(${TARGET} ${LIBCONFIGXX_LIBRARIES})
 target_link_libraries(${TARGET} ixwebsocket)
