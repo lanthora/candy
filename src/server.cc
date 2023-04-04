@@ -8,21 +8,21 @@
 namespace candy {
 
 int Server::setWebsocketServer(const std::string &ws) {
-    candy::WsUriParser parser(ws);
-    if (!parser.isValid()) {
+    candy::Uri uri(ws);
+    if (!uri.isValid()) {
         spdlog::critical("websocket uri is invalid. ws: {0}", ws);
         exit(1);
     }
 
-    _wsPort = std::stoi(parser.getPort());
-    _wsHost = parser.getHost();
+    _wsPort = std::stoi(uri.port());
+    _wsHost = uri.host();
 
-    if (!INet::isIpv4Address(parser.getHost())) {
-        spdlog::critical("{0} is not a valid websocket server ip address", parser.getHost());
+    if (!INet::isIpv4Address(uri.host())) {
+        spdlog::critical("{0} is not a valid websocket server ip address", uri.host());
         exit(1);
     }
 
-    if (parser.getScheme() != "ws") {
+    if (uri.scheme() != "ws") {
         spdlog::critical("websocket server only support ws. please use a proxy such as nginx to handle encryption");
         exit(1);
     }

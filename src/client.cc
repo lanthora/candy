@@ -66,8 +66,8 @@ void Client::handleMessage(const WebSocketMessagePtr &msg) {
 int Client::setWebsocketServer(std::string ws) {
     using namespace std::placeholders;
 
-    candy::WsUriParser parser(ws);
-    if (!parser.isValid()) {
+    candy::Uri uri(ws);
+    if (!uri.isValid()) {
         spdlog::critical("websocket uri is invalid. ws: {0}", ws);
         exit(1);
     }

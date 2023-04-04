@@ -3,6 +3,7 @@
 
 #include <netinet/ip.h>
 #include <openssl/sha.h>
+#include <uriparser/Uri.h>
 #include <string>
 
 namespace candy {
@@ -15,20 +16,26 @@ public:
     static std::string networkPrefixToSubnetMask(std::string prefix);
 };
 
-class WsUriParser {
+class Uri {
 public:
-    WsUriParser(const std::string &uri);
-    bool isValid();
+    Uri(std::string uri);
+    ~Uri();
+    bool isValid() const;
 
-    std::string getScheme();
-    std::string getHost();
-    std::string getPort();
+    std::string scheme() const;
+    std::string host() const;
+    std::string port() const;
+    std::string path() const;
+    std::string query() const;
+    std::string fragment() const;
 
 private:
-    std::string _scheme;
-    std::string _host;
-    std::string _port;
-    std::string _uri;
+    std::string uri_;
+    UriUriA uriParse_;
+    bool isValid_;
+
+    std::string fromRange(const UriTextRangeA &rng) const;
+    std::string fromList(UriPathSegmentA *xs, const std::string &delim) const;
 };
 
 class INet {

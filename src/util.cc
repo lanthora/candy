@@ -21,54 +21,58 @@ std::string CIDR::networkPrefixToSubnetMask(std::string prefix) {
     return inet_ntoa(addr);
 }
 
-WsUriParser::WsUriParser(const std::string &uri) {
-    _uri = uri;
-    std::size_t pos;
-    pos = _uri.find(":");
-    if (pos == std::string::npos)
-        return;
+Uri::Uri(std::string uri) : uri_(uri) {
+    UriParserStateA state_;
+    state_.uri = &uriParse_;
+    isValid_ = uriParseUriA(&state_, uri_.c_str()) == URI_SUCCESS;
+}
 
-    _scheme = _uri.substr(0, pos);
-    if (_scheme == "ws") {
-        _port = "80";
-    } else if (_scheme == "wss") {
-        _port = "443";
-    } else {
-        return;
+Uri::~Uri() {
+    uriFreeUriMembersA(&uriParse_);
+}
+
+bool Uri::isValid() const {
+    return isValid_;
+}
+
+std::string Uri::scheme() const {
+    return fromRange(uriParse_.scheme);
+}
+
+std::string Uri::host() const {
+    return fromRange(uriParse_.hostText);
+}
+
+std::string Uri::port() const {
+    return fromRange(uriParse_.portText);
+}
+
+std::string Uri::path() const {
+    return fromList(uriParse_.pathHead, "/");
+}
+
+std::string Uri::query() const {
+    return fromRange(uriParse_.query);
+}
+
+std::string Uri::fragment() const {
+    return fromRange(uriParse_.fragment);
+}
+
+std::string Uri::fromRange(const UriTextRangeA &rng) const {
+    return std::string(rng.first, rng.afterLast);
+}
+
+std::string Uri::fromList(UriPathSegmentA *xs, const std::string &delim) const {
+    UriPathSegmentStructA *head(xs);
+    std::string accum;
+
+    while (head) {
+        accum += delim + fromRange(head->text);
+        head = head->next;
     }
-    _uri.erase(0, pos + 1);
 
-    if (!_uri.starts_with("//"))
-        return;
-    _uri.erase(0, 2);
-    pos = _uri.find(":");
-    if (pos != std::string::npos) {
-        _port = _uri.substr(pos + 1);
-        _uri.erase(pos);
-    }
-
-    if (std::stoi(_port) <= 0 || std::stoi(_port) >= 65443)
-        return;
-
-    _host = _uri;
-    _uri.clear();
-    return;
-}
-
-bool WsUriParser::isValid() {
-    return _uri.empty();
-}
-
-std::string WsUriParser::getScheme() {
-    return _scheme;
-}
-
-std::string WsUriParser::getHost() {
-    return _host;
-}
-
-std::string WsUriParser::getPort() {
-    return _port;
+    return accum;
 }
 
 bool INet::isIpv4Address(std::string address) {
