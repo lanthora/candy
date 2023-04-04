@@ -59,6 +59,18 @@ bool WsUriParser::isValid() {
     return _uri.empty();
 }
 
+std::string WsUriParser::getScheme() {
+    return _scheme;
+}
+
+std::string WsUriParser::getHost() {
+    return _host;
+}
+
+std::string WsUriParser::getPort() {
+    return _port;
+}
+
 bool INet::isIpv4Address(std::string address) {
     struct in_addr sin_addr;
     return inet_pton(AF_INET, address.data(), &sin_addr) == 1;

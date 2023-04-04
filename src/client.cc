@@ -43,7 +43,7 @@ void Client::handleServerMessage(const WebSocketMessagePtr &msg) {
 }
 
 void Client::handleErrorMessage(const WebSocketMessagePtr &msg) {
-    // TODO: 处理错误
+    spdlog::critical("{0}", msg->errorInfo.reason);
     exit(1);
 }
 

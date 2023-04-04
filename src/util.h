@@ -20,15 +20,9 @@ public:
     WsUriParser(const std::string &uri);
     bool isValid();
 
-    std::string getScheme() {
-        return _scheme;
-    }
-    std::string getHost() {
-        return _host;
-    }
-    std::string getPort() {
-        return _port;
-    }
+    std::string getScheme();
+    std::string getHost();
+    std::string getPort();
 
 private:
     std::string _scheme;
