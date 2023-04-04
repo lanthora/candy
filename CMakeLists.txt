@@ -32,3 +32,5 @@ target_link_libraries(${TARGET} ${SPDLOG_LIBRARIES})
 target_link_libraries(${TARGET} ${OPENSSL_LIBRARIES})
 target_link_libraries(${TARGET} ${LIBCONFIGXX_LIBRARIES})
 target_link_libraries(${TARGET} ixwebsocket)
+
+install(TARGETS ${TARGET})
