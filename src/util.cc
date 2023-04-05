@@ -1,6 +1,7 @@
 #include "util.h"
 #include <spdlog/spdlog.h>
 #include <arpa/inet.h>
+#include <chrono>
 
 namespace candy {
 
@@ -101,6 +102,11 @@ bool AuthHeader::checkHash(const std::string &password) {
     SHA256((unsigned char *)data.data(), data.size(), calculated);
 
     return memcmp(calculated, _hash, SHA256_DIGEST_LENGTH) == 0;
+}
+
+int64_t unixTimeStamp() {
+    using namespace std::chrono;
+    return duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
 }
 
 }; // namespace candy

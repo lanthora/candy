@@ -47,7 +47,7 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
         }
 
         AuthHeader *auth = (AuthHeader *)msg->str.data();
-        if (std::abs(time(NULL) - (time_t)ntohll(auth->timestamp)) > 30) {
+        if (std::abs(unixTimeStamp() - (int64_t)ntohll(auth->timestamp)) > 30) {
             return;
         }
 
