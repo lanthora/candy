@@ -176,7 +176,7 @@ int Client::start() {
     std::array<char, Client::MTU + 1> buffer;
     ForwardHeader *forward = (ForwardHeader *)&buffer;
     forward->type = TYPE_FORWARD;
-    while ((len = read(_tunFd, &forward->iph, buffer.size() - 1)) > 0) {
+    while ((len = read(_tunFd, buffer.begin() + 1, buffer.size() - 1)) > 0) {
         if ((unsigned long)len < sizeof(ForwardHeader)) {
             continue;
         }
