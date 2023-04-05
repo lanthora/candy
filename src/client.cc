@@ -75,6 +75,8 @@ int Client::setWebsocketServer(std::string ws) {
 
     _wsClient = std::make_shared<ix::WebSocket>();
     _wsClient->setUrl(ws);
+    _wsClient->setPingInterval(30);
+    _wsClient->disablePerMessageDeflate();
     _wsClient->setOnMessageCallback(std::bind(&Client::handleMessage, this, _1));
 
     return 0;
