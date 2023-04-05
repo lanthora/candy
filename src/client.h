@@ -30,6 +30,8 @@ private:
     std::string _tunMask;
     std::shared_ptr<ix::WebSocket> _wsClient;
     std::string _password;
+
+    static const int MTU = 65535;
 };
 }; // namespace candy
 

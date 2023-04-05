@@ -134,6 +134,12 @@ int Client::setTun(std::string tun) {
         exit(1);
     }
 
+    ifr.ifr_mtu = Client::MTU;
+    if (ioctl(sock, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
+        spdlog::critical("set mtu failed");
+        exit(1);
+    }
+
     ifr.ifr_ifru.ifru_flags |= IFF_UP;
     if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1) {
         spdlog::critical("up interface failed");
@@ -167,8 +173,7 @@ int Client::start() {
     _wsClient->start();
 
     ssize_t len;
-    // FIXME: 这里 buffer 大小给了 1M, Server 应该是有个默认值的, 需要调整 Server 的默认值,然后和客户端统一
-    std::array<char, 1024 * 1024> buffer;
+    std::array<char, Client::MTU + 1> buffer;
     ForwardHeader *forward = (ForwardHeader *)&buffer;
     forward->type = TYPE_FORWARD;
     while ((len = read(_tunFd, &forward->iph, buffer.size() - 1)) > 0) {
