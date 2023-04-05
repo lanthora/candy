@@ -23,7 +23,8 @@ void Client::sendHandshakeMsg() {
 
     buffer.type = TYPE_AUTH;
     buffer.tunIp = inet_addr(_tunIp.data());
-    buffer.timestamp = htonll(time(NULL));
+
+    buffer.timestamp = htonll(unixTimeStamp());
     buffer.calculateHash(_password);
 
     auto data = ix::IXWebSocketSendData((const char *)&buffer, sizeof(buffer));

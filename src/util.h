@@ -64,6 +64,8 @@ struct ForwardHeader {
     struct iphdr iph;
 } __attribute__((packed));
 
+int64_t unixTimeStamp();
+
 }; // namespace candy
 
 #endif
