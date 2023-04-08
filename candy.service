@@ -1,5 +1,6 @@
 [Unit]
 Description=WebSocket-based VPN
+After=time-sync.target
 
 [Service]
 ExecStart=/usr/bin/candy -c /etc/candy.conf
