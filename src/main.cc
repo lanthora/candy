@@ -1,5 +1,6 @@
 #include "client.h"
 #include "server.h"
+#include "util.h"
 #include <spdlog/spdlog.h>
 #include <libconfig.h++>
 #include <argp.h>
@@ -10,6 +11,23 @@
 static volatile bool running = true;
 static void handleSignal(int signum) {
     running = false;
+}
+
+static void waitExit() {
+    int64_t current = 0;
+    int64_t last = candy::unixTimeStamp();
+    static const int64_t sleepTime = 5;
+
+    signal(SIGINT, handleSignal);
+    signal(SIGTERM, handleSignal);
+
+    while (running) {
+        sleep(sleepTime);
+        current = candy::unixTimeStamp();
+        if (std::abs(current - last) > 2 * sleepTime)
+            break;
+        last = current;
+    }
 }
 
 struct arguments {
@@ -123,12 +141,7 @@ int main(int argc, char *argv[]) {
         std::thread([&]() { client->start(); }).detach();
     }
 
-    signal(SIGINT, handleSignal);
-    signal(SIGTERM, handleSignal);
-
-    while (running) {
-        sleep(1);
-    }
+    waitExit();
 
     if (client) {
         client->stop();
