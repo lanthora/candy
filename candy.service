@@ -4,7 +4,7 @@ Description=WebSocket-based VPN
 [Service]
 ExecStart=/usr/bin/candy -c /etc/candy.conf
 Restart=always
-RestartSec=30
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target

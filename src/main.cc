@@ -16,15 +16,14 @@ static void handleSignal(int signum) {
 static void waitExit() {
     int64_t current = 0;
     int64_t last = candy::unixTimeStamp();
-    static const int64_t sleepTime = 5;
 
     signal(SIGINT, handleSignal);
     signal(SIGTERM, handleSignal);
 
     while (running) {
-        sleep(sleepTime);
+        sleep(1);
         current = candy::unixTimeStamp();
-        if (std::abs(current - last) > 2 * sleepTime)
+        if (std::abs(current - last) > 2)
             break;
         last = current;
     }
