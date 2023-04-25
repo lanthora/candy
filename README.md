@@ -1,7 +1,44 @@
 # Trick Or Treat
 
-一个基于 WebSocket 的 VPN
+A WebSocket and TUN based VPN for Linux users.
 
-## 设计初衷
+## Target
 
-目前主流 VPN 的流量特征明显,这个特性使得流量在通过防火墙时可以被轻易的识别和封锁.本项目是解决上述问题的一次尝试.
+At present, the traffic characteristics of mainstream VPNs are obvious, which makes it easy for firewalls to identify and block them. This project tries to solve this problem.
+
+## Install
+
+### Arch Linux
+
+I maintain this project on AUR, choose your favorite AUR Helper to install.
+
+```bash
+yay -S trick-or-treat
+# or
+yay -S trick-or-treat-git
+```
+
+### Manual
+
+Manual compilation requires the following dependencies.
+
+- ixwebsocket
+- libconfig
+- openssl
+- spdlog
+- uriparser
+- cmake
+- make
+- pkgconf
+
+```bash
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make install
+```
+
+## Usage
+
+```bash
+candy --help
+```
