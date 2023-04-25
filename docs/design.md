@@ -1,8 +1,9 @@
-# 设计文档
+# Design
 
-## TUN/TAP 的最简单用法
+## The simplest usage of TUN/TAP
 
-参考 [simpletun](https://github.com/gregnietsky/simpletun) 可以实现端到端的通信,这里暂且命名为 Client.
+Refer to [simpletun](https://github.com/gregnietsky/simpletun) for the simplest peer-to-peer communication.
+Here the two peers are named Client A and client B.
 
 ```txt
 ┌──────────┐  ┌──────────┐
@@ -10,9 +11,10 @@
 └──────────┘  └──────────┘
 ```
 
-## 在 Client A 和 Client B 中间加个 Server 进行转发
+## Server traffic forwarding
 
-在端到端通信的基础上,中间添加一个设备,只进行两个设备之间的流量转发.对于两个 Client 来说收发的流量没有任何变化.
+On the basis of peer-to-peer communication, a device is added in the middle for traffic forwarding.
+There is no change in the traffic sent and received by the two clients.
 
 ```txt
 ┌──────────┐  ┌────────┐  ┌──────────┐
@@ -20,9 +22,10 @@
 └──────────┘  └────────┘  └──────────┘
 ```
 
-## 给 Server 加上路由的能力
+## Server traffic routing
 
-在转发的基础上, Server 分析由 Client 上报的三层报文,根据目的地址进行路由,就可以实现多个 Client 之间的通信
+On the basis of forwarding, the Server analyzes the IP data packets uploaded by the Client.
+Routing is performed according to the destination address, and the clients can communicate with each other
 
 ```txt
 ┌──────────┐   ┌────────┐   ┌──────────┐
@@ -34,10 +37,10 @@
               └──────────┘
 ```
 
-## 在 Server 所在机器上部署一个 Client
+## Access Server via VPN
 
-在 Server 所在物理机上部署 Client D, 这个 Client 与其他 Client 没有任何区别. 此时就可以实现所有设备之间的通信.
-当客户端想访问 Server 所在机器时,必须通过 Client D.
+Deploy Client D on the physical machine where the Server is located. This Client is no different from other Clients.
+At this point, all devices can communicate with each other.
 
 ```txt
               ┌──────────┐
@@ -53,6 +56,6 @@
               └──────────┘
 ```
 
-## 使用 WebSocket 进行设备间通信
+## Network traffic between devices
 
-由于某些众所周知的原因,需要使用运行在 HTTPS 握手之后的 WebSocket 进行设备间通信.
+For some well-known reasons, TLS + WebSocket is used for communication.

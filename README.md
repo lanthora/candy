@@ -1,10 +1,10 @@
 # Trick Or Treat
 
-A WebSocket and TUN based VPN for Linux users.
+A WebSocket and TUN based VPN for Linux.
 
 ## Target
 
-At present, the traffic characteristics of mainstream VPNs are obvious, which makes it easy for firewalls to identify and block them. This project tries to solve this problem.
+At present, the traffic characteristics of mainstream VPNs are obvious, which makes it easy for firewalls to identify and block them. [This project](docs/design.md) tries to solve this problem.
 
 ## Install
 
