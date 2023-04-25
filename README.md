@@ -1,4 +1,4 @@
-# Trick Or Treat
+# Candy
 
 A WebSocket and TUN based VPN for Linux.
 
@@ -11,12 +11,6 @@ At present, the traffic characteristics of mainstream VPNs are obvious, which ma
 ### Arch Linux
 
 I maintain this project on AUR, choose your favorite AUR Helper to install.
-
-```bash
-yay -S trick-or-treat
-# or
-yay -S trick-or-treat-git
-```
 
 ### Manual
 
