@@ -87,8 +87,12 @@ int Client::setPassword(std::string password) {
     return 0;
 }
 
-int Client::setTun(std::string tun) {
-    std::string interface_name = "candy";
+int Client::setTun(std::string tun, std::string name) {
+    std::string interfaceName = "candy";
+    if (!name.empty()) {
+        interfaceName += "-";
+        interfaceName += name;
+    }
 
     std::size_t pos = tun.find("/");
     _tunIp = tun.substr(0, pos);
@@ -108,7 +112,7 @@ int Client::setTun(std::string tun) {
     struct ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));
 
-    strncpy(ifr.ifr_name, interface_name.data(), IFNAMSIZ);
+    strncpy(ifr.ifr_name, interfaceName.data(), IFNAMSIZ);
     ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
     if (ioctl(_tunFd, TUNSETIFF, &ifr) == -1) {
         spdlog::critical("create tun failed", _tunFd);
@@ -160,7 +164,7 @@ int Client::setTun(std::string tun) {
     addr->sin_family = AF_INET;
     addr->sin_addr.s_addr = inet_addr(_tunMask.data());
 
-    route.rt_dev = interface_name.data();
+    route.rt_dev = interfaceName.data();
     route.rt_flags = RTF_UP | RTF_HOST;
     if (ioctl(sock, SIOCADDRT, &route) == -1) {
         spdlog::critical("set route failed");

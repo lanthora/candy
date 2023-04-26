@@ -6,6 +6,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
+#include <filesystem>
 #include <set>
 
 static volatile bool running = true;
@@ -34,6 +35,7 @@ struct arguments {
     std::string websocket;
     std::string tun;
     std::string password;
+    std::string name;
 };
 
 static const struct argp_option options[] = {
@@ -77,6 +79,12 @@ static void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);
         cfg.lookupValue("password", arguments->password);
+
+        if (config != "/etc/candy.conf") {
+            std::filesystem::path path = config;
+            arguments->name = path.stem();
+        }
+
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("I/O error while reading configuration file");
         exit(1);
@@ -136,7 +144,7 @@ int main(int argc, char *argv[]) {
         client = std::make_shared<candy::Client>();
         client->setPassword(arguments.password);
         client->setWebsocketServer(arguments.websocket);
-        client->setTun(arguments.tun);
+        client->setTun(arguments.tun, arguments.name);
         std::thread([&]() { client->start(); }).detach();
     }
 

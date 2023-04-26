@@ -9,8 +9,19 @@ namespace candy {
 
 int Server::setWebsocketServer(const std::string &ws) {
     candy::Uri uri(ws);
+
     if (!uri.isValid()) {
         spdlog::critical("websocket uri is invalid. ws: {0}", ws);
+        exit(1);
+    }
+
+    if (uri.scheme() != "ws") {
+        spdlog::critical("websocket server only support ws. please use a proxy such as nginx to handle encryption");
+        exit(1);
+    }
+
+    if (uri.port().empty()) {
+        spdlog::critical("websocket server must specify the listening port");
         exit(1);
     }
 
@@ -18,12 +29,7 @@ int Server::setWebsocketServer(const std::string &ws) {
     _wsHost = uri.host();
 
     if (!INet::isIpv4Address(uri.host())) {
-        spdlog::critical("{0} is not a valid websocket server ip address", uri.host());
-        exit(1);
-    }
-
-    if (uri.scheme() != "ws") {
-        spdlog::critical("websocket server only support ws. please use a proxy such as nginx to handle encryption");
+        spdlog::critical("{0} is not a valid websocket server ipv4 address", uri.host());
         exit(1);
     }
 
