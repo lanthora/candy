@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 #include "util.h"
-#include <spdlog/spdlog.h>
 #include <arpa/inet.h>
 #include <chrono>
+#include <spdlog/spdlog.h>
 
 namespace candy {
 

@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
 #include "server.h"
 #include "util.h"
-#include <spdlog/fmt/bin_to_hex.h>
+#include <cstdlib>
 #include <spdlog/spdlog.h>
 #include <string>
-#include <cstdlib>
 
 namespace candy {
 

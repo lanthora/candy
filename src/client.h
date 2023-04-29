@@ -1,11 +1,12 @@
+// SPDX-License-Identifier: MIT
 #ifndef CANDY_CLIENT_H
 #define CANDY_CLIENT_H
 
 #include <ixwebsocket/IXNetSystem.h>
-#include <ixwebsocket/IXWebSocket.h>
 #include <ixwebsocket/IXUserAgent.h>
-#include <spdlog/spdlog.h>
+#include <ixwebsocket/IXWebSocket.h>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <string>
 
 namespace candy {

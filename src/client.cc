@@ -1,20 +1,18 @@
+// SPDX-License-Identifier: MIT
 #include "client.h"
 #include "util.h"
-#include <ixwebsocket/IXWebSocketSendData.h>
-#include <spdlog/spdlog.h>
-#include <spdlog/fmt/bin_to_hex.h>
 #include <arpa/inet.h>
-#include <assert.h>
+#include <cstring>
 #include <fcntl.h>
+#include <ixwebsocket/IXWebSocketSendData.h>
 #include <linux/if_tun.h>
+#include <map>
 #include <net/if.h>
 #include <net/route.h>
-#include <stdio.h>
+#include <spdlog/spdlog.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <map>
 
 namespace candy {
 
