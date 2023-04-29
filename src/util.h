@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: MIT
 #ifndef CANDY_UTIL_H
 #define CANDY_UTIL_H
 
 #include <netinet/ip.h>
 #include <openssl/sha.h>
-#include <uriparser/Uri.h>
 #include <string>
+#include <uriparser/Uri.h>
 
 namespace candy {
 

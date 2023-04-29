@@ -1,13 +1,12 @@
+// SPDX-License-Identifier: MIT
 #include "client.h"
 #include "server.h"
 #include "util.h"
-#include <spdlog/spdlog.h>
-#include <libconfig.h++>
 #include <argp.h>
-#include <signal.h>
-#include <unistd.h>
+#include <csignal>
 #include <filesystem>
-#include <set>
+#include <libconfig.h++>
+#include <spdlog/spdlog.h>
 
 static volatile bool running = true;
 static void handleSignal(int signum) {
