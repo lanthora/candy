@@ -171,6 +171,8 @@ int Client::setTun(std::string tun, std::string name) {
 
     close(sock);
 
+    disableIPv6(interfaceName);
+
     return 0;
 }
 
@@ -178,17 +180,18 @@ int Client::start() {
     _wsClient->start();
 
     ssize_t len;
-    std::array<char, Client::MTU + 1> buffer;
+    constexpr int fix_header_len = sizeof(ForwardHeader::type);
+    std::array<char, Client::MTU + fix_header_len> buffer;
     ForwardHeader *forward = (ForwardHeader *)&buffer;
     forward->type = TYPE_FORWARD;
-    while ((len = read(_tunFd, buffer.begin() + 1, buffer.size() - 1)) > 0) {
+    while ((len = read(_tunFd, buffer.begin() + fix_header_len, buffer.size() - fix_header_len)) > 0) {
         if ((unsigned long)len < sizeof(ForwardHeader)) {
             continue;
         }
         if (forward->iph.version != 4) {
             continue;
         }
-        auto data = ix::IXWebSocketSendData(buffer.data(), len + 1);
+        auto data = ix::IXWebSocketSendData(buffer.data(), len + fix_header_len);
         _wsClient->sendBinary(data);
     }
 
@@ -198,6 +201,21 @@ int Client::start() {
 void Client::stop() {
     close(_tunFd);
     _wsClient->stop();
+}
+
+void Client::disableIPv6(std::string interface) {
+    std::string config = "/proc/sys/net/ipv6/conf/" + interface + "/disable_ipv6";
+    int fd = open(config.data(), O_WRONLY);
+    if (fd < 0) {
+        spdlog::debug("Opening interface IPv6 configuration file failed");
+        return;
+    }
+
+    if (write(fd, "1", 1) < 0) {
+        spdlog::debug("Disable current interface IPv6 failed");
+    }
+
+    close(fd);
 }
 
 }; // namespace candy

@@ -33,6 +33,9 @@ private:
     std::string _password;
 
     static const int MTU = 65535;
+
+private:
+    void disableIPv6(std::string interface);
 };
 }; // namespace candy
 
