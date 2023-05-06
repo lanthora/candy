@@ -50,6 +50,7 @@ static const struct argp_option options[] = {
     {"tun", 't', "IP", 0,
      "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
     {"password", 'p', "TEXT", 0, "Password for simple authentication"},
+    {"name", 'n', "TEXT", 0, "Interface name suffix"},
     {"config", 'c', "PATH", 0, "Configuration file path"},
     {},
 };
@@ -78,8 +79,9 @@ static void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);
         cfg.lookupValue("password", arguments->password);
+        cfg.lookupValue("name", arguments->name);
 
-        if (config != "/etc/candy.conf") {
+        if (config != "/etc/candy.conf" && arguments->name.empty()) {
             std::filesystem::path path = config;
             arguments->name = path.stem();
         }
@@ -108,6 +110,9 @@ static int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 'p':
         arguments->password = arg;
+        break;
+    case 'n':
+        arguments->name = arg;
         break;
     case 'c':
         parseConfigFile(arguments, arg);
