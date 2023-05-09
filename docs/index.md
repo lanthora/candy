@@ -44,3 +44,7 @@ Please ensure that the difference between the client time and the server time is
 ```bash
 candy --help
 ```
+
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/lanthora/candy.svg)](https://starchart.cc/lanthora/candy)
