@@ -6,7 +6,7 @@ A WebSocket and TUN based VPN for Linux.
 
 At present, mainstream VPN traffic has obvious characteristics and is easily identified and blocked by firewalls. This project tries to solve this problem.
 
-For more details, refer to the [design document](https://lanthora.github.io/candy/design) and [specification document](https://lanthora.github.io/candy/specification). You are also welcome to join our [discussion group](https://t.me/CandyVPNGroup)
+For more details, refer to the [design document](https://lanthora.github.io/candy/design) and [specification document](https://lanthora.github.io/candy/specification). You are also welcome to join our [discussion group](https://t.me/CandyVPNGroup).
 
 ## Install
 
@@ -31,7 +31,7 @@ Manual compilation requires the following dependencies.
 - [cmake](https://cmake.org): CMake is an open-source, cross-platform family of tools designed to build, test and package software
 - [make](https://www.gnu.org/software/make/): GNU Make is a tool which controls the generation of executables and other non-source files of a program from the program's source files
 
-Get the [source code](https://github.com/lanthora/candy) in the way you like, and enter the project root directory. Then
+Get the [source code](https://github.com/lanthora/candy) in the way you like, and enter the project root directory. Then,
 
 ```bash
 cd build
@@ -41,11 +41,13 @@ make install
 
 ## Usage
 
-Please ensure that the difference between the client time and the server time is less than 30 seconds.
-
 ```bash
 candy --help
 ```
+
+You can use command line arguments directly, or specify a configuration file, or use systemd service.
+
+Please make sure that the difference between the client time and the server time is less than 30 seconds, otherwise the authentication will fail. In order to avoid being detected, no error message will be returned.
 
 ## Stargazers over time
 
