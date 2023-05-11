@@ -10,6 +10,16 @@ For more details, refer to the [design document](https://lanthora.github.io/cand
 
 ## Install
 
+### Docker
+
+```bash
+mkdir candy && cd candy
+wget https://raw.githubusercontent.com/lanthora/candy/master/Dockerfile
+wget https://raw.githubusercontent.com/lanthora/candy/master/docker-compose.yml
+wget https://raw.githubusercontent.com/lanthora/candy/master/candy.conf
+docker-compose up
+```
+
 ### Arch Linux
 
 This project has been maintained on [AUR](https://aur.archlinux.org/packages/candy), choose your favorite [AUR Helper](https://wiki.archlinux.org/title/AUR_helpers) to install this software.
