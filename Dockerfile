@@ -1,7 +1,10 @@
 FROM archlinux/archlinux:base-devel
 
+# Change to the fastest mirror site for you
+RUN echo 'Server = https://mirrors.tuna.tsinghua.edu.cn/archlinux/$repo/os/$arch' > /etc/pacman.d/mirrorlist
+
 RUN pacman -Syu --needed --noconfirm git libconfig openssl spdlog uriparser clang cmake
- 
+
 ARG user=candy
 RUN useradd --system --create-home $user && echo "$user ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/$user
 USER $user
