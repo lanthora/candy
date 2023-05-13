@@ -1,7 +1,8 @@
 FROM archlinux/archlinux:base-devel
 
-# Change to the fastest mirror site for you
-RUN echo 'Server = https://mirrors.tuna.tsinghua.edu.cn/archlinux/$repo/os/$arch' > /etc/pacman.d/mirrorlist
+ARG MIRROR
+
+RUN if [[ $MIRROR ]]; then echo $MIRROR > /etc/pacman.d/mirrorlist ; fi
 
 RUN pacman -Syu --needed --noconfirm git libconfig openssl spdlog uriparser clang cmake
 
