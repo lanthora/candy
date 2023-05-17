@@ -1,12 +1,15 @@
 version: "3.7"
 services:
-  service:
+  candy:
+    image: lanthora/candy:latest
     build:
       context: ./
       dockerfile: dockerfile
+      tags:
+        - lanthora/candy:latest
       args:
         # Change to the fastest mirror site for you
-        - MIRROR=Server = https://mirrors.tuna.tsinghua.edu.cn/archlinux/$$repo/os/$$arch
+        - MIRROR=https://mirrors.tuna.tsinghua.edu.cn/archlinux
     container_name: candy
     network_mode: "host"
     privileged: true
