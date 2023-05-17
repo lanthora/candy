@@ -13,9 +13,9 @@ For more details, refer to the [design document](https://lanthora.github.io/cand
 ### Docker
 
 ```bash
-mkdir candy && cd candy
-wget https://raw.githubusercontent.com/lanthora/candy/master/{dockerfile,docker-compose.yml,candy.conf}
-docker compose up
+docker pull lanthora/candy
+docker run --rm lanthora/candy --help
+docker run --rm --device /dev/net/tun --privileged --net=host lanthora/candy -m client -w wss://zone.icandy.one/default -t 172.16.1.1/16 -p default -n docker
 ```
 
 ### Arch Linux

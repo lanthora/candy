@@ -15,4 +15,5 @@ RUN git clone https://aur.archlinux.org/ixwebsocket.git && cd ixwebsocket && mak
 RUN git clone https://aur.archlinux.org/candy.git && cd candy && makepkg --syncdeps --rmdeps --install --needed --noconfirm
 
 USER root
-CMD ["/usr/bin/candy", "-c", "/etc/candy.conf"]
+ENTRYPOINT ["/usr/bin/candy"]
+CMD ["-c", "/etc/candy.conf"]
