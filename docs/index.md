@@ -15,7 +15,7 @@ For more details, refer to the [design document](https://lanthora.github.io/cand
 ```bash
 mkdir candy && cd candy
 wget https://raw.githubusercontent.com/lanthora/candy/master/{dockerfile,docker-compose.yml,candy.conf}
-docker-compose up
+docker compose up
 ```
 
 ### Arch Linux
