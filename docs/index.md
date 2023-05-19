@@ -26,9 +26,9 @@ This project has been maintained on [AUR](https://aur.archlinux.org/packages/can
 yay -S candy
 ```
 
-### Manual
+### Build From Source
 
-Manual compilation requires the following dependencies.
+Dependencies of this project:
 
 - [ixwebsocket](https://github.com/machinezone/IXWebSocket): websocket and http client and server library, with TLS support and very few dependencies
 - [libconfig](https://github.com/hyperrealm/libconfig): C/C++ library for processing configuration files
