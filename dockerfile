@@ -11,7 +11,6 @@ RUN useradd --system --create-home $user && echo "$user ALL=(ALL:ALL) NOPASSWD:A
 USER $user
 WORKDIR /home/$user
 
-RUN git clone https://aur.archlinux.org/ixwebsocket.git && cd ixwebsocket && makepkg --syncdeps --rmdeps --install --needed --noconfirm
 RUN git clone https://aur.archlinux.org/candy.git && cd candy && makepkg --syncdeps --rmdeps --install --needed --noconfirm
 
 USER root
