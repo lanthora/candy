@@ -1,18 +1,18 @@
-FROM archlinux:base-devel
+FROM archlinux
 
 ARG MIRROR
 
+WORKDIR /tmp/build
+COPY . .
+
 RUN if [[ $MIRROR ]]; then printf "Server = %s/\$repo/os/\$arch\n" $MIRROR > /etc/pacman.d/mirrorlist ; fi
+RUN pacman -Syyu --noconfirm && \
+    pacman -S --needed --noconfirm git cmake make pkgconf clang spdlog openssl libconfig uriparser && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j install && \
+    pacman -Rsc --noconfirm git cmake make pkgconf clang && \
+    rm -rf /var/cache/pacman/pkg/*
 
-RUN pacman -Syu --needed --noconfirm git
-
-ARG user=candy
-RUN useradd --system --create-home $user && echo "$user ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/$user
-USER $user
-WORKDIR /home/$user
-
-RUN git clone https://aur.archlinux.org/candy.git && cd candy && makepkg --syncdeps --rmdeps --install --needed --noconfirm
-
-USER root
-ENTRYPOINT ["/usr/bin/candy"]
+ENTRYPOINT ["/usr/local/bin/candy"]
 CMD ["-c", "/etc/candy.conf"]
