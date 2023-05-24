@@ -57,6 +57,6 @@ You can use command line arguments directly, or specify a configuration file, or
 
 Please make sure that the difference between the client time and the server time is less than 30 seconds, otherwise the authentication will fail. In order to avoid being detected, no error message will be returned.
 
-## Stargazers over time
+## Star History
 
-[![Stargazers over time](https://starchart.cc/lanthora/candy.svg)](https://starchart.cc/lanthora/candy)
+[![Star History Chart](https://api.star-history.com/svg?repos=lanthora/candy&type=Date)](https://star-history.com/#lanthora/candy&Date)
