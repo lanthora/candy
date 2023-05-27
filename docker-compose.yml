@@ -14,3 +14,4 @@ services:
       - ./candy.conf:/etc/candy.conf
     devices:
       - /dev/net/tun
+    restart: always  
