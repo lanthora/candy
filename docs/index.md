@@ -13,9 +13,8 @@ For more details, refer to the [design document](https://lanthora.github.io/cand
 ### Docker
 
 ```bash
-docker pull lanthora/candy
-docker run --rm lanthora/candy --help
-docker run --rm --device /dev/net/tun --privileged --net=host lanthora/candy -m client -w wss://zone.icandy.one/default -t 172.16.1.1/16 -p default -n docker
+git clone https://github.com/lanthora/candy.git
+cd candy && docker compose pull
 ```
 
 ### Arch Linux
@@ -26,9 +25,16 @@ This project has been maintained on [AUR](https://aur.archlinux.org/packages/can
 yay -S candy
 ```
 
-### Build From Source
+## Build
 
-Dependencies of this project:
+### Build in Docker
+
+```bash
+git clone https://github.com/lanthora/candy.git
+cd candy && docker compose build
+```
+
+### Build From Source
 
 - [ixwebsocket](https://github.com/machinezone/IXWebSocket): websocket and http client and server library, with TLS support and very few dependencies
 - [libconfig](https://github.com/hyperrealm/libconfig): C/C++ library for processing configuration files
@@ -39,10 +45,9 @@ Dependencies of this project:
 - [cmake](https://cmake.org): CMake is an open-source, cross-platform family of tools designed to build, test and package software
 - [make](https://www.gnu.org/software/make/): GNU Make is a tool which controls the generation of executables and other non-source files of a program from the program's source files
 
-Get the [source code](https://github.com/lanthora/candy) in the way you like, and enter the project root directory. Then,
-
 ```bash
-cd build
+git clone https://github.com/lanthora/candy.git
+cd candy/build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make install
 ```
