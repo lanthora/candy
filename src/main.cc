@@ -37,21 +37,25 @@ struct arguments {
     std::string name;
 };
 
-static const struct argp_option options[] = {
+const struct argp_option options[] = {
     {"mode", 'm', "MODE", 0,
      "Select work mode. MODE must choose one of the following values: server, client, mixed. When MODE is server, the "
      "websocket service will be started. When MODE is client, a connection will be initiated to the websocket service. "
      "At the same time, IP layer data forwarding will be performed through tun. When MODE is mixed, it works as server "
-     "and client at the same time."},
+     "and client at the same time"},
     {"websocket", 'w', "URI", 0,
      "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This "
      "service only handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. "
-     "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443."},
+     "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
     {"tun", 't', "IP", 0,
-     "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24."},
-    {"password", 'p', "TEXT", 0, "Password for simple authentication."},
-    {"name", 'n', "TEXT", 0, "Interface name suffix."},
-    {"config", 'c', "PATH", 0, "Configuration file path."},
+     "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
+    {"password", 'p', "TEXT", 0,
+     "The password used for authentication. Client and server require the same value, this value will not be passed "
+     "across the network."},
+    {"name", 'n', "TEXT", 0,
+     "Interface name suffix. Used to avoid name collisions when using multiple clients in the same network namespace"},
+    {"config", 'c', "PATH", 0,
+     "Configuration file path. All other configuration items can be configured through the configuration file"},
     {},
 };
 
