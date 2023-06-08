@@ -46,12 +46,12 @@ static const struct argp_option options[] = {
     {"websocket", 'w', "URI", 0,
      "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This "
      "service only handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. "
-     "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
+     "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443."},
     {"tun", 't', "IP", 0,
-     "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
-    {"password", 'p', "TEXT", 0, "Password for simple authentication"},
-    {"name", 'n', "TEXT", 0, "Interface name suffix"},
-    {"config", 'c', "PATH", 0, "Configuration file path"},
+     "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24."},
+    {"password", 'p', "TEXT", 0, "Password for simple authentication."},
+    {"name", 'n', "TEXT", 0, "Interface name suffix."},
+    {"config", 'c', "PATH", 0, "Configuration file path."},
     {},
 };
 
@@ -152,6 +152,7 @@ int main(int argc, char *argv[]) {
         std::thread([&]() { client->start(); }).detach();
     }
 
+    spdlog::info("Service started successfully");
     waitExit();
 
     if (client) {
