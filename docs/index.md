@@ -6,7 +6,7 @@ A WebSocket and TUN based VPN for Linux.
 
 At present, mainstream VPN traffic has obvious characteristics and is easily identified and blocked by firewalls. This project tries to solve this problem.
 
-For more details, refer to the [design document](https://lanthora.github.io/candy/design) and [specification document](https://lanthora.github.io/candy/specification). You are also welcome to join our [discussion group](https://t.me/CandyVPNGroup).
+For more details, refer to the [design document](https://lanthora.github.io/candy/design) and [specification document](https://lanthora.github.io/candy/specification). You are also welcome to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1).
 
 ## Install
 
