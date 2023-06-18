@@ -24,6 +24,7 @@ private:
     void handleMessage(const WebSocketMessagePtr &msg);
     void sendHandshakeMsg();
     void handleServerMessage(const WebSocketMessagePtr &msg);
+    void handleCloseMessage(const WebSocketMessagePtr &msg);
     void handleErrorMessage(const WebSocketMessagePtr &msg);
 
     int _tunFd;

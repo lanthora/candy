@@ -41,6 +41,11 @@ void Client::handleServerMessage(const WebSocketMessagePtr &msg) {
     write(_tunFd, &forward->iph, msg->str.size() - 1);
 }
 
+void Client::handleCloseMessage(const WebSocketMessagePtr &msg) {
+    spdlog::info("{0}", msg->closeInfo.reason);
+    exit(1);
+}
+
 void Client::handleErrorMessage(const WebSocketMessagePtr &msg) {
     spdlog::critical("{0}", msg->errorInfo.reason);
     exit(1);
@@ -53,6 +58,9 @@ void Client::handleMessage(const WebSocketMessagePtr &msg) {
         break;
     case ix::WebSocketMessageType::Open:
         sendHandshakeMsg();
+        break;
+    case ix::WebSocketMessageType::Close:
+        handleCloseMessage(msg);
         break;
     case ix::WebSocketMessageType::Error:
         handleErrorMessage(msg);
