@@ -61,6 +61,13 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
             return;
         }
 
+        if (_ipWsClientMap.contains(auth->tunIp)) {
+            auto ws = _ipWsClientMap[auth->tunIp].lock();
+            if (ws) {
+                ws->close();
+            }
+        }
+
         _ipWsClientMap[auth->tunIp] = webSocket;
         return;
     }
@@ -73,6 +80,11 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
         ForwardHeader *forward = (ForwardHeader *)msg->str.data();
 
         if (!_ipWsClientMap.contains(forward->iph.saddr)) {
+            return;
+        }
+
+        if (_ipWsClientMap[forward->iph.saddr].expired()) {
+            _ipWsClientMap.erase(forward->iph.saddr);
             return;
         }
 
