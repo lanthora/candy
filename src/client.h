@@ -22,7 +22,8 @@ private:
     using WebSocketMessagePtr = ix::WebSocketMessagePtr;
 
     void handleMessage(const WebSocketMessagePtr &msg);
-    void sendHandshakeMsg();
+    void sendAuthMessage();
+    void sendDHCPMessage();
     void handleServerMessage(const WebSocketMessagePtr &msg);
     void handleCloseMessage(const WebSocketMessagePtr &msg);
     void handleErrorMessage(const WebSocketMessagePtr &msg);
@@ -32,10 +33,13 @@ private:
     std::string _tunMask;
     std::shared_ptr<ix::WebSocket> _wsClient;
     std::string _password;
+    bool _useDHCP;
+    std::string _DHCPInterfaceName;
 
     static const int MTU = 65535;
 
 private:
+    int initTun(std::string tun, std::string name);
     void disableIPv6(std::string interface);
 };
 }; // namespace candy

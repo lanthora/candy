@@ -14,7 +14,9 @@ namespace candy {
 
 class CIDR {
 public:
-    static std::string networkPrefixToSubnetMask(std::string prefix);
+    static uint32_t networkPrefixToSubnetMask(int num);
+    static uint32_t networkPrefixToSubnetMask(std::string prefix);
+    static std::string networkPrefixToSubnetMaskString(std::string prefix);
 };
 
 class Uri {
@@ -42,19 +44,21 @@ private:
 class INet {
 public:
     static bool isIpv4Address(std::string address);
-    static std::string ipToString(uint32_t ip);
+    static std::string ipU32ToString(uint32_t ip);
+    static uint32_t ipStringToU32(std::string address);
 };
 
 enum {
     TYPE_AUTH,
     TYPE_FORWARD,
+    TYPE_DHCP,
 };
 
 struct AuthHeader {
     uint8_t type;
-    uint32_t tunIp;
+    uint32_t ip;
     int64_t timestamp;
-    uint8_t _hash[SHA256_DIGEST_LENGTH];
+    uint8_t hash[SHA256_DIGEST_LENGTH];
 
     void calculateHash(const std::string &password);
     bool checkHash(const std::string &password);
@@ -63,6 +67,16 @@ struct AuthHeader {
 struct ForwardHeader {
     uint8_t type;
     struct iphdr iph;
+} __attribute__((packed));
+
+struct DHCPHeader {
+    uint8_t type;
+    int64_t timestamp;
+    char cidr[32];
+    uint8_t hash[SHA256_DIGEST_LENGTH];
+
+    void calculateHash(const std::string &password);
+    bool checkHash(const std::string &password);
 } __attribute__((packed));
 
 int64_t unixTimeStamp();

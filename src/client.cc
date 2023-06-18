@@ -16,15 +16,21 @@
 
 namespace candy {
 
-void Client::sendHandshakeMsg() {
+void Client::sendAuthMessage() {
     AuthHeader buffer;
-
     buffer.type = TYPE_AUTH;
-    buffer.tunIp = inet_addr(_tunIp.data());
-
+    buffer.ip = inet_addr(_tunIp.data());
     buffer.timestamp = htonll(unixTimeStamp());
     buffer.calculateHash(_password);
+    auto data = ix::IXWebSocketSendData((const char *)&buffer, sizeof(buffer));
+    _wsClient->sendBinary(data);
+}
 
+void Client::sendDHCPMessage() {
+    DHCPHeader buffer;
+    buffer.type = TYPE_DHCP;
+    buffer.timestamp = htonll(unixTimeStamp());
+    buffer.calculateHash(_password);
     auto data = ix::IXWebSocketSendData((const char *)&buffer, sizeof(buffer));
     _wsClient->sendBinary(data);
 }
@@ -34,15 +40,19 @@ void Client::handleServerMessage(const WebSocketMessagePtr &msg) {
         return;
     }
 
-    ForwardHeader *forward = (ForwardHeader *)msg->str.data();
-    if (forward->type != TYPE_FORWARD) {
-        return;
+    if (msg->str.front() == TYPE_FORWARD) {
+        ForwardHeader *forward = (ForwardHeader *)msg->str.data();
+        size_t size = msg->str.size() - sizeof(ForwardHeader::type);
+        if (write(_tunFd, &forward->iph, size) != (ssize_t)size) {
+            spdlog::warn("data not fully written to TUN device");
+            return;
+        }
     }
 
-    size_t size = msg->str.size() - sizeof(ForwardHeader::type);
-    if (write(_tunFd, &forward->iph, size) != (ssize_t)size) {
-        spdlog::warn("data not fully written to TUN device");
-        return;
+    if (msg->str.front() == TYPE_DHCP) {
+        DHCPHeader *dhcp = (DHCPHeader *)msg->str.data();
+        initTun(dhcp->cidr, _DHCPInterfaceName);
+        sendAuthMessage();
     }
 }
 
@@ -62,7 +72,11 @@ void Client::handleMessage(const WebSocketMessagePtr &msg) {
         handleServerMessage(msg);
         break;
     case ix::WebSocketMessageType::Open:
-        sendHandshakeMsg();
+        if (_useDHCP) {
+            sendDHCPMessage();
+        } else {
+            sendAuthMessage();
+        }
         break;
     case ix::WebSocketMessageType::Close:
         handleCloseMessage(msg);
@@ -97,8 +111,16 @@ int Client::setPassword(std::string password) {
     _password = password;
     return 0;
 }
-
 int Client::setTun(std::string tun, std::string name) {
+    if (tun.empty()) {
+        _DHCPInterfaceName = name;
+        _useDHCP = true;
+        return 0;
+    }
+    return initTun(tun, name);
+}
+
+int Client::initTun(std::string tun, std::string name) {
     std::string interfaceName = "candy";
     if (!name.empty()) {
         interfaceName += "-";
@@ -107,7 +129,7 @@ int Client::setTun(std::string tun, std::string name) {
 
     std::size_t pos = tun.find("/");
     _tunIp = tun.substr(0, pos);
-    _tunMask = CIDR::networkPrefixToSubnetMask(tun.substr(pos + 1));
+    _tunMask = CIDR::networkPrefixToSubnetMaskString(tun.substr(pos + 1));
 
     if (_tunIp.empty() || _tunMask.empty()) {
         spdlog::critical("please set client tun ip");

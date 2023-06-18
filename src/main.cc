@@ -33,6 +33,7 @@ struct arguments {
     std::string mode;
     std::string websocket;
     std::string tun;
+    std::string dhcp;
     std::string password;
     std::string name;
 };
@@ -47,8 +48,12 @@ const struct argp_option options[] = {
      "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This "
      "service only handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. "
      "Except for testing needs, it is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
-    {"tun", 't', "IP", 0,
-     "Set local virtual IP and subnet mask. IP is address and subnet in CIDR notation. e.g. 10.0.0.1/24"},
+    {"tun", 't', "CIDR", 0,
+     "Set the virtual IP address and subnet. Use CIDR format, e.g. 172.16.1.1/16. Not setting this configuration "
+     "means using the address dynamically allocated by the server"},
+    {"dhcp", 'd', "CIDR", 0,
+     "The server automatically assigns the client IP address. The assigned address conforms to the current subnet. If "
+     "this option is not configured, this function is not enabled. e.g. 172.16.0.0/16"},
     {"password", 'p', "TEXT", 0,
      "The password used for authentication. Client and server require the same value, this value will not be passed "
      "across the network."},
@@ -69,9 +74,6 @@ static bool needShowUsage(struct arguments *arguments, struct argp_state *state)
     if (arguments->websocket.empty())
         return true;
 
-    if (arguments->tun.empty() && arguments->mode != "server")
-        return true;
-
     return false;
 }
 
@@ -82,6 +84,7 @@ static void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("mode", arguments->mode);
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);
+        cfg.lookupValue("dhcp", arguments->dhcp);
         cfg.lookupValue("password", arguments->password);
         cfg.lookupValue("name", arguments->name);
 
@@ -111,6 +114,9 @@ static int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 't':
         arguments->tun = arg;
+        break;
+    case 'd':
+        arguments->dhcp = arg;
         break;
     case 'p':
         arguments->password = arg;
@@ -145,6 +151,7 @@ int main(int argc, char *argv[]) {
         server = std::make_shared<candy::Server>();
         server->setPassword(arguments.password);
         server->setWebsocketServer(arguments.websocket);
+        server->setDHCP(arguments.dhcp);
         std::thread([&]() { server->start(); }).detach();
     }
 
