@@ -33,12 +33,17 @@ void Client::handleServerMessage(const WebSocketMessagePtr &msg) {
     if (msg->str.size() < sizeof(ForwardHeader)) {
         return;
     }
+
     ForwardHeader *forward = (ForwardHeader *)msg->str.data();
     if (forward->type != TYPE_FORWARD) {
         return;
     }
 
-    write(_tunFd, &forward->iph, msg->str.size() - 1);
+    size_t size = msg->str.size() - sizeof(ForwardHeader::type);
+    if (write(_tunFd, &forward->iph, size) != (ssize_t)size) {
+        spdlog::warn("data not fully written to TUN device");
+        return;
+    }
 }
 
 void Client::handleCloseMessage(const WebSocketMessagePtr &msg) {
