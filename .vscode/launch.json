@@ -6,7 +6,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/candy",
-            "args": [],
+            "args": [
+                "-c",
+                "../candy.conf"
+            ],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/build",
             "environment": [],
@@ -19,7 +22,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/candy",
-            "args": [],
+            "args": [
+                "-c",
+                "../candy.conf"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],

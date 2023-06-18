@@ -212,20 +212,23 @@ int Client::initTun(std::string tun, std::string name) {
 }
 
 int Client::start() {
-    _wsClient->start();
-
     ssize_t len;
     constexpr int fix_header_len = sizeof(ForwardHeader::type);
     std::array<char, Client::MTU + fix_header_len> buffer;
     ForwardHeader *forward = (ForwardHeader *)&buffer;
     forward->type = TYPE_FORWARD;
-    while ((len = read(_tunFd, buffer.begin() + fix_header_len, buffer.size() - fix_header_len)) > 0) {
-        if ((unsigned long)len < sizeof(ForwardHeader)) {
-            continue;
+
+    _wsClient->start();
+    while (_tunFd == 0) {
+        sleep(1);
+    }
+
+    while (true) {
+        len = read(_tunFd, buffer.begin() + fix_header_len, buffer.size() - fix_header_len);
+        if (len <= 0) {
+            break;
         }
-        if (forward->iph.version != 4) {
-            continue;
-        }
+
         auto data = ix::IXWebSocketSendData(buffer.data(), len + fix_header_len);
         _wsClient->sendBinary(data);
     }
