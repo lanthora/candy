@@ -1,16 +1,13 @@
 services:
-  candy:
-    image: lanthora/candy:latest
+  demo:
+    image: lanthora/candy
     build:
       context: ./
       dockerfile: dockerfile
-      tags:
-        - lanthora/candy:latest
-    container_name: candy
+    command: -m client -w wss://zone.icandy.one/demo
     network_mode: "host"
-    privileged: true
-    volumes:
-      - ./candy.conf:/etc/candy.conf
+    cap_add:
+      - NET_ADMIN
     devices:
       - /dev/net/tun
-    restart: always  
+    restart: always
