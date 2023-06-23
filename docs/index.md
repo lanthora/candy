@@ -2,22 +2,30 @@
 
 A WebSocket and TUN based VPN for Linux.
 
-This project aims to overcome the problem of mainstream VPN traffic being easily detected and blocked by firewalls.
+## Candy Is A VPN, Not A Proxy
 
-## Usage
+VPN is an abbreviation for "Virtual Private Network", which is a technology that uses public networks (such as the Internet) to build private networks. VPN allows remote users to connect to the internal network of an enterprise or organization through an encrypted tunnel, and access internal resources and services.
 
-Please ensure that the server and the client are synchronized within 30 seconds, otherwise the connection will fail. The server will not send any feedback if the connection is unsuccessful, to avoid being detected.
+Proxy is a common network security tool. Its role is to establish an intermediary service between the user and the target server, thereby hiding the user's real IP address and location information, and enhancing the privacy and security of network access.
 
-You will be able to join our virtual private network with a single command.
+## Why A New VPN Was Developed
 
-```bash
-docker run --device /dev/net/tun --cap-add NET_ADMIN --net=host lanthora/candy -m client -w wss://zone.icandy.one/demo
-```
+Widely used VPNs, such as WireGuard and OpenVPN, can be blocked by GFW. Therefore, a VPN that can cross GFW is needed.
 
-Setting up your own virtual private network is easy. For instructions, please see the help document.
+## How To Install
 
-```bash
-docker run lanthora/candy --help
-```
+### Docker
 
-We also invite you to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1) and share your feedback with us.
+The image has been uploaded to [Dockerhub](https://hub.docker.com/r/lanthora/candy), we recommend all users to use the Docker image.
+
+### AUR
+
+If you don't like Docker and you are an Arch Linux user, you can use [AUR](https://aur.archlinux.org/packages/candy).
+
+### Build From Source
+
+If you are not satisfied with the previous installation methods, you can start the installation from the source code, the code is hosted on [Github](https://github.com/lanthora/candy).
+
+## How To Use
+
+Run the program and you will know how to use it.

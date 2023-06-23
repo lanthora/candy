@@ -35,3 +35,11 @@ The client and the server send each other, the client forwards the data read fro
 ```
 
 Type is 1.
+
+## DHCP
+
+```plaintext
++-------------------------------------------------------------------------+
+| Type (1 Byte) | Timestamp (8 Bytes) | CIDR (32 Bytes) | Hash (32 Bytes) |
++-------------------------------------------------------------------------+
+```
