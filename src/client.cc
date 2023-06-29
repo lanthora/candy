@@ -245,12 +245,12 @@ void Client::disableIPv6(std::string interface) {
     std::string config = "/proc/sys/net/ipv6/conf/" + interface + "/disable_ipv6";
     int fd = open(config.data(), O_WRONLY);
     if (fd < 0) {
-        spdlog::debug("Opening interface IPv6 configuration file failed");
+        spdlog::warn("Opening interface IPv6 configuration file failed");
         return;
     }
 
     if (write(fd, "1", 1) < 0) {
-        spdlog::debug("Disable current interface IPv6 failed");
+        spdlog::warn("Disable current interface IPv6 failed");
     }
 
     close(fd);
