@@ -17,8 +17,7 @@ spec:
         image: lanthora/candy:latest
         command: ["candy", "-m", "client", "-w", "wss://zone.icandy.one/demo"]
         securityContext:
-          capabilities:
-            add: ["NET_ADMIN"]
+          privileged: true
         volumeMounts:
         - name: dev-net-tun
           mountPath: /dev/net/tun
