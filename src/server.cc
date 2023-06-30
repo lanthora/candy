@@ -77,12 +77,6 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
             return;
         }
 
-        if (_ipWsClientMap[forward->iph.saddr].expired()) {
-            _ipWsClientMap.erase(forward->iph.saddr);
-            _wsIpClientMap.erase(webSocket);
-            return;
-        }
-
         if (_ipWsClientMap[forward->iph.saddr].lock() != webSocket.lock()) {
             return;
         }
@@ -117,8 +111,10 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
             if (ws) {
                 ws->close();
             }
+            spdlog::info("{} conflict, old connection kicked out", INet::ipU32ToString(auth->ip));
         }
 
+        spdlog::info("{} connected", INet::ipU32ToString(auth->ip));
         _ipWsClientMap[auth->ip] = webSocket;
         _wsIpClientMap[webSocket] = auth->ip;
         return;
@@ -186,9 +182,14 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
 
 void Server::handleCloseMessage(WebSocket webSocket, const WebSocketMessagePtr &msg) {
     auto it = _wsIpClientMap.find(webSocket);
-    if (it != _wsIpClientMap.end()) {
-        _ipWsClientMap.erase(it->second);
+    if (it == _wsIpClientMap.end()) {
+        return;
     }
+    if (webSocket.lock() != _ipWsClientMap[it->second].lock()) {
+        return;
+    }
+    spdlog::info("{} disconnected", INet::ipU32ToString(it->second));
+    _ipWsClientMap.erase(it->second);
     _wsIpClientMap.erase(webSocket);
 }
 
