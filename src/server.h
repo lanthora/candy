@@ -40,7 +40,8 @@ private:
     uint32_t _lastClientTunIp;
     uint32_t _network;
     uint32_t _subnet;
-    uint32_t newClientTunIP();
+    bool canUseThisAddress(std::string cidr);
+    std::string nextClientAddress();
 };
 
 }; // namespace candy

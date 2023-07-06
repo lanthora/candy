@@ -21,7 +21,13 @@ spec:
         volumeMounts:
         - name: dev-net-tun
           mountPath: /dev/net/tun
+        - name: var-lib-candy
+          mountPath: /var/lib/candy
       volumes:
       - name: dev-net-tun
         hostPath:
           path: /dev/net/tun
+      - name: var-lib-candy
+        HostPath:
+          path: /var/lib/candy
+
