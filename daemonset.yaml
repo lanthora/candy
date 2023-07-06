@@ -28,6 +28,5 @@ spec:
         hostPath:
           path: /dev/net/tun
       - name: var-lib-candy
-        HostPath:
+        hostPath:
           path: /var/lib/candy
-
