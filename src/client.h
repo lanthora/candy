@@ -39,8 +39,12 @@ private:
     static const int MTU = 65535;
 
 private:
+    std::string getInterfaceName(std::string name);
     int initTun(std::string tun, std::string name);
     void disableIPv6(std::string interface);
+    std::string getDHCPConfigFile();
+    int saveDHCPAddress(std::string cidr);
+    std::string getLastDHCPAddress();
 };
 }; // namespace candy
 

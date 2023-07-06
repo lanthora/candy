@@ -48,7 +48,14 @@ int Server::setDHCP(std::string dhcp) {
 
     std::size_t pos = dhcp.find("/");
     std::string addr = dhcp.substr(0, pos);
-    _subnet = std::stoi(dhcp.substr(pos + 1));
+
+    try {
+        _subnet = std::stoi(dhcp.substr(pos + 1));
+    } catch (...) {
+        spdlog::critical("dhcp format error: {0}", dhcp);
+        exit(1);
+    }
+
     if (_subnet <= 0 || _subnet >= 31 || !INet::isIpv4Address(addr)) {
         spdlog::critical("dhcp: {0} invalid", dhcp);
         exit(1);
@@ -138,40 +145,9 @@ void Server::handleClientMessage(WebSocket webSocket, const WebSocketMessagePtr 
             return;
         }
 
-        uint32_t nextClientTunIp = _lastClientTunIp;
-        uint32_t mask = (1 << (32 - _subnet)) - 1;
-
-        bool no_address_available = false;
-        while (true) {
-            nextClientTunIp += 1;
-            nextClientTunIp &= mask;
-
-            if (nextClientTunIp == 0) {
-                continue;
-            }
-
-            if (nextClientTunIp == mask) {
-                if (no_address_available) {
-                    spdlog::critical("no address available");
-                    exit(1);
-                }
-                no_address_available = true;
-                continue;
-            }
-
-            if (_ipWsClientMap.contains(htonl(_network | nextClientTunIp))) {
-                continue;
-            }
-
-            _lastClientTunIp = _network | nextClientTunIp;
-            break;
+        if (!canUseThisAddress(dhcp->cidr)) {
+            strcpy(dhcp->cidr, nextClientAddress().data());
         }
-
-        std::string ip = INet::ipU32ToString(htonl(_lastClientTunIp));
-        ip += "/";
-        ip += std::to_string(_subnet);
-
-        strcpy(dhcp->cidr, ip.data());
 
         auto ws = webSocket.lock();
         if (ws) {
@@ -222,6 +198,69 @@ void Server::handleConnection(WebSocket webSocket, ConnectionState connectionSta
         return;
 
     ws->setOnMessageCallback(std::bind(&Server::handleMessage, this, webSocket, connectionState, _1));
+}
+
+bool Server::canUseThisAddress(std::string cidr) {
+    std::size_t pos;
+    uint32_t ip, subnet;
+
+    try {
+        pos = cidr.find("/");
+        ip = ntohl(INet::ipStringToU32(cidr.substr(0, pos)));
+        subnet = std::stoi(cidr.substr(pos + 1));
+    } catch (...) {
+        return false;
+    }
+
+    if (subnet != _subnet) {
+        return false;
+    }
+
+    if ((ip & (~((1 << (32 - _subnet)) - 1))) != _network) {
+        return false;
+    }
+
+    if (_ipWsClientMap.contains(htonl(ip))) {
+        return false;
+    }
+
+    return true;
+}
+
+std::string Server::nextClientAddress() {
+    uint32_t nextClientTunIp = _lastClientTunIp;
+    uint32_t mask = (1 << (32 - _subnet)) - 1;
+
+    bool no_address_available = false;
+    while (true) {
+        nextClientTunIp += 1;
+        nextClientTunIp &= mask;
+
+        if (nextClientTunIp == 0) {
+            continue;
+        }
+
+        if (nextClientTunIp == mask) {
+            if (no_address_available) {
+                spdlog::critical("no address available");
+                exit(1);
+            }
+            no_address_available = true;
+            continue;
+        }
+
+        if (_ipWsClientMap.contains(htonl(_network | nextClientTunIp))) {
+            continue;
+        }
+
+        _lastClientTunIp = _network | nextClientTunIp;
+        break;
+    }
+
+    std::string cidr = INet::ipU32ToString(htonl(_lastClientTunIp));
+    cidr += "/";
+    cidr += std::to_string(_subnet);
+    return cidr;
 }
 
 int Server::start() {

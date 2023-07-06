@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
+#include <filesystem>
+#include <fstream>
 #include <ixwebsocket/IXWebSocketSendData.h>
 #include <linux/if_tun.h>
 #include <map>
@@ -31,6 +33,7 @@ void Client::sendDHCPMessage() {
     buffer.type = TYPE_DHCP;
     buffer.timestamp = htonll(unixTimeStamp());
     buffer.calculateHash(_password);
+    strcpy(buffer.cidr, getLastDHCPAddress().data());
     auto data = ix::IXWebSocketSendData((const char *)&buffer, sizeof(buffer));
     _wsClient->sendBinary(data);
 }
@@ -51,6 +54,7 @@ void Client::handleServerMessage(const WebSocketMessagePtr &msg) {
 
     if (msg->str.front() == TYPE_DHCP) {
         DHCPHeader *dhcp = (DHCPHeader *)msg->str.data();
+        saveDHCPAddress(dhcp->cidr);
         initTun(dhcp->cidr, _DHCPInterfaceName);
         sendAuthMessage();
     }
@@ -120,13 +124,17 @@ int Client::setTun(std::string tun, std::string name) {
     return initTun(tun, name);
 }
 
-int Client::initTun(std::string tun, std::string name) {
+std::string Client::getInterfaceName(std::string name) {
     std::string interfaceName = "candy";
     if (!name.empty()) {
         interfaceName += "-";
         interfaceName += name;
     }
+    return interfaceName;
+}
 
+int Client::initTun(std::string tun, std::string name) {
+    std::string interfaceName = getInterfaceName(name);
     std::size_t pos = tun.find("/");
     _tunIp = tun.substr(0, pos);
     _tunMask = CIDR::networkPrefixToSubnetMaskString(tun.substr(pos + 1));
@@ -254,6 +262,33 @@ void Client::disableIPv6(std::string interface) {
     }
 
     close(fd);
+}
+std::string Client::getDHCPConfigFile() {
+    std::string dhcpConfigFile = "/var/lib/candy/dhcp/" + getInterfaceName(_DHCPInterfaceName);
+    return dhcpConfigFile;
+}
+
+int Client::saveDHCPAddress(std::string cidr) {
+    std::string dhcpConfigFile = getDHCPConfigFile();
+    std::filesystem::create_directories(std::filesystem::path(dhcpConfigFile).parent_path());
+    std::ofstream ofs(dhcpConfigFile);
+    if (ofs.is_open()) {
+        ofs << cidr;
+        ofs.close();
+    }
+    return 0;
+}
+
+std::string Client::getLastDHCPAddress() {
+    std::string dhcpConfigFile = getDHCPConfigFile();
+    std::ifstream ifs(dhcpConfigFile);
+    if (!ifs.is_open()) {
+        return "";
+    }
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    ifs.close();
+    return ss.str();
 }
 
 }; // namespace candy

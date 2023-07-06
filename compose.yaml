@@ -9,4 +9,6 @@ services:
     privileged: true
     devices:
       - /dev/net/tun
+    volumes:
+      - /var/lib/candy:/var/lib/candy
     restart: always
