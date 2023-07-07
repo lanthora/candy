@@ -4,7 +4,6 @@ services:
     build:
       context: ./
       dockerfile: dockerfile
-    command: -m client -w wss://zone.icandy.one/demo
     network_mode: host
     privileged: true
     devices:
