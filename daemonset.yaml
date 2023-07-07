@@ -15,7 +15,6 @@ spec:
       containers:
       - name: candy-demo
         image: lanthora/candy:latest
-        command: ["candy", "-m", "client", "-w", "wss://zone.icandy.one/demo"]
         securityContext:
           privileged: true
         volumeMounts:

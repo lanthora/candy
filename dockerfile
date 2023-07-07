@@ -10,4 +10,4 @@ RUN cd candy/build && cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Relea
 FROM base as production
 COPY --from=builder /usr/bin/candy /usr/bin/candy
 ENTRYPOINT ["/usr/bin/candy"]
-CMD ["-c", "/etc/candy.conf"]
+CMD ["-m", "client", "-w", "wss://zone.icandy.one/demo"]
