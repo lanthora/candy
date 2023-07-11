@@ -1,9 +1,6 @@
 services:
   demo:
     image: lanthora/candy
-    build:
-      context: ./
-      dockerfile: dockerfile
     network_mode: host
     privileged: true
     devices:
