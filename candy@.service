@@ -3,7 +3,7 @@ Description=WebSocket-based VPN
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/bin/candy -c /etc/candy.d/%i.conf
+ExecStart=/usr/bin/candy --no-timestamp -c /etc/candy.d/%i.conf
 Restart=always
 RestartSec=3
 

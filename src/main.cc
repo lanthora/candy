@@ -38,6 +38,8 @@ struct arguments {
     std::string name;
 };
 
+static const int OPT_NO_TIMESTAMP = 1;
+
 const struct argp_option options[] = {
     {"mode", 'm', "MODE", 0,
      "Select work mode. MODE must choose one of the following values: server, client, mixed. When MODE is server, the "
@@ -56,13 +58,20 @@ const struct argp_option options[] = {
      "this option is not configured, this function is not enabled. e.g. 172.16.0.0/16"},
     {"password", 'p', "TEXT", 0,
      "The password used for authentication. Client and server require the same value, this value will not be passed "
-     "across the network."},
+     "across the network"},
     {"name", 'n', "TEXT", 0,
      "Interface name suffix. Used to avoid name collisions when using multiple clients in the same network namespace"},
     {"config", 'c', "PATH", 0,
      "Configuration file path. All other configuration items can be configured through the configuration file"},
+    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0,
+     "Do not record the log time, in order to avoid redundant display of time with other tools such as systemd"},
     {},
 };
+
+static int set_no_timestamp() {
+    spdlog::set_pattern("[%^%l%$] %v");
+    return 0;
+}
 
 static bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
     if (state->arg_num > 0)
@@ -126,6 +135,9 @@ static int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 'c':
         parseConfigFile(arguments, arg);
+        break;
+    case OPT_NO_TIMESTAMP:
+        set_no_timestamp();
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
