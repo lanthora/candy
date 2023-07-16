@@ -16,7 +16,7 @@ Widely used VPNs, such as WireGuard and OpenVPN, can be blocked by GFW. Therefor
 
 ### Docker
 
-The image has been uploaded to [Dockerhub](https://hub.docker.com/r/lanthora/candy), we recommend all users to use the Docker image.
+The image has been uploaded to [Docker Hub](https://hub.docker.com/r/lanthora/candy) and [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy), we recommend all users to use the Docker image.
 
 ### AUR
 
@@ -29,3 +29,5 @@ If you are not satisfied with the previous installation methods, you can start t
 ## How To Use
 
 Run the program and you will know how to use it.
+
+We also welcome you to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1) and share your feedback with us.
