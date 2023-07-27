@@ -8,7 +8,7 @@ This project aims to overcome the problem of mainstream VPN traffic being easily
 
 ## Usage
 
-Please ensure that the server and the client are synchronized within 30 seconds, otherwise the connection will fail. The server will not send any feedback if the connection is unsuccessful, to avoid being detected.
+Please ensure that the time difference between the server host and the client host does not exceed 30 seconds, otherwise the connection will fail. The server will not send any feedback if the connection is unsuccessful, to avoid being detected.
 
 You only need one command to join our virtual private network.
 
