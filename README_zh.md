@@ -1,6 +1,6 @@
 # Candy
 
-[English](README.md)
+[English](README.md) | 中文
 
 一款基于 WebSocket 和 TUN 的 Linux VPN
 
