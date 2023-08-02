@@ -36,7 +36,7 @@ private:
     bool _useDHCP;
     std::string _DHCPInterfaceName;
 
-    static const int MTU = 65535;
+    static const int MTU = 1400;
 
 private:
     std::string getInterfaceName(std::string name);
