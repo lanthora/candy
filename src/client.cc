@@ -107,6 +107,7 @@ int Client::setWebsocketServer(std::string ws) {
     _wsClient->setPingInterval(30);
     _wsClient->disablePerMessageDeflate();
     _wsClient->setOnMessageCallback(std::bind(&Client::handleMessage, this, _1));
+    _wsClient->setAutoThreadName(false);
 
     return 0;
 }
