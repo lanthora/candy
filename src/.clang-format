@@ -6,7 +6,8 @@ AccessModifierOffset: -4
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-ColumnLimit: 120
+ColumnLimit: 130
 SortIncludes: false
 IndentCaseLabels: false
+SortIncludes: true
 ...
