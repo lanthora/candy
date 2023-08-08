@@ -36,7 +36,7 @@ The client and the server send each other, the client forwards the data read fro
 
 Type is 1.
 
-## DHCP
+## Synamic Address Message
 
 ```plaintext
 +-------------------------------------------------------------------------+

@@ -1,25 +1,25 @@
 # Candy
 
-English | [中文](README_zh.md)
+中文 | [English](README_en.md)
 
-A WebSocket and TUN based VPN for Linux.
+一款基于 WebSocket 和 TUN 的 Linux VPN
 
-This project aims to overcome the problem of mainstream VPN traffic being easily detected and blocked by firewalls.
+这个项目旨在解决传统 VPN 流量被防火墙轻易识别和屏蔽的问题.
 
-## Usage
+## 使用方法
 
-Please ensure that the time difference between the server host and the client host does not exceed 30 seconds, otherwise the connection will fail. The server will not send any feedback if the connection is unsuccessful, to avoid being detected.
+请确保服务器和客户端的时间差不超过 30 秒,否则连接会失败.服务器在连接失败时不会发送任何反馈,以避免被检测.
 
-You only need one command to join our virtual private network.
+你只需一个命令,就可以加入我们的虚拟私人网络.
 
 ```bash
 docker run --rm --privileged=true --net=host --device /dev/net/tun --volume /var/lib/candy:/var/lib/candy lanthora/candy
 ```
 
-If you want to set up your own virtual private network, it's also easy. For details, please refer to the help document.
+如果你想搭建自己的虚拟私人网络也很简单.具体步骤请参考帮助文档.
 
 ```bash
 docker run --rm lanthora/candy --help
 ```
 
-We also welcome you to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1) and share your feedback with us.
+我们也欢迎你加入我们的 [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1), 和我们分享你的反馈意见.

@@ -1,0 +1,221 @@
+// SPDX-License-Identifier: MIT
+#if defined(__linux__) || defined(__linux)
+
+#include "core/client.h"
+#include "core/server.h"
+#include <argp.h>
+#include <csignal>
+#include <filesystem>
+#include <fstream>
+#include <libconfig.h++>
+#include <mutex>
+#include <spdlog/spdlog.h>
+#include <string>
+
+namespace {
+
+struct arguments {
+    std::string mode;
+    std::string websocket;
+    std::string tun;
+    std::string dhcp;
+    std::string password;
+    std::string name;
+};
+
+const int OPT_NO_TIMESTAMP = 1;
+
+struct argp_option options[] = {
+    {"mode", 'm', "MODE", 0,
+     "Select work mode. MODE must choose one of the following values: server, client, mixed. When MODE is server, the websocket "
+     "service will be started. When MODE is client, a connection will be initiated to the websocket service. At the same time, "
+     "IP layer data forwarding will be performed through tun. When MODE is mixed, it works as server and client at the same "
+     "time"},
+    {"websocket", 'w', "URI", 0,
+     "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This service only "
+     "handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. Except for testing needs, it "
+     "is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
+    {"tun", 't', "CIDR", 0,
+     "Set the virtual IP address and subnet. Use CIDR format, e.g. 172.16.1.1/16. Not setting this configuration means using the "
+     "address dynamically allocated by the server"},
+    {"dhcp", 'd', "CIDR", 0,
+     "The server automatically assigns the client IP address. The assigned address conforms to the current subnet. If this "
+     "option is not configured, this function is not enabled. e.g. 172.16.0.0/16"},
+    {"password", 'p', "TEXT", 0,
+     "The password used for authentication. Client and server require the same value, this value will not be passed across the "
+     "network"},
+    {"name", 'n', "TEXT", 0,
+     "Interface name suffix. Used to avoid name collisions when using multiple clients in the same network namespace"},
+    {"config", 'c', "PATH", 0,
+     "Configuration file path. All other configuration items can be configured through the configuration file"},
+    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0,
+     "Do not record the log time, in order to avoid redundant display of time with other tools such as systemd"},
+    {},
+};
+
+int set_no_timestamp() {
+    spdlog::set_pattern("[%^%l%$] %v");
+    return 0;
+}
+
+bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
+    if (state->arg_num > 0)
+        return true;
+
+    if (arguments->mode.empty())
+        return true;
+
+    if (arguments->websocket.empty())
+        return true;
+
+    return false;
+}
+
+void parseConfigFile(struct arguments *arguments, std::string config) {
+    try {
+        libconfig::Config cfg;
+        cfg.readFile(config);
+        cfg.lookupValue("mode", arguments->mode);
+        cfg.lookupValue("websocket", arguments->websocket);
+        cfg.lookupValue("tun", arguments->tun);
+        cfg.lookupValue("dhcp", arguments->dhcp);
+        cfg.lookupValue("password", arguments->password);
+        cfg.lookupValue("name", arguments->name);
+    } catch (const libconfig::FileIOException &fioex) {
+        spdlog::critical("I/O error while reading configuration file");
+        exit(1);
+    } catch (const libconfig::ParseException &pex) {
+        spdlog::critical("Parse error at {0} : {1} - {2}", pex.getFile(), pex.getLine(), pex.getError());
+        exit(1);
+    }
+}
+
+int parseOption(int key, char *arg, struct argp_state *state) {
+    struct arguments *arguments = (struct arguments *)state->input;
+
+    switch (key) {
+    case 'm':
+        arguments->mode = arg;
+        break;
+    case 'w':
+        arguments->websocket = arg;
+        break;
+    case 't':
+        arguments->tun = arg;
+        break;
+    case 'd':
+        arguments->dhcp = arg;
+        break;
+    case 'p':
+        arguments->password = arg;
+        break;
+    case 'n':
+        arguments->name = arg;
+        break;
+    case 'c':
+        parseConfigFile(arguments, arg);
+        break;
+    case OPT_NO_TIMESTAMP:
+        set_no_timestamp();
+        break;
+    case ARGP_KEY_END:
+        if (needShowUsage(arguments, state))
+            argp_usage(state);
+        break;
+    }
+    return 0;
+}
+
+struct argp config = {
+    .options = options,
+    .parser = parseOption,
+};
+
+bool running = true;
+std::mutex mutex;
+std::condition_variable condition;
+
+void shutdown(int signal) {
+    running = false;
+    condition.notify_one();
+}
+
+int saveLatestAddress(const std::string &name, const std::string &cidr) {
+    std::string dhcpConfigFile = "/var/lib/candy/dhcp/";
+    dhcpConfigFile += name.empty() ? "_" : name;
+    std::filesystem::create_directories(std::filesystem::path(dhcpConfigFile).parent_path());
+    std::ofstream ofs(dhcpConfigFile);
+    if (ofs.is_open()) {
+        ofs << cidr;
+        ofs.close();
+    }
+    return 0;
+}
+
+std::string getLastestAddress(const std::string &name) {
+    std::string dhcpConfigFile = "/var/lib/candy/dhcp/";
+    dhcpConfigFile += name.empty() ? "_" : name;
+    std::ifstream ifs(dhcpConfigFile);
+    if (!ifs.is_open()) {
+        return "";
+    }
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    ifs.close();
+    return ss.str();
+}
+
+}; // namespace
+
+namespace Candy {
+void shutdown() {
+    ::shutdown(SIGQUIT);
+}
+} // namespace Candy
+
+int main(int argc, char *argv[]) {
+    Candy::Server server;
+    Candy::Client client;
+
+    struct arguments arguments;
+    argp_parse(&config, argc, argv, 0, 0, &arguments);
+
+    if (arguments.mode == "mixed" || arguments.mode == "server") {
+        server.setPassword(arguments.password);
+        server.setWebSocketServer(arguments.websocket);
+        server.setDynamicAddressRange(arguments.dhcp);
+        server.run();
+    }
+
+    if (arguments.mode == "mixed" || arguments.mode == "client") {
+        client.setPassword(arguments.password);
+        client.setWebSocketServer(arguments.websocket);
+        client.setLocalAddress(arguments.tun);
+        client.setDynamicAddress(getLastestAddress(arguments.name));
+        client.setName(arguments.name);
+        client.run();
+    }
+
+    spdlog::info("Service started successfully");
+
+    std::signal(SIGINT, shutdown);
+    std::signal(SIGTERM, shutdown);
+
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        condition.wait(lock, [&]() { return !running; });
+    }
+
+    server.shutdown();
+    client.shutdown();
+
+    if (arguments.mode == "mixed" || arguments.mode == "client") {
+        saveLatestAddress(arguments.name, client.getAddress());
+    }
+
+    spdlog::info("Service stopped successfully");
+
+    return 0;
+}
+
+#endif
