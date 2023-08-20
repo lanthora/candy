@@ -28,6 +28,10 @@ public:
         return 0;
     }
 
+    int getIP() {
+        return this->ip;
+    }
+
     int setMask(uint32_t mask) {
         this->mask = mask;
         return 0;
@@ -208,6 +212,12 @@ int Tun::setAddress(const std::string &cidr) {
         return -1;
     }
     return 0;
+}
+
+uint32_t Tun::getIP() {
+    std::shared_ptr<LinuxTun> tun;
+    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
+    return tun->getIP();
 }
 
 int Tun::setMTU(int mtu) {

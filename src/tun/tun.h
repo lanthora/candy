@@ -3,6 +3,7 @@
 #define CANDY_TUN_TUN_H
 
 #include <any>
+#include <cstdint>
 #include <string>
 
 namespace Candy {
@@ -17,6 +18,9 @@ public:
 
     // 设置 TUN 设备的地址和网络,以及由网络引入的路由.设置相同网络的流量路由到本设备.
     int setAddress(const std::string &cidr);
+
+    // 获取 IP 地址,用于发包前校验源 IP 是否相同
+    uint32_t getIP();
 
     // 设置 MTU, 这个数值应该略小于网络实际 MTU, 这样即使添加了 VPN 的包头也能一次发包.
     int setMTU(int mtu);

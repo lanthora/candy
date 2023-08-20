@@ -201,6 +201,10 @@ void Client::handleTunMessage() {
         if ((header->version_ihl >> 4) != 4) {
             continue;
         }
+        // 发包地址必须与登录地址相同
+        if (Address::netToHost(header->saddr) != this->tun.getIP()) {
+            continue;
+        }
 
         // 目前客户端只与服务端通信,所以可以不加判断的直接把数据发给服务端.
         // 未来支持端到端通信后,发送数据前先判断到目的地址能否直连,并通过直连的连接发送
