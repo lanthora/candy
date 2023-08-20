@@ -141,10 +141,10 @@ void shutdown(int signal) {
 }
 
 int saveLatestAddress(const std::string &name, const std::string &cidr) {
-    std::string dhcpConfigFile = "/var/lib/candy/dhcp/";
-    dhcpConfigFile += name.empty() ? "_" : name;
-    std::filesystem::create_directories(std::filesystem::path(dhcpConfigFile).parent_path());
-    std::ofstream ofs(dhcpConfigFile);
+    std::string cfgFile = "/var/lib/candy/address/";
+    cfgFile += name.empty() ? "__noname__" : name;
+    std::filesystem::create_directories(std::filesystem::path(cfgFile).parent_path());
+    std::ofstream ofs(cfgFile);
     if (ofs.is_open()) {
         ofs << cidr;
         ofs.close();
@@ -153,9 +153,9 @@ int saveLatestAddress(const std::string &name, const std::string &cidr) {
 }
 
 std::string getLastestAddress(const std::string &name) {
-    std::string dhcpConfigFile = "/var/lib/candy/dhcp/";
-    dhcpConfigFile += name.empty() ? "_" : name;
-    std::ifstream ifs(dhcpConfigFile);
+    std::string cfgFile = "/var/lib/candy/address/";
+    cfgFile += name.empty() ? "__noname__" : name;
+    std::ifstream ifs(cfgFile);
     if (!ifs.is_open()) {
         return "";
     }
