@@ -36,6 +36,7 @@ private:
     WebSocketServer ws;
 
     Address dynamic;
+    bool dynamicAddrEnabled = false;
 
     std::map<uint32_t, WebSocketConn> ipWsMap;
     std::map<WebSocketConn, uint32_t> wsIpMap;

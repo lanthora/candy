@@ -41,12 +41,20 @@ int Server::setPassword(const std::string &password) {
 }
 
 int Server::setDynamicAddressRange(const std::string &cidr) {
+    if (cidr.empty()) {
+        return 0;
+    }
     if (this->dynamic.cidrUpdate(cidr)) {
         spdlog::critical("Dynamic address generator init failed");
         return -1;
     }
-    this->dynamic.ipMaskUpdate(this->dynamic.getNet(), this->dynamic.getMask());
-    this->dynamic.next();
+    if (this->dynamic.ipMaskUpdate(this->dynamic.getNet(), this->dynamic.getMask())) {
+        return -1;
+    }
+    if (this->dynamic.next()) {
+        return -1;
+    }
+    this->dynamicAddrEnabled = true;
     return 0;
 }
 
@@ -66,7 +74,7 @@ int Server::shutdown() {
     }
 
     this->running = false;
-
+    this->dynamicAddrEnabled = false;
     if (this->wsThread.joinable()) {
         this->wsThread.join();
     }
@@ -159,24 +167,28 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
 }
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
+    if (!this->wsIpMap.contains(message.conn)) {
+        spdlog::debug("Unauthorized websocket client");
+        return;
+    }
+
     if (message.buffer.length() < sizeof(ForwardHeader)) {
         spdlog::warn("Invalid forawrd package: len={}", message.buffer.length());
         return;
     }
 
     ForwardHeader *header = (ForwardHeader *)message.buffer.data();
-    if (!this->ipWsMap.contains(Address::netToHost(header->iph.saddr))) {
-        spdlog::warn("Source client not logged in");
-        return;
-    }
+    Address auth, source, destination;
+    auth.ipUpdate(this->wsIpMap[message.conn]);
+    source.ipUpdate(Address::netToHost(header->iph.saddr));
+    destination.ipUpdate(Address::netToHost(header->iph.daddr));
 
-    if (this->ipWsMap[Address::netToHost(header->iph.saddr)] != message.conn) {
-        spdlog::warn("Source client address does not match connection");
-        return;
+    if (this->wsIpMap[message.conn] != Address::netToHost(header->iph.saddr)) {
+        spdlog::warn("Source address does not match authorized address: auth={} source={}", auth.getIpStr(), source.getIpStr());
     }
 
     if (!this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        spdlog::warn("Destination client not logged in");
+        spdlog::warn("Destination client not logged in: source={}  destination={}", source.getIpStr(), destination.getIpStr());
         return;
     }
 
@@ -199,8 +211,12 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     Address address;
     address.cidrUpdate(header->cidr);
 
-    // 期望使用的地址不再当前网络或已经被分配
+    // 期望使用的地址不在当前网络或已经被分配
     if (!dynamic.inSameNetwork(address) || this->ipWsMap.contains(address.getIp())) {
+        if (!this->dynamicAddrEnabled) {
+            spdlog::warn("The client requests a dynamic address, but the server does not enable this function");
+            return;
+        }
         // 生成下一个动态地址并检查是否可用
         uint32_t oldip = dynamic.getIp();
         uint32_t newip = oldip;
