@@ -8,7 +8,7 @@ namespace Candy {
 int Address::cidrUpdate(const std::string &cidr) {
     std::size_t pos = cidr.find('/');
     if (pos == std::string::npos) {
-        spdlog::error("invalid cidr format");
+        spdlog::error("invalid cidr format. cidr={0}", cidr);
         return -1;
     }
 
