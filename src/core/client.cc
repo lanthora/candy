@@ -148,7 +148,7 @@ void Client::handleWebSocketMessage() {
         if (message.type == WebSocketMessageType::Open) {
             if (!this->localAddress.empty()) {
                 if (startTunThread()) {
-                    spdlog::critical("Start tun thread failed");
+                    spdlog::critical("Start tun thread with static address failed");
                     break;
                 }
                 continue;
@@ -219,7 +219,11 @@ void Client::handleTunMessage() {
 
 void Client::sendDynamicAddressMessage() {
     Address address;
-    address.cidrUpdate(this->dynamicAddress);
+    if (address.cidrUpdate(this->dynamicAddress)) {
+        spdlog::critical("Cannot send invalid dynamic address");
+        Candy::shutdown();
+        return;
+    }
 
     DynamicAddressHeader header(address.getCidr());
     header.updateHash(this->password);
@@ -232,7 +236,11 @@ void Client::sendDynamicAddressMessage() {
 
 void Client::sendAuthMessage() {
     Address address;
-    address.cidrUpdate(this->localAddress);
+    if (address.cidrUpdate(this->localAddress)) {
+        spdlog::critical("Cannot send invalid auth address");
+        Candy::shutdown();
+        return;
+    }
 
     AuthHeader header(address.getIp());
     header.updateHash(this->password);
@@ -259,7 +267,9 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
     }
 
     this->localAddress = address.getCidr();
-    startTunThread();
+    if (startTunThread()) {
+        spdlog::critical("Start tun thread with dynamic address failed");
+    }
 }
 
 void Client::handleForwardMessage(WebSocketMessage &message) {
