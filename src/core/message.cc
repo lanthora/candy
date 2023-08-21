@@ -20,7 +20,7 @@ void AuthHeader::updateHash(const std::string &password) {
 
 bool AuthHeader::check(const std::string &password) {
     // 检查时间戳
-    if (std::abs(Time::unixTime() - Time::netToHost(this->timestamp)) > 30) {
+    if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
         spdlog::warn("Auth header timestamp check failed. timestamp={0}", Time::netToHost(this->timestamp));
         return false;
     }
@@ -59,7 +59,7 @@ void DynamicAddressHeader::updateHash(const std::string &password) {
 
 bool DynamicAddressHeader::check(const std::string &password) {
     // 检查时间戳
-    if (std::abs(Time::unixTime() - Time::netToHost(this->timestamp)) > 30) {
+    if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
         spdlog::warn("Dynamic address header timestamp check failed. timestamp={0}", Time::netToHost(this->timestamp));
         return false;
     }
