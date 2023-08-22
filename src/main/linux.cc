@@ -27,10 +27,9 @@ const int OPT_NO_TIMESTAMP = 1;
 
 struct argp_option options[] = {
     {"mode", 'm', "MODE", 0,
-     "Select work mode. MODE must choose one of the following values: server, client, mixed. When MODE is server, the websocket "
-     "service will be started. When MODE is client, a connection will be initiated to the websocket service. At the same time, "
-     "IP layer data forwarding will be performed through tun. When MODE is mixed, it works as server and client at the same "
-     "time"},
+     "Select work mode. MODE must choose one of the following values: server, client. When MODE is server, the websocket service "
+     "will be started. When MODE is client, a connection will be initiated to the websocket service. At the same time, IP layer "
+     "data forwarding will be performed through tun."},
     {"websocket", 'w', "URI", 0,
      "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This service only "
      "handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. Except for testing needs, it "
@@ -53,7 +52,7 @@ struct argp_option options[] = {
     {},
 };
 
-int set_no_timestamp() {
+int disableLogTimestamp() {
     spdlog::set_pattern("[%^%l%$] %v");
     return 0;
 }
@@ -62,7 +61,7 @@ bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
     if (state->arg_num > 0)
         return true;
 
-    if (arguments->mode.empty())
+    if (arguments->mode != "client" && arguments->mode != "server")
         return true;
 
     if (arguments->websocket.empty())
@@ -82,10 +81,10 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("password", arguments->password);
         cfg.lookupValue("name", arguments->name);
     } catch (const libconfig::FileIOException &fioex) {
-        spdlog::critical("I/O error while reading configuration file");
+        spdlog::critical("i/o error while reading configuration file");
         exit(1);
     } catch (const libconfig::ParseException &pex) {
-        spdlog::critical("Parse error at {0} : {1} - {2}", pex.getFile(), pex.getLine(), pex.getError());
+        spdlog::critical("parse error at {} : {} - {}", pex.getFile(), pex.getLine(), pex.getError());
         exit(1);
     }
 }
@@ -116,7 +115,7 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         parseConfigFile(arguments, arg);
         break;
     case OPT_NO_TIMESTAMP:
-        set_no_timestamp();
+        disableLogTimestamp();
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
@@ -180,14 +179,14 @@ int main(int argc, char *argv[]) {
     struct arguments arguments;
     argp_parse(&config, argc, argv, 0, 0, &arguments);
 
-    if (arguments.mode == "mixed" || arguments.mode == "server") {
+    if (arguments.mode == "server") {
         server.setPassword(arguments.password);
         server.setWebSocketServer(arguments.websocket);
         server.setDynamicAddressRange(arguments.dhcp);
         server.run();
     }
 
-    if (arguments.mode == "mixed" || arguments.mode == "client") {
+    if (arguments.mode == "client") {
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setLocalAddress(arguments.tun);
@@ -196,7 +195,7 @@ int main(int argc, char *argv[]) {
         client.run();
     }
 
-    spdlog::info("Service started successfully");
+    spdlog::info("service started successfully");
 
     std::signal(SIGINT, shutdown);
     std::signal(SIGTERM, shutdown);
@@ -209,11 +208,11 @@ int main(int argc, char *argv[]) {
     server.shutdown();
     client.shutdown();
 
-    if (arguments.mode == "mixed" || arguments.mode == "client") {
+    if (arguments.mode == "client") {
         saveLatestAddress(arguments.name, client.getAddress());
     }
 
-    spdlog::info("Service stopped successfully");
+    spdlog::info("service stopped successfully");
 
     return 0;
 }
