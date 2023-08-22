@@ -157,13 +157,13 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
     Address address;
     address.ipUpdate(Address::netToHost(header->ip));
     if (this->ipWsMap.contains(address.getIp())) {
-        this->ws.close(ipWsMap[address.getIp()]);
+        this->ws.close(this->ipWsMap[address.getIp()]);
         spdlog::info("{} conflict, old connection kicked out", address.getIpStr());
     }
 
     spdlog::info("{} connected", address.getIpStr());
-    ipWsMap[address.getIp()] = message.conn;
-    wsIpMap[message.conn] = address.getIp();
+    this->ipWsMap[address.getIp()] = message.conn;
+    this->wsIpMap[message.conn] = address.getIp();
 }
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
@@ -192,7 +192,7 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
         return;
     }
 
-    message.conn = ipWsMap[Address::netToHost(header->iph.daddr)];
+    message.conn = this->ipWsMap[Address::netToHost(header->iph.daddr)];
     this->ws.write(message);
 }
 
@@ -252,7 +252,12 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
         this->ipWsMap.erase(it->second);
     }
 
-    this->wsIpMap.erase(message.conn);
+    Address address;
+    if (!address.ipUpdate(it->second)) {
+        spdlog::info("{} disconnected", address.getIpStr());
+    }
+
+    this->wsIpMap.erase(it);
 }
 
 }; // namespace Candy
