@@ -8,7 +8,7 @@ namespace Candy {
 int Address::cidrUpdate(const std::string &cidr) {
     std::size_t pos = cidr.find('/');
     if (pos == std::string::npos) {
-        spdlog::error("invalid cidr format. cidr={0}", cidr);
+        spdlog::error("invalid cidr format. cidr {}", cidr);
         return -1;
     }
 
@@ -21,11 +21,11 @@ int Address::cidrUpdate(const std::string &cidr) {
 int Address::ipMaskStrUpdate(const std::string &ipStr, const std::string &maskStr) {
     uint32_t ip, mask;
     if (inet_pton(AF_INET, ipStr.c_str(), &ip) != 1) {
-        spdlog::error("Invalid ip format. ip={0}", ipStr);
+        spdlog::error("invalid ip format: ip {}", ipStr);
         return -1;
     }
     if (inet_pton(AF_INET, maskStr.c_str(), &mask) != 1) {
-        spdlog::error("Invalid mask format. mask={0}", maskStr);
+        spdlog::error("invalid mask format: mask {}", maskStr);
         return -1;
     }
     ip = ntohl(ip);
@@ -74,7 +74,7 @@ bool Address::inSameNetwork(const Address &address) {
 
 int Address::next() {
     if (this->prefix >= 31) {
-        spdlog::error("Unable to generate next available address: prefix={}", this->prefix);
+        spdlog::error("unable to generate next available address: prefix {}", this->prefix);
         return -1;
     }
 
@@ -150,7 +150,7 @@ int Address::prefixStrToMaskStr(const std::string &prefixStr, std::string &maskS
 
 int Address::prefixToMask(uint32_t prefix, uint32_t &mask) {
     if (prefix > 32 || prefix < 0) {
-        spdlog::critical("CIDR prefix exception. value: {0}", prefix);
+        spdlog::critical("cidr prefix exception: prefix {}", prefix);
         return -1;
     }
 
@@ -173,7 +173,7 @@ int Address::maskToPrefix(uint32_t mask, uint32_t &prefix) {
     }
     for (uint32_t idx = prefix; idx < 32; ++idx) {
         if ((0x80000000 >> idx) & (mask)) {
-            spdlog::error("Invalid mask. mask={0}", mask);
+            spdlog::error("invalid mask: mask {}", mask);
             return -1;
         }
     }

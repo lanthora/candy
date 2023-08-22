@@ -12,7 +12,7 @@ namespace Candy {
 int Server::setWebSocketServer(const std::string &uri) {
     Uri parser(uri);
     if (!parser.isValid()) {
-        spdlog::critical("Invalid websocket uri: {}", uri);
+        spdlog::critical("invalid websocket uri: {}", uri);
         return -1;
     }
     if (parser.scheme() != "ws") {
@@ -27,7 +27,7 @@ int Server::setWebSocketServer(const std::string &uri) {
     // 服务端必须指定 IP 地址和端口号,不能用域名
     Address address;
     if (address.ipStrUpdate(parser.host())) {
-        spdlog::critical("Invalid websocket server ip: {}", parser.host());
+        spdlog::critical("invalid websocket server ip: {}", parser.host());
         return -1;
     }
     this->ipStr = address.getIpStr();
@@ -45,7 +45,7 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
         return 0;
     }
     if (this->dynamic.cidrUpdate(cidr)) {
-        spdlog::critical("Dynamic address generator init failed");
+        spdlog::critical("dynamic address generator init failed");
         return -1;
     }
     if (this->dynamic.ipMaskUpdate(this->dynamic.getNet(), this->dynamic.getMask())) {
@@ -62,7 +62,7 @@ int Server::run() {
     this->running = true;
 
     if (startWsThread()) {
-        spdlog::critical("Start websocket server thread failed");
+        spdlog::critical("start websocket server thread failed");
         return -1;
     }
     return 0;
@@ -85,12 +85,12 @@ int Server::shutdown() {
 
 int Server::startWsThread() {
     if (this->ws.listen(this->ipStr, this->port)) {
-        spdlog::critical("Websocket server listen failed");
+        spdlog::critical("websocket server listen failed");
         return -1;
     }
 
     if (this->ws.setTimeout(1)) {
-        spdlog::critical("Websocket server set read write timeout failed");
+        spdlog::critical("websocket server set read write timeout failed");
         return -1;
     }
 
@@ -108,7 +108,7 @@ void Server::handleWebSocketMessage() {
             continue;
         }
         if (error < 0) {
-            spdlog::error("WebSocket server read failed: error={0}", error);
+            spdlog::error("websocket server read failed: error {}", error);
             break;
         }
 
@@ -125,7 +125,7 @@ void Server::handleWebSocketMessage() {
                 handleDynamicAddressMessage(message);
                 continue;
             }
-            spdlog::warn("Unknown message type. type={0}", message.buffer.front());
+            spdlog::warn("unknown message type. type {}", message.buffer.front());
             continue;
         }
 
@@ -134,7 +134,7 @@ void Server::handleWebSocketMessage() {
             continue;
         }
         if (message.type == WebSocketMessageType::Error) {
-            spdlog::critical("WebSocket communication exception");
+            spdlog::critical("websocket communication exception");
             break;
         }
     }
@@ -144,36 +144,39 @@ void Server::handleWebSocketMessage() {
 
 void Server::handleAuthMessage(WebSocketMessage &message) {
     if (message.buffer.length() != sizeof(AuthHeader)) {
-        spdlog::warn("Invalid auth package: len={}", message.buffer.length());
+        spdlog::warn("invalid auth package: len {}", message.buffer.length());
         return;
     }
 
     AuthHeader *header = (AuthHeader *)message.buffer.data();
     if (!header->check(this->password)) {
-        spdlog::warn("Auth header check failed: buffer={:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("auth header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 
     Address address;
-    address.ipUpdate(Address::netToHost(header->ip));
+    if (address.ipUpdate(Address::netToHost(header->ip))) {
+        spdlog::info("invalid auth ip: buffer {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
     if (this->ipWsMap.contains(address.getIp())) {
         this->ws.close(this->ipWsMap[address.getIp()]);
-        spdlog::info("{} conflict, old connection kicked out", address.getIpStr());
+        spdlog::info("ip conflict, old connection kicked out: {}", address.getIpStr());
     }
 
-    spdlog::info("{} connected", address.getIpStr());
+    spdlog::info("new client connected: {}", address.getIpStr());
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
 }
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
     if (!this->wsIpMap.contains(message.conn)) {
-        spdlog::debug("Unauthorized websocket client");
+        spdlog::debug("unauthorized websocket client");
         return;
     }
 
     if (message.buffer.length() < sizeof(ForwardHeader)) {
-        spdlog::warn("Invalid forawrd package: len={}", message.buffer.length());
+        spdlog::warn("invalid forawrd package: len {}", message.buffer.length());
         return;
     }
 
@@ -184,11 +187,12 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     destination.ipUpdate(Address::netToHost(header->iph.daddr));
 
     if (this->wsIpMap[message.conn] != Address::netToHost(header->iph.saddr)) {
-        spdlog::warn("Source address does not match authorized address: auth={} source={}", auth.getIpStr(), source.getIpStr());
+        spdlog::warn("source address does not match authorized address: auth {} source {}", auth.getIpStr(), source.getIpStr());
+        return;
     }
 
     if (!this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        spdlog::warn("Destination client not logged in: source={}  destination={}", source.getIpStr(), destination.getIpStr());
+        spdlog::warn("destination client not logged in: source {}  destination {}", source.getIpStr(), destination.getIpStr());
         return;
     }
 
@@ -198,13 +202,13 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
 
 void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (message.buffer.length() != sizeof(DynamicAddressHeader)) {
-        spdlog::warn("Invalid dynamic address package: len={}", message.buffer.length());
+        spdlog::warn("invalid dynamic address package: len {}", message.buffer.length());
         return;
     }
 
     DynamicAddressHeader *header = (DynamicAddressHeader *)message.buffer.data();
     if (!header->check(this->password)) {
-        spdlog::warn("Dynamic address header check failed: buffer={:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("dynamic address header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 
@@ -214,7 +218,7 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     // 期望使用的地址不在当前网络或已经被分配
     if (!dynamic.inSameNetwork(address) || this->ipWsMap.contains(address.getIp())) {
         if (!this->dynamicAddrEnabled) {
-            spdlog::warn("The client requests a dynamic address, but the server does not enable this function");
+            spdlog::warn("the client requests a dynamic address, but the server does not enable this function");
             return;
         }
         // 生成下一个动态地址并检查是否可用
@@ -223,12 +227,12 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
         while (this->ipWsMap.contains(newip)) {
             // 获取下一个地址失败,一般不会发生,除非输入的配置错误
             if (this->dynamic.next()) {
-                spdlog::error("Unable to get next available address");
+                spdlog::error("unable to get next available address");
                 return;
             }
             newip = dynamic.getIp();
             if (oldip == newip) {
-                spdlog::warn("All addresses in the network are assigned");
+                spdlog::warn("all addresses in the network are assigned");
                 return;
             }
         }
@@ -254,7 +258,7 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
 
     Address address;
     if (!address.ipUpdate(it->second)) {
-        spdlog::info("{} disconnected", address.getIpStr());
+        spdlog::info("client disconnected: {}", address.getIpStr());
     }
 
     this->wsIpMap.erase(it);

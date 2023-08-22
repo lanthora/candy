@@ -25,11 +25,11 @@ int Client::setPassword(const std::string &password) {
 int Client::setWebSocketServer(const std::string &uri) {
     Uri parser(uri);
     if (!parser.isValid()) {
-        spdlog::critical("Client websocket server parser failed");
+        spdlog::critical("client websocket server parser failed");
         return -1;
     }
     if (parser.scheme() != "ws" && parser.scheme() != "wss") {
-        spdlog::critical("Invalid websocket scheme {}", parser.scheme());
+        spdlog::critical("invalid websocket scheme {}", parser.scheme());
         return -1;
     }
     this->wsUri = uri;
@@ -53,7 +53,7 @@ std::string Client::getAddress() {
 int Client::run() {
     this->running = true;
     if (startWsThread()) {
-        spdlog::critical("Start websocket client thread failed");
+        spdlog::critical("start websocket client thread failed");
         return -1;
     }
     return 0;
@@ -80,11 +80,11 @@ int Client::shutdown() {
 
 int Client::startWsThread() {
     if (this->ws.connect(this->wsUri)) {
-        spdlog::critical("Websocket client connect failed");
+        spdlog::critical("websocket client connect failed");
         return -1;
     }
     if (this->ws.setTimeout(1)) {
-        spdlog::critical("Websocket clinet set read write timeout failed");
+        spdlog::critical("websocket clinet set read write timeout failed");
         return -1;
     }
 
@@ -127,7 +127,7 @@ void Client::handleWebSocketMessage() {
             continue;
         }
         if (error < 0) {
-            spdlog::critical("WebSocket client read failed: error={0}", error);
+            spdlog::critical("webSocket client read failed: error {}", error);
             break;
         }
         if (message.type == WebSocketMessageType::Message) {
@@ -141,14 +141,14 @@ void Client::handleWebSocketMessage() {
                 handleDynamicAddressMessage(message);
                 continue;
             }
-            spdlog::warn("Unknown message type. type={0}", message.buffer.front());
+            spdlog::warn("unknown message type. type {}", message.buffer.front());
             continue;
         }
 
         if (message.type == WebSocketMessageType::Open) {
             if (!this->localAddress.empty()) {
                 if (startTunThread()) {
-                    spdlog::critical("Start tun thread with static address failed");
+                    spdlog::critical("start tun thread with static address failed");
                     break;
                 }
                 continue;
@@ -157,19 +157,19 @@ void Client::handleWebSocketMessage() {
             Address address;
             if (this->dynamicAddress.empty() || address.cidrUpdate(this->dynamicAddress)) {
                 this->dynamicAddress = "0.0.0.0/0";
-                spdlog::warn("Invalid dynamic address, set dynamic address to {}", this->dynamicAddress);
+                spdlog::warn("invalid dynamic address, set dynamic address to {}", this->dynamicAddress);
             }
             sendDynamicAddressMessage();
             continue;
         }
         // 连接断开,可能是地址冲突,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Close) {
-            spdlog::info("WebSocket communication disconnected");
+            spdlog::info("websocket communication disconnected");
             break;
         }
         // 通信出现错误,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Error) {
-            spdlog::critical("WebSocket communication exception");
+            spdlog::critical("websocket communication exception");
             break;
         }
     }
@@ -189,7 +189,7 @@ void Client::handleTunMessage() {
             continue;
         }
         if (error < 0) {
-            spdlog::critical("Tun read failed. error={0}", error);
+            spdlog::critical("tun read failed. error {}", error);
             break;
         }
         if (buffer.length() < sizeof(IPv4Header)) {
@@ -220,7 +220,7 @@ void Client::handleTunMessage() {
 void Client::sendDynamicAddressMessage() {
     Address address;
     if (address.cidrUpdate(this->dynamicAddress)) {
-        spdlog::critical("Cannot send invalid dynamic address");
+        spdlog::critical("cannot send invalid dynamic address");
         Candy::shutdown();
         return;
     }
@@ -237,7 +237,7 @@ void Client::sendDynamicAddressMessage() {
 void Client::sendAuthMessage() {
     Address address;
     if (address.cidrUpdate(this->localAddress)) {
-        spdlog::critical("Cannot send invalid auth address");
+        spdlog::critical("cannot send invalid auth address");
         Candy::shutdown();
         return;
     }
@@ -253,8 +253,8 @@ void Client::sendAuthMessage() {
 
 void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (message.buffer.size() != sizeof(DynamicAddressHeader)) {
-        spdlog::warn("Invalid dynamic address package: len={}", message.buffer.length());
-        spdlog::debug("Dynamic address buffer: {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("invalid dynamic address package: len {}", message.buffer.length());
+        spdlog::debug("dynamic address buffer: {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 
@@ -262,19 +262,19 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
 
     Address address;
     if (address.cidrUpdate(header->cidr)) {
-        spdlog::warn("Invalid dynamic address ip: cidr={}", header->cidr);
+        spdlog::warn("invalid dynamic address ip: cidr {}", header->cidr);
         return;
     }
 
     this->localAddress = address.getCidr();
     if (startTunThread()) {
-        spdlog::critical("Start tun thread with dynamic address failed");
+        spdlog::critical("start tun thread with dynamic address failed");
     }
 }
 
 void Client::handleForwardMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(ForwardHeader)) {
-        spdlog::warn("Invalid forward package: {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("invalid forward package: {:n}", spdlog::to_hex(message.buffer));
     }
 
     const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);

@@ -49,13 +49,13 @@ static int64_t ntpTime() {
     hints.ai_socktype = SOCK_DGRAM;
 
     if (getaddrinfo("pool.ntp.org", "123", &hints, &info)) {
-        spdlog::warn("Resolve NTP server domain name failed");
+        spdlog::warn("resolve ntp server domain name failed");
         goto out;
     }
 
     sockfd = socket(info->ai_family, info->ai_socktype, IPPROTO_UDP);
     if (sockfd == -1) {
-        spdlog::warn("Create udp socket failed");
+        spdlog::warn("create udp socket failed");
         goto out;
     }
 
@@ -64,7 +64,7 @@ static int64_t ntpTime() {
 
     len = sendto(sockfd, &packet, sizeof(packet), 0, info->ai_addr, info->ai_addrlen);
     if (len == -1) {
-        spdlog::warn("send NTP request failed");
+        spdlog::warn("send ntp request failed");
         goto out;
     }
 
@@ -73,13 +73,13 @@ static int64_t ntpTime() {
         goto out;
     }
     if (len < 0) {
-        spdlog::warn("NTP client select failed");
+        spdlog::warn("ntp client select failed");
         goto out;
     }
 
     len = recv(sockfd, &packet, sizeof(packet), 0);
     if (len == -1) {
-        spdlog::warn("Recv NTP response failed");
+        spdlog::warn("recv ntp response failed");
         goto out;
     }
 
@@ -115,7 +115,7 @@ int64_t Time::unixTime() {
     int64_t timestamp = 0;
     for (int i = 0; i < 3 && timestamp == 0; ++i) {
         if (i > 0) {
-            spdlog::debug("Get time from ntp server failed: retry {}", i);
+            spdlog::debug("get time from ntp server failed: retry {}", i);
         }
         timestamp = ntpTime();
     }
@@ -125,7 +125,7 @@ int64_t Time::unixTime() {
     }
 
     using namespace std::chrono;
-    spdlog::warn("Unable to get the time from the network, please make sure the local time is accurate");
+    spdlog::warn("unable to get the time from the network, please make sure the local time is accurate");
     return duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
 }
 

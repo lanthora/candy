@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "core/message.h"
 #include "utility/address.h"
 #include <spdlog/spdlog.h>
@@ -21,7 +22,7 @@ void AuthHeader::updateHash(const std::string &password) {
 bool AuthHeader::check(const std::string &password) {
     // 检查时间戳
     if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
-        spdlog::warn("Auth header timestamp check failed. timestamp={0}", Time::netToHost(this->timestamp));
+        spdlog::warn("auth header timestamp check failed. timestamp {}", Time::netToHost(this->timestamp));
         return false;
     }
 
@@ -34,7 +35,7 @@ bool AuthHeader::check(const std::string &password) {
 
     // 检查上报的哈希和填充的哈希是否相等
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("Auth header hash check failed");
+        spdlog::warn("auth header hash check failed");
         return false;
     }
     return true;
@@ -60,7 +61,7 @@ void DynamicAddressHeader::updateHash(const std::string &password) {
 bool DynamicAddressHeader::check(const std::string &password) {
     // 检查时间戳
     if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
-        spdlog::warn("Dynamic address header timestamp check failed. timestamp={0}", Time::netToHost(this->timestamp));
+        spdlog::warn("dynamic address header timestamp check failed: timestamp {}", Time::netToHost(this->timestamp));
         return false;
     }
 
@@ -73,7 +74,7 @@ bool DynamicAddressHeader::check(const std::string &password) {
 
     // 检查上报的哈希和填充的哈希是否相等
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("Dynamic address header hash check failed");
+        spdlog::warn("dynamic address header hash check failed");
         return false;
     }
     return true;
