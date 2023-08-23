@@ -5,11 +5,16 @@ on:
     branches: [master]
 
 jobs:
-  build-job:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       
+      - name: Code Format
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          check-path: 'src'
+
       - name: Build
         run: docker build .
