@@ -253,12 +253,11 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
     }
 
     if (this->ipWsMap[it->second] == message.conn) {
+        Address address;
+        if (!address.ipUpdate(it->second)) {
+            spdlog::info("client disconnected: {}", address.getIpStr());
+        }
         this->ipWsMap.erase(it->second);
-    }
-
-    Address address;
-    if (!address.ipUpdate(it->second)) {
-        spdlog::info("client disconnected: {}", address.getIpStr());
     }
 
     this->wsIpMap.erase(it);
