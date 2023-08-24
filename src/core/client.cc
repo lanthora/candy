@@ -54,6 +54,7 @@ int Client::run() {
     this->running = true;
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
+        Candy::shutdown();
         return -1;
     }
     return 0;
@@ -149,6 +150,7 @@ void Client::handleWebSocketMessage() {
             if (!this->localAddress.empty()) {
                 if (startTunThread()) {
                     spdlog::critical("start tun thread with static address failed");
+                    Candy::shutdown();
                     break;
                 }
                 continue;
@@ -269,6 +271,7 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
     this->localAddress = address.getCidr();
     if (startTunThread()) {
         spdlog::critical("start tun thread with dynamic address failed");
+        Candy::shutdown();
     }
 }
 
