@@ -164,12 +164,12 @@ void Client::handleWebSocketMessage() {
         }
         // 连接断开,可能是地址冲突,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Close) {
-            spdlog::info("websocket communication disconnected");
+            spdlog::info("client websocket close: {}", message.buffer);
             break;
         }
         // 通信出现错误,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Error) {
-            spdlog::critical("websocket communication exception");
+            spdlog::critical("client websocket error: {}", message.buffer);
             break;
         }
     }

@@ -134,7 +134,7 @@ void Server::handleWebSocketMessage() {
             continue;
         }
         if (message.type == WebSocketMessageType::Error) {
-            spdlog::critical("websocket communication exception");
+            spdlog::critical("server websocket error: {}", message.buffer);
             break;
         }
     }
