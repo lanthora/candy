@@ -156,6 +156,7 @@ std::string getLastestAddress(const std::string &name) {
     cfgFile += name.empty() ? "__noname__" : name;
     std::ifstream ifs(cfgFile);
     if (!ifs.is_open()) {
+        spdlog::warn("make sure the file is persistent to use a previously assigned address: {}", cfgFile);
         return "";
     }
     std::stringstream ss;
