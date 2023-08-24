@@ -51,9 +51,6 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
     if (this->dynamic.ipMaskUpdate(this->dynamic.getNet(), this->dynamic.getMask())) {
         return -1;
     }
-    if (this->dynamic.next()) {
-        return -1;
-    }
     this->dynamicAddrEnabled = true;
     return 0;
 }
@@ -223,8 +220,8 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
         }
         // 生成下一个动态地址并检查是否可用
         uint32_t oldip = dynamic.getIp();
-        uint32_t newip = oldip;
-        while (this->ipWsMap.contains(newip)) {
+        uint32_t newip = 0;
+        do {
             // 获取下一个地址失败,一般不会发生,除非输入的配置错误
             if (this->dynamic.next()) {
                 spdlog::error("unable to get next available address");
@@ -235,7 +232,7 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
                 spdlog::warn("all addresses in the network are assigned");
                 return;
             }
-        }
+        } while (this->ipWsMap.contains(newip));
         address.ipMaskUpdate(dynamic.getIp(), dynamic.getMask());
     }
 

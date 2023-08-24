@@ -11,13 +11,13 @@
 你只需一个命令,就可以加入我们的虚拟私人网络.
 
 ```bash
-podman run --rm --privileged=true --net=host --device /dev/net/tun --volume /var/lib/candy:/var/lib/candy ghcr.io/lanthora/candy
+podman run --rm --privileged=true --net=host --device /dev/net/tun docker.io/lanthora/candy:latest
 ```
 
 如果你想搭建自己的虚拟私人网络也很简单.具体步骤请参考帮助文档.
 
 ```bash
-podman run --rm ghcr.io/lanthora/candy --help
+podman run --rm docker.io/lanthora/candy:latest --help
 ```
 
 我们也欢迎你加入我们的 [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1), 和我们分享你的反馈意见.
