@@ -1,5 +1,7 @@
 # Design
 
+[Index](index.md) | Design | [Specification](specification.md)
+
 ## The Simplest Usage of TUN/TAP
 
 Refer to [simpletun](https://github.com/gregnietsky/simpletun) for the simplest peer-to-peer communication.

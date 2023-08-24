@@ -1,6 +1,6 @@
 # Specification
 
-We use WebSocket to transmit data, which is a reliable message-oriented transmission method without considering the problems of TCP "sticky packets" and UDP packet loss.
+[Index](index.md) | [Design](design.md) | Specification
 
 ## Handshake Message
 

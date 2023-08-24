@@ -1,6 +1,6 @@
-# Candy
+# Candy - A WebSocket and TUN based VPN for Linux
 
-A WebSocket and TUN based VPN for Linux.
+Index | [Design](design.md) | [Specification](specification.md)
 
 ## Candy Is A VPN, Not A Proxy
 
