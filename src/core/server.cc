@@ -57,9 +57,9 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
 
 int Server::run() {
     this->running = true;
-
     if (startWsThread()) {
         spdlog::critical("start websocket server thread failed");
+        Candy::shutdown();
         return -1;
     }
     return 0;
