@@ -27,6 +27,7 @@ public:
         this->ixWs->setPingInterval(30);
         this->ixWs->disablePerMessageDeflate();
         this->ixWs->setOnMessageCallback(std::bind(&WebSocketClientImpl::handleMessage, this, std::placeholders::_1));
+        this->ixWs->disableAutomaticReconnection();
         this->ixWs->setAutoThreadName(false);
         this->ixWs->start();
 
