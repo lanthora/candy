@@ -7,6 +7,7 @@ FetchContent_Declare(
 )
 
 set(USE_TLS 1 CACHE BOOL "" FORCE)
+set(USE_OPEN_SSL 1 CACHE BOOL "" FORCE)
 
 FetchContent_GetProperties(ixwebsocket)
 if(NOT ixwebsocket_POPULATED)
