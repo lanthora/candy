@@ -1,6 +1,8 @@
 # Design
 
-[Index](index.md) | Design | [Specification](specification.md)
+- [Index](index.md)
+- Design
+- [Specification](specification.md)
 
 ## The Simplest Usage of TUN/TAP
 

@@ -1,3 +1,3 @@
 title: Candy
-subtitle: "A WebSocket and TUN based VPN for Linux"
-show_downloads: true
+subtitle: "A WebSocket and TUN based VPN"
+theme: jekyll-theme-hacker

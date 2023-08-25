@@ -1,6 +1,8 @@
 # Specification
 
-[Index](index.md) | [Design](design.md) | Specification
+- [Index](index.md)
+- [Design](design.md)
+- Specification
 
 ## Handshake Message
 
