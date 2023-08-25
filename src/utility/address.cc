@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: MIT
 #include "utility/address.h"
-#include <arpa/inet.h>
 #include <spdlog/spdlog.h>
+
+#if defined(__linux__) || defined(__linux)
+#include <arpa/inet.h>
+#elif defined(__APPLE__) || defined(__MACH__)
+#include <arpa/inet.h>
+#elif defined(_WIN32) || defined(_WIN64)
+#include <ws2tcpip.h>
+#endif
 
 namespace Candy {
 
 int Address::cidrUpdate(const std::string &cidr) {
     std::size_t pos = cidr.find('/');
     if (pos == std::string::npos) {
-        spdlog::error("invalid cidr format. cidr {}", cidr);
+        spdlog::error("invalid cidr format: {}", cidr);
         return -1;
     }
 
@@ -28,17 +35,30 @@ int Address::ipMaskStrUpdate(const std::string &ipStr, const std::string &maskSt
         spdlog::error("invalid mask format: mask {}", maskStr);
         return -1;
     }
-    ip = ntohl(ip);
-    mask = ntohl(mask);
+    ip = netToHost(ip);
+    mask = netToHost(mask);
     return this->ipMaskUpdate(ip, mask);
 }
 
 int Address::ipMaskUpdate(uint32_t ip, uint32_t mask) {
     this->ip = ip;
     this->mask = mask;
-    this->ipStr = inet_ntoa((in_addr)htonl(this->ip));
-    this->maskStr = inet_ntoa((in_addr)htonl(this->mask));
+    ip = hostToNet(ip);
+    mask = hostToNet(mask);
+    char buffer[16];
+    if (!inet_ntop(AF_INET, &ip, buffer, sizeof(buffer))) {
+        spdlog::error("invalid ip format: ip {:08x}", ip);
+        return -1;
+    }
+    this->ipStr = buffer;
+    if (!inet_ntop(AF_INET, &mask, buffer, sizeof(buffer))) {
+        spdlog::error("invalid mask format: mask {:08x}", mask);
+        return -1;
+    }
+    this->maskStr = buffer;
+
     if (maskToPrefix(this->mask, this->prefix)) {
+        spdlog::error("mask to prefix failed: mask {:08x}", mask);
         return -1;
     }
     this->prefixStr = std::to_string(this->prefix);
@@ -144,7 +164,13 @@ int Address::prefixStrToMaskStr(const std::string &prefixStr, std::string &maskS
         return -1;
     }
 
-    maskStr = inet_ntoa((in_addr)htonl(mask));
+    char buffer[16];
+    mask = hostToNet(mask);
+    if (!inet_ntop(AF_INET, &mask, buffer, sizeof(buffer))) {
+        spdlog::error("invalid mask format: mask {:08x}", mask);
+        return -1;
+    }
+    maskStr = buffer;
     return 0;
 }
 

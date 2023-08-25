@@ -189,7 +189,7 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     }
 
     if (!this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        spdlog::warn("destination client not logged in: source {}  destination {}", source.getIpStr(), destination.getIpStr());
+        spdlog::warn("destination client not logged in: source {} destination {}", source.getIpStr(), destination.getIpStr());
         return;
     }
 
