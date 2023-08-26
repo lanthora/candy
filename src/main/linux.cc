@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
     server.shutdown();
     client.shutdown();
 
-    if (arguments.mode == "client") {
+    if (!client.getAddress().empty()) {
         saveLatestAddress(arguments.name, client.getAddress());
     }
 
