@@ -2,6 +2,7 @@
 #ifndef CANDY_CORE_MESSAGE_H
 #define CANDY_CORE_MESSAGE_H
 
+#include "utility/address.h"
 #include "utility/time.h"
 #include <cstdint>
 #include <cstring>
@@ -10,26 +11,14 @@
 
 namespace Candy {
 
-struct IPv4Header {
-    unsigned char version_ihl; // 版本号和首部长度
-    unsigned char tos;         // 服务类型
-    unsigned short tot_len;    // 总长度
-    unsigned short id;         // 标识
-    unsigned short frag_off;   // 分片偏移
-    unsigned char ttl;         // 生存时间
-    unsigned char protocol;    // 协议类型
-    unsigned short check;      // 校验和
-    unsigned int saddr;        // 源地址
-    unsigned int daddr;        // 目的地址
-};
-
 namespace MessageType {
-enum {
-    TYPE_AUTH = 0,
-    TYPE_FORWARD = 1,
-    TYPE_DYNAMIC_ADDRESS = 2,
-};
-};
+
+constexpr uint8_t AUTH = 0;
+constexpr uint8_t FORWARD = 1;
+constexpr uint8_t DHCP = 2;
+constexpr uint8_t PEER = 3;
+
+}; // namespace MessageType
 
 struct AuthHeader {
     uint8_t type;
@@ -49,15 +38,25 @@ struct ForwardHeader {
     ForwardHeader();
 } __attribute__((packed));
 
-struct DynamicAddressHeader {
+struct DynamicAddressMessage {
     uint8_t type;
     int64_t timestamp;
     char cidr[32];
     uint8_t hash[SHA256_DIGEST_LENGTH];
 
-    DynamicAddressHeader(const std::string &cidr);
+    DynamicAddressMessage(const std::string &cidr);
     void updateHash(const std::string &password);
     bool check(const std::string &password);
+} __attribute__((packed));
+
+struct PeerConnMessage {
+    uint8_t type;
+    uint32_t tunSrcIp;
+    uint32_t tunDestIp;
+    uint32_t pubIp;
+    uint16_t pubPort;
+
+    PeerConnMessage();
 } __attribute__((packed));
 
 }; // namespace Candy

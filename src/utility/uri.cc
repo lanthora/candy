@@ -3,6 +3,12 @@
 
 namespace Candy {
 
+Uri::Uri(const char *uri) {
+    UriParserStateA state;
+    state.uri = &this->uri;
+    this->valid = (uriParseUriA(&state, uri) == URI_SUCCESS);
+}
+
 Uri::Uri(const std::string &uri) {
     UriParserStateA state;
     state.uri = &this->uri;

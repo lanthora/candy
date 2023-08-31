@@ -4,6 +4,7 @@
 #include "core/client.h"
 #include "core/server.h"
 #include <argp.h>
+#include <condition_variable>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
@@ -21,9 +22,11 @@ struct arguments {
     std::string dhcp;
     std::string password;
     std::string name;
+    std::string stun;
 };
 
 const int OPT_NO_TIMESTAMP = 1;
+const int OPT_LOG_LEVEL_DEBUG = 2;
 
 struct argp_option options[] = {
     {"mode", 'm', "MODE", 0,
@@ -45,15 +48,24 @@ struct argp_option options[] = {
      "network"},
     {"name", 'n', "TEXT", 0,
      "Interface name suffix. Used to avoid name collisions when using multiple clients in the same network namespace"},
+    {"stun", 's', "URI", 0,
+     "stun server address, used to obtain the public network address of the peer communication. For example: stun://stun.qq.com"},
     {"config", 'c', "PATH", 0,
      "Configuration file path. All other configuration items can be configured through the configuration file"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0,
      "Do not record the log time, in order to avoid redundant display of time with other tools such as systemd"},
+    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Output debug level log"},
     {},
 };
 
 int disableLogTimestamp() {
     spdlog::set_pattern("[%^%l%$] %v");
+    return 0;
+}
+
+int setLogLevelDebug() {
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::debug("set log level: debug");
     return 0;
 }
 
@@ -78,6 +90,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);
         cfg.lookupValue("dhcp", arguments->dhcp);
+        cfg.lookupValue("stun", arguments->stun);
         cfg.lookupValue("password", arguments->password);
         cfg.lookupValue("name", arguments->name);
     } catch (const libconfig::FileIOException &fioex) {
@@ -111,11 +124,17 @@ int parseOption(int key, char *arg, struct argp_state *state) {
     case 'n':
         arguments->name = arg;
         break;
+    case 's':
+        arguments->stun = arg;
+        break;
     case 'c':
         parseConfigFile(arguments, arg);
         break;
     case OPT_NO_TIMESTAMP:
         disableLogTimestamp();
+        break;
+    case OPT_LOG_LEVEL_DEBUG:
+        setLogLevelDebug();
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
@@ -135,7 +154,10 @@ std::mutex mutex;
 std::condition_variable condition;
 
 void shutdown(int signal) {
-    running = false;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        running = false;
+    }
     condition.notify_one();
 }
 
@@ -189,6 +211,7 @@ int main(int argc, char *argv[]) {
     if (arguments.mode == "client") {
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
+        client.setStun(arguments.stun);
         client.setLocalAddress(arguments.tun);
         client.setDynamicAddress(getLastestAddress(arguments.name));
         client.setName(arguments.name);
@@ -202,7 +225,7 @@ int main(int argc, char *argv[]) {
 
     {
         std::unique_lock<std::mutex> lock(mutex);
-        condition.wait(lock, [&]() { return !running; });
+        condition.wait(lock, [&] { return !running; });
     }
 
     server.shutdown();

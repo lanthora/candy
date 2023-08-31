@@ -156,6 +156,17 @@ uint32_t Address::hostToNet(uint32_t address) {
     return netToHost(address);
 }
 
+uint16_t Address::netToHost(uint16_t port) {
+    if (std::endian::native == std::endian::little) {
+        return std::byteswap(port);
+    }
+    return port;
+}
+
+uint16_t Address::hostToNet(uint16_t port) {
+    return netToHost(port);
+}
+
 int Address::prefixStrToMaskStr(const std::string &prefixStr, std::string &maskStr) {
     uint32_t prefix = std::stoi(prefixStr);
     uint32_t mask = 0;
