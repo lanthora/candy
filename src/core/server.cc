@@ -91,7 +91,7 @@ int Server::startWsThread() {
         return -1;
     }
 
-    this->wsThread = std::move(std::thread(&Server::handleWebSocketMessage, this));
+    this->wsThread = std::move(std::thread([&] { this->handleWebSocketMessage(); }));
     return 0;
 }
 
@@ -110,16 +110,20 @@ void Server::handleWebSocketMessage() {
         }
 
         if (message.type == WebSocketMessageType::Message) {
-            if (message.buffer.front() == MessageType::TYPE_FORWARD) {
+            if (message.buffer.front() == MessageType::FORWARD) {
                 handleForwardMessage(message);
                 continue;
             }
-            if (message.buffer.front() == MessageType::TYPE_AUTH) {
+            if (message.buffer.front() == MessageType::AUTH) {
                 handleAuthMessage(message);
                 continue;
             }
-            if (message.buffer.front() == MessageType::TYPE_DYNAMIC_ADDRESS) {
+            if (message.buffer.front() == MessageType::DHCP) {
                 handleDynamicAddressMessage(message);
+                continue;
+            }
+            if (message.buffer.front() == MessageType::PEER) {
+                handlePeerConnMessage(message);
                 continue;
             }
             spdlog::warn("unknown message type. type {}", message.buffer.front());
@@ -140,8 +144,8 @@ void Server::handleWebSocketMessage() {
 }
 
 void Server::handleAuthMessage(WebSocketMessage &message) {
-    if (message.buffer.length() != sizeof(AuthHeader)) {
-        spdlog::warn("invalid auth package: len {}", message.buffer.length());
+    if (message.buffer.length() < sizeof(AuthHeader)) {
+        spdlog::warn("invalid auth message: len {}", message.buffer.length());
         return;
     }
 
@@ -168,12 +172,12 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
     if (!this->wsIpMap.contains(message.conn)) {
-        spdlog::debug("unauthorized websocket client");
+        spdlog::debug("unauthorized forward websocket client");
         return;
     }
 
     if (message.buffer.length() < sizeof(ForwardHeader)) {
-        spdlog::warn("invalid forawrd package: len {}", message.buffer.length());
+        spdlog::debug("invalid forawrd message: len {}", message.buffer.length());
         return;
     }
 
@@ -184,12 +188,12 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     destination.ipUpdate(Address::netToHost(header->iph.daddr));
 
     if (this->wsIpMap[message.conn] != Address::netToHost(header->iph.saddr)) {
-        spdlog::warn("source address does not match authorized address: auth {} source {}", auth.getIpStr(), source.getIpStr());
+        spdlog::debug("forward source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
         return;
     }
 
     if (!this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        spdlog::warn("destination client not logged in: source {} destination {}", source.getIpStr(), destination.getIpStr());
+        spdlog::debug("forward dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
         return;
     }
 
@@ -198,12 +202,12 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
 }
 
 void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
-    if (message.buffer.length() != sizeof(DynamicAddressHeader)) {
-        spdlog::warn("invalid dynamic address package: len {}", message.buffer.length());
+    if (message.buffer.length() < sizeof(DynamicAddressMessage)) {
+        spdlog::warn("invalid dynamic address message: len {}", message.buffer.length());
         return;
     }
 
-    DynamicAddressHeader *header = (DynamicAddressHeader *)message.buffer.data();
+    DynamicAddressMessage *header = (DynamicAddressMessage *)message.buffer.data();
     if (!header->check(this->password)) {
         spdlog::warn("dynamic address header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
         return;
@@ -241,6 +245,34 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     header->updateHash(this->password);
 
     this->ws.write(message);
+}
+
+void Server::handlePeerConnMessage(WebSocketMessage &message) {
+    if (!this->wsIpMap.contains(message.conn)) {
+        spdlog::debug("unauthorized peer websocket client");
+        return;
+    }
+
+    if (message.buffer.length() < sizeof(PeerConnMessage)) {
+        spdlog::warn("invalid peer message: len {}", message.buffer.length());
+        return;
+    }
+
+    PeerConnMessage *header = (PeerConnMessage *)message.buffer.data();
+    Address auth, source, destination;
+    auth.ipUpdate(this->wsIpMap[message.conn]);
+    source.ipUpdate(Address::netToHost(header->tunSrcIp));
+    if (this->wsIpMap[message.conn] != Address::netToHost(header->tunSrcIp)) {
+        spdlog::debug("peer source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
+        return;
+    }
+    if (!this->ipWsMap.contains(Address::netToHost(header->tunDestIp))) {
+        spdlog::debug("peer dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
+        return;
+    }
+    message.conn = this->ipWsMap[Address::netToHost(header->tunDestIp)];
+    this->ws.write(message);
+    return;
 }
 
 void Server::handleCloseMessage(WebSocketMessage &message) {

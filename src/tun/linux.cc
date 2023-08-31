@@ -58,7 +58,7 @@ public:
 
         // 设置设备名
         struct ifreq ifr;
-        memset(&ifr, 0, sizeof(ifr));
+        bzero(&ifr, sizeof(ifr));
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
@@ -77,7 +77,7 @@ public:
         }
 
         // 设置地址
-        addr->sin_addr.s_addr = htonl(this->ip);
+        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
             spdlog::critical("set ip address failed: ip {:08x}", this->ip);
             close(sockfd);
@@ -85,7 +85,7 @@ public:
         }
 
         // 设置掩码
-        addr->sin_addr.s_addr = htonl(this->mask);
+        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
             spdlog::critical("set mask failed: mask {:08x}", this->mask);
             close(sockfd);
@@ -110,15 +110,15 @@ public:
 
         // 设置路由
         struct rtentry route;
-        memset(&route, 0, sizeof(route));
+        bzero(&route, sizeof(route));
 
         addr = (struct sockaddr_in *)&route.rt_dst;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = htonl(this->ip);
+        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
 
         addr = (struct sockaddr_in *)&route.rt_genmask;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = htonl(this->mask);
+        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
 
         route.rt_dev = (char *)this->name.c_str();
         route.rt_flags = RTF_UP | RTF_HOST;

@@ -6,7 +6,7 @@
 namespace Candy {
 
 AuthHeader::AuthHeader(uint32_t ip) {
-    this->type = MessageType::TYPE_AUTH;
+    this->type = MessageType::AUTH;
     this->ip = Address::hostToNet(ip);
     this->timestamp = Time::hostToNet(Time::unixTime());
 }
@@ -42,23 +42,23 @@ bool AuthHeader::check(const std::string &password) {
 }
 
 ForwardHeader::ForwardHeader() {
-    this->type = MessageType::TYPE_FORWARD;
+    this->type = MessageType::FORWARD;
 }
 
-DynamicAddressHeader::DynamicAddressHeader(const std::string &cidr) {
-    this->type = MessageType::TYPE_DYNAMIC_ADDRESS;
+DynamicAddressMessage::DynamicAddressMessage(const std::string &cidr) {
+    this->type = MessageType::DHCP;
     this->timestamp = Time::hostToNet(Time::unixTime());
     std::strcpy(this->cidr, cidr.c_str());
 }
 
-void DynamicAddressHeader::updateHash(const std::string &password) {
+void DynamicAddressMessage::updateHash(const std::string &password) {
     std::string data;
     data.append(password);
     data.append((char *)&timestamp, sizeof(timestamp));
     SHA256((unsigned char *)data.data(), data.size(), this->hash);
 }
 
-bool DynamicAddressHeader::check(const std::string &password) {
+bool DynamicAddressMessage::check(const std::string &password) {
     // 检查时间戳
     if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
         spdlog::warn("dynamic address header timestamp check failed: timestamp {}", Time::netToHost(this->timestamp));
@@ -78,6 +78,10 @@ bool DynamicAddressHeader::check(const std::string &password) {
         return false;
     }
     return true;
+}
+
+PeerConnMessage::PeerConnMessage() {
+    this->type = MessageType::PEER;
 }
 
 }; // namespace Candy

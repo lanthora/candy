@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "utility/time.h"
+#include "utility/address.h"
 #include <bit>
 #include <chrono>
 #include <spdlog/spdlog.h>
@@ -44,7 +45,7 @@ static int64_t ntpTime() {
     struct timeval timeout = {.tv_sec = 1};
     fd_set set;
 
-    memset(&hints, 0, sizeof(hints));
+    bzero(&hints, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 
@@ -83,7 +84,7 @@ static int64_t ntpTime() {
         goto out;
     }
 
-    retval = (int64_t)ntohl(packet.rxTm_s);
+    retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
 
     // Fix ntp 2036 problem
     if (!(retval & 0x80000000)) {

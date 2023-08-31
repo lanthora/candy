@@ -31,11 +31,13 @@ include_directories(${spdlog_SOURCE_DIR}/include)
 add_subdirectory(${SOURCE}/core)
 add_subdirectory(${SOURCE}/websocket)
 add_subdirectory(${SOURCE}/tun)
+add_subdirectory(${SOURCE}/peer)
 add_subdirectory(${SOURCE}/utility)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE core)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websocket)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE tun)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)

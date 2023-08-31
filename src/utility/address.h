@@ -7,6 +7,19 @@
 
 namespace Candy {
 
+struct IPv4Header {
+    unsigned char version_ihl; // 版本号和首部长度
+    unsigned char tos;         // 服务类型
+    unsigned short tot_len;    // 总长度
+    unsigned short id;         // 标识
+    unsigned short frag_off;   // 分片偏移
+    unsigned char ttl;         // 生存时间
+    unsigned char protocol;    // 协议类型
+    unsigned short check;      // 校验和
+    unsigned int saddr;        // 源地址
+    unsigned int daddr;        // 目的地址
+};
+
 class Address {
 public:
     // 以不同的形式更新地址
@@ -37,6 +50,8 @@ public:
 
     static uint32_t netToHost(uint32_t address);
     static uint32_t hostToNet(uint32_t address);
+    static uint16_t netToHost(uint16_t port);
+    static uint16_t hostToNet(uint16_t port);
 
 private:
     int prefixStrToMaskStr(const std::string &netPrefixStr, std::string &maskStr);

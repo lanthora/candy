@@ -9,6 +9,7 @@ namespace Candy {
 
 class Uri {
 public:
+    Uri(const char *uri);
     Uri(const std::string &uri);
     ~Uri();
     bool isValid() const;

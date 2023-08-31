@@ -35,7 +35,7 @@ public:
     }
 
     int disconnect() {
-        ixWs->stop();
+        this->ixWs->stop();
         {
             std::lock_guard<std::mutex> lock(this->mutex);
             this->queue = std::queue<WebSocketMessage>();
@@ -52,7 +52,7 @@ public:
 
     int read(WebSocketMessage &message) {
         std::unique_lock<std::mutex> lock(this->mutex);
-        if (this->condition.wait_for(lock, std::chrono::seconds(this->timeout), [&]() { return !this->queue.empty(); })) {
+        if (this->condition.wait_for(lock, std::chrono::seconds(this->timeout), [&] { return !this->queue.empty(); })) {
             message = this->queue.front();
             this->queue.pop();
             return 1;
