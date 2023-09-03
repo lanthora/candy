@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
   ixwebsocket
   GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-  GIT_TAG        a7019631b765581b7e3549cf7cdac77496984709
+  GIT_TAG        ef57e3a2b14c17b1a05aed0079f55fac2ece4996
 )
 
 set(USE_TLS 1 CACHE BOOL "" FORCE)
