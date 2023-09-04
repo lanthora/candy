@@ -109,11 +109,11 @@ int Address::next() {
 }
 
 int Address::dump() const {
-    spdlog::info("cidr={}", this->cidr);
-    spdlog::info("ipStr={} ip=0x{:0>8x}", this->ipStr, this->ip);
-    spdlog::info("maskStr={} mask=0x{:0>8x}", this->maskStr, this->mask);
-    spdlog::info("prefixStr={} prefix={}", this->prefixStr, this->prefix);
-    spdlog::info("net=0x{:0>8x} host=0x{:0>8x}", this->net, this->host);
+    spdlog::debug("cidr={}", this->cidr);
+    spdlog::debug("ipStr={} ip=0x{:0>8x}", this->ipStr, this->ip);
+    spdlog::debug("maskStr={} mask=0x{:0>8x}", this->maskStr, this->mask);
+    spdlog::debug("prefixStr={} prefix={}", this->prefixStr, this->prefix);
+    spdlog::debug("net=0x{:0>8x} host=0x{:0>8x}", this->net, this->host);
     return 0;
 }
 

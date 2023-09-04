@@ -144,7 +144,7 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
         return -1;
     }
     if (getaddrinfo(uri.host().c_str(), uri.port().empty() ? "3478" : uri.port().c_str(), &hints, &info)) {
-        spdlog::warn("resolve stun server domain name failed");
+        spdlog::debug("resolve stun server domain name failed");
         return -1;
     }
 
@@ -153,7 +153,7 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
 
     int fd = std::any_cast<int>(this->socket);
     if (!fd) {
-        spdlog::warn("invalid peer udp socket");
+        spdlog::debug("invalid peer udp socket");
         return -1;
     }
 
@@ -164,16 +164,16 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
     stun_request request;
     int len = sendto(fd, &request, sizeof(request), 0, info->ai_addr, info->ai_addrlen);
     if (len == -1) {
-        spdlog::warn("send stun request failed");
+        spdlog::debug("send stun request failed");
         return -1;
     }
 
     if (!this->pubCondition.wait_for(lock, std::chrono::seconds(1), [&] { return this->stunResponded; })) {
-        spdlog::warn("recv stun response timeout");
+        spdlog::debug("recv stun response timeout");
         return -1;
     }
     if (!this->stunResponded || this->pubIp == 0 || this->pubPort == 0) {
-        spdlog::warn("invalid public info: ip {:x} port {}", this->pubIp, this->pubPort);
+        spdlog::debug("invalid public info: ip {:x} port {}", this->pubIp, this->pubPort);
         return -1;
     }
 
@@ -188,20 +188,18 @@ int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pu
         std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
         Peer &peer = this->ipPeerMap[tunIp];
 
-        if (peer.state == PeerConnState::INIT) {
+        if (forceSync) {
             peer.state = PeerConnState::SYNCHRONIZING;
-            spdlog::info("peer state changed: peer {:x} INIT -> SYNCHRONIZING", tunIp);
+            spdlog::debug("conn state: peer {:x} forceSync SYNCHRONIZING", tunIp);
+        } else if (peer.state == PeerConnState::INIT) {
+            peer.state = PeerConnState::SYNCHRONIZING;
+            spdlog::debug("conn state: peer {:x} INIT -> SYNCHRONIZING", tunIp);
         } else if (peer.state == PeerConnState::FAILED) {
             peer.state = PeerConnState::SYNCHRONIZING;
-            spdlog::info("peer state changed: peer {:x} FAILED -> SYNCHRONIZING", tunIp);
+            spdlog::debug("conn state: peer {:x} FAILED -> SYNCHRONIZING", tunIp);
         } else if (peer.state == PeerConnState::PERPARING) {
-            if (forceSync) {
-                peer.state = PeerConnState::SYNCHRONIZING;
-                spdlog::info("peer state changed: peer {:x} PERPARING -> SYNCHRONIZING", tunIp);
-            } else {
-                peer.state = PeerConnState::CONNECTING;
-                spdlog::info("peer state changed: peer {:x} PERPARING -> CONNECTING", tunIp);
-            }
+            peer.state = PeerConnState::CONNECTING;
+            spdlog::debug("conn state: peer {:x} PERPARING -> CONNECTING", tunIp);
         } else {
             return 0;
         }
@@ -223,10 +221,10 @@ int Dispatcher::updatePeerState(uint32_t tunIp) {
 
         if (peer.state == PeerConnState::INIT) {
             peer.state = PeerConnState::PERPARING;
-            spdlog::info("peer state changed: peer {:x} INIT -> PERPARING", tunIp);
+            spdlog::debug("conn state: peer {:x} INIT -> PERPARING", tunIp);
         } else if (peer.state == PeerConnState::SYNCHRONIZING) {
             peer.state = PeerConnState::CONNECTING;
-            spdlog::info("peer state changed: peer {:x} SYNCHRONIZING -> CONNECTING", tunIp);
+            spdlog::debug("conn state: peer {:x} SYNCHRONIZING -> CONNECTING", tunIp);
         } else {
             return 0;
         }
@@ -425,7 +423,7 @@ int Dispatcher::tick() {
                 // 对方不在线或者对方版本不支持对等连接才会超时,标记为 FAILED 不再尝试连接.
                 if (peer.tickCount > 30) {
                     peer.state = PeerConnState::FAILED;
-                    spdlog::info("peer state changed: peer {:x} PERPARING -> FAILED", ip);
+                    spdlog::debug("conn state: peer {:x} PERPARING -> FAILED", ip);
                     continue;
                 }
             }
@@ -433,7 +431,7 @@ int Dispatcher::tick() {
             if (peer.state == PeerConnState::SYNCHRONIZING) {
                 if (peer.tickCount > 10) {
                     peer.state = PeerConnState::INIT;
-                    spdlog::info("peer state changed: peer {:x} SYNCHRONIZING -> INIT", ip);
+                    spdlog::debug("conn state: peer {:x} SYNCHRONIZING -> INIT", ip);
                     continue;
                 }
             }
@@ -441,7 +439,7 @@ int Dispatcher::tick() {
             if (peer.state == PeerConnState::CONNECTING) {
                 if (peer.tickCount > 60) {
                     peer.state = PeerConnState::FAILED;
-                    spdlog::info("peer state changed: peer {:x} CONNECTING -> FAILED", ip);
+                    spdlog::debug("conn state: peer {:x} CONNECTING -> FAILED", ip);
                     continue;
                 }
             }
@@ -449,7 +447,7 @@ int Dispatcher::tick() {
             if (peer.state == PeerConnState::CONNECTED) {
                 if (peer.tickCount > 2) {
                     peer.state = PeerConnState::INIT;
-                    spdlog::info("peer state changed: peer {:x} CONNECTED -> INIT", ip);
+                    spdlog::debug("conn state: peer {:x} CONNECTED -> INIT", ip);
                     continue;
                 }
             }
@@ -525,7 +523,7 @@ int Dispatcher::handleHeartbeatMsg(const std::string &msg, uint32_t pubIp, uint1
         return -1;
     }
     if (peer.state != PeerConnState::CONNECTED) {
-        spdlog::info("peer state changed: peer {:x} CONNECTED", peer.tunIp);
+        spdlog::debug("conn state: peer {:x} CONNECTED", peer.tunIp);
     }
     peer.state = PeerConnState::CONNECTED;
     peer.tickCount = 0;
@@ -628,12 +626,12 @@ int Dispatcher::handleStunResponse(const std::string &msg) {
     uint16_t port = 0;
 
     if (msg.length() < sizeof(stun_response)) {
-        spdlog::warn("invalid stun response length: {}", msg.length());
+        spdlog::debug("invalid stun response length: {}", msg.length());
         return -1;
     }
     stun_response *response = (stun_response *)msg.c_str();
     if (Address::netToHost(response->type) != 0x0101) {
-        spdlog::warn("stun not success response");
+        spdlog::debug("stun not success response");
         return -1;
     }
     uint8_t *attr = response->attr;
@@ -661,11 +659,11 @@ int Dispatcher::handleStunResponse(const std::string &msg) {
         pos += 2 + Address::netToHost(*(uint16_t *)(attr + pos));
     }
     if (ip && port) {
-        spdlog::info("stun response: ip {:x} port {}", ip, port);
+        spdlog::debug("stun response: ip {:x} port {}", ip, port);
         this->pubIp = ip;
         this->pubPort = port;
     } else {
-        spdlog::warn("stun response parse failed: {:n}", spdlog::to_hex(msg));
+        spdlog::debug("stun response parse failed: {:n}", spdlog::to_hex(msg));
     }
     {
         std::lock_guard<std::mutex> lock(this->pubMutex);
