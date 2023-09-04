@@ -260,21 +260,27 @@ void Client::handleTunMessage() {
             continue;
         }
 
-        // 通过 WebSocket 转发
-        WebSocketMessage message;
-        message.buffer.push_back(MessageType::FORWARD);
-        message.buffer.append(buffer);
-        ws.write(message);
-
+        // 先发送建连的包
         if (peerState == PeerConnState::INIT || peerState == PeerConnState::SYNCHRONIZING) {
             uint32_t pubIp;
             uint16_t pubPort;
             if (this->dispatcher.fetchPublicInfo(pubIp, pubPort)) {
                 spdlog::warn("fetch public info failed");
             }
-            sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort);
+            if (peerState == PeerConnState::INIT) {
+                sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 1);
+            } else {
+                sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 0);
+            }
+
             this->dispatcher.updatePeerState(peerIp);
         }
+
+        // 通过 WebSocket 转发
+        WebSocketMessage message;
+        message.buffer.push_back(MessageType::FORWARD);
+        message.buffer.append(buffer);
+        ws.write(message);
     }
     Candy::shutdown();
     return;
@@ -331,12 +337,13 @@ void Client::sendAuthMessage() {
     return;
 }
 
-void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort) {
+void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync) {
     PeerConnMessage header;
     header.tunSrcIp = Address::hostToNet(src);
     header.tunDestIp = Address::hostToNet(dst);
     header.pubIp = Address::hostToNet(pubIp);
     header.pubPort = Address::hostToNet(pubPort);
+    header.forceSync = forceSync;
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
@@ -394,6 +401,7 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     uint32_t tunDestIp = Address::netToHost(header->tunDestIp);
     uint32_t pubIp = Address::netToHost(header->pubIp);
     uint16_t pubPort = Address::netToHost(header->pubPort);
+    uint8_t forceSync = header->forceSync;
 
     if (tunDestIp != this->tun.getIP()) {
         spdlog::warn("peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
@@ -404,7 +412,7 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
         return;
     }
 
-    this->dispatcher.updatePeerPublicInfo(tunSrcIp, pubIp, pubPort);
+    this->dispatcher.updatePeerPublicInfo(tunSrcIp, pubIp, pubPort, forceSync);
     return;
 }
 
