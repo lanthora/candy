@@ -7,17 +7,13 @@
 
 namespace Candy {
 
-// 主动尝试连接: INIT -> PERPARING
-// 收到连接请求: * -> CONNECTING
-// 连接成功: CONNECTING -> CONNECTED
-// 连接失败: CONNECTING -> FAILED
-// 成功的连接丢失心跳: CONNECTED -> INIT
 enum class PeerConnState {
-    INIT,       // 初始状态
-    PERPARING,  // 准备连接
-    CONNECTING, // 尝试连接
-    CONNECTED,  // 处于连接状态
-    FAILED,     // 连接失败
+    INIT,
+    PERPARING,
+    SYNCHRONIZING,
+    CONNECTING,
+    CONNECTED,
+    FAILED,
 };
 
 struct Peer {

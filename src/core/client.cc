@@ -252,10 +252,10 @@ void Client::handleTunMessage() {
 
         // 获取当前对端状态机的状态
         uint32_t peerIp = Address::netToHost(header->daddr);
-        PeerConnState state = this->dispatcher.getPeerState(peerIp);
+        PeerConnState peerState = this->dispatcher.getPeerState(peerIp);
 
         // 处于连接状态,直接发送,不需要其他操作
-        if (state == PeerConnState::CONNECTED) {
+        if (peerState == PeerConnState::CONNECTED) {
             this->dispatcher.write(buffer);
             continue;
         }
@@ -266,14 +266,14 @@ void Client::handleTunMessage() {
         message.buffer.append(buffer);
         ws.write(message);
 
-        if (state == PeerConnState::INIT) {
+        if (peerState == PeerConnState::INIT || peerState == PeerConnState::SYNCHRONIZING) {
             uint32_t pubIp;
             uint16_t pubPort;
             if (this->dispatcher.fetchPublicInfo(pubIp, pubPort)) {
-                continue;
+                spdlog::warn("fetch public info failed");
             }
-            sendPeerMessage(this->tun.getIP(), peerIp, pubIp, pubPort);
-            this->dispatcher.createPeerPublicInfo(peerIp);
+            sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort);
+            this->dispatcher.updatePeerState(peerIp);
         }
     }
     Candy::shutdown();
@@ -331,7 +331,7 @@ void Client::sendAuthMessage() {
     return;
 }
 
-void Client::sendPeerMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort) {
+void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort) {
     PeerConnMessage header;
     header.tunSrcIp = Address::hostToNet(src);
     header.tunDestIp = Address::hostToNet(dst);
@@ -396,8 +396,14 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     uint16_t pubPort = Address::netToHost(header->pubPort);
 
     if (tunDestIp != this->tun.getIP()) {
-        spdlog::warn("peer message dest not match: {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
     }
+
+    if (this->dispatcher.getPeerState(tunSrcIp) == PeerConnState::CONNECTED) {
+        spdlog::info("ignore peer conn connected message");
+        return;
+    }
+
     this->dispatcher.updatePeerPublicInfo(tunSrcIp, pubIp, pubPort);
     return;
 }
