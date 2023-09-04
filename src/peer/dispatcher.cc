@@ -431,7 +431,7 @@ int Dispatcher::tick() {
             }
             // 被动待连接状态
             if (peer.state == PeerConnState::SYNCHRONIZING) {
-                if (peer.tickCount > 3) {
+                if (peer.tickCount > 10) {
                     peer.state = PeerConnState::INIT;
                     spdlog::info("peer state changed: peer {:x} SYNCHRONIZING -> INIT", ip);
                     continue;
