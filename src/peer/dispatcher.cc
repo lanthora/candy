@@ -6,6 +6,7 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
+#include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 #include <string.h>
 #include <utility/uri.h>
@@ -45,7 +46,7 @@ struct stun_response {
     uint16_t length;
     uint32_t cookie;
     uint8_t id[12];
-    uint8_t attr[8];
+    uint8_t attr[0];
 };
 
 }; // namespace
@@ -156,8 +157,9 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
         return -1;
     }
 
-    this->pubIp = 0;
-    this->pubPort = 0;
+    std::unique_lock<std::mutex> lock(this->pubMutex);
+
+    this->stunResponded = false;
 
     stun_request request;
     int len = sendto(fd, &request, sizeof(request), 0, info->ai_addr, info->ai_addrlen);
@@ -166,14 +168,18 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
         return -1;
     }
 
-    std::unique_lock<std::mutex> lock(this->pubMutex);
-    if (this->pubCondition.wait_for(lock, std::chrono::seconds(1), [&] { return this->pubIp && this->pubPort; })) {
-        pubIp = this->pubIp;
-        pubPort = this->pubPort;
-        return 0;
+    if (!this->pubCondition.wait_for(lock, std::chrono::seconds(1), [&] { return this->stunResponded; })) {
+        spdlog::warn("recv stun response timeout");
+        return -1;
+    }
+    if (!this->stunResponded || this->pubIp == 0 || this->pubPort == 0) {
+        spdlog::warn("invalid public info: ip {:x} port {}", this->pubIp, this->pubPort);
+        return -1;
     }
 
-    return -1;
+    pubIp = this->pubIp;
+    pubPort = this->pubPort;
+    return 0;
 }
 #endif
 
@@ -181,28 +187,49 @@ int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pu
     if (this->running) {
         std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
         Peer &peer = this->ipPeerMap[tunIp];
-        peer.state = PeerConnState::CONNECTING;
+
+        if (peer.state == PeerConnState::INIT) {
+            peer.state = PeerConnState::SYNCHRONIZING;
+            spdlog::info("peer state changed: peer {:x} INIT -> SYNCHRONIZING", tunIp);
+        } else if (peer.state == PeerConnState::FAILED) {
+            peer.state = PeerConnState::SYNCHRONIZING;
+            spdlog::info("peer state changed: peer {:x} FAILED -> SYNCHRONIZING", tunIp);
+        } else if (peer.state == PeerConnState::PERPARING) {
+            peer.state = PeerConnState::CONNECTING;
+            spdlog::info("peer state changed: peer {:x} PERPARING -> CONNECTING", tunIp);
+        } else {
+            return 0;
+        }
+
         peer.tunIp = tunIp;
         peer.pubIp = pubIp;
         peer.pubPort = pubPort;
         peer.tickCount = 0;
         peer.updateKey(this->password);
-        spdlog::debug("update peer public info:tun ip {:x} pub ip {:x} pub port {}", tunIp, pubIp, pubPort);
+        spdlog::debug("update peer public info: tun ip {:x} pub ip {:x} pub port {}", tunIp, pubIp, pubPort);
     }
     return 0;
 }
 
-int Dispatcher::createPeerPublicInfo(uint32_t tunIp) {
+int Dispatcher::updatePeerState(uint32_t tunIp) {
     if (this->running) {
         std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
         Peer &peer = this->ipPeerMap[tunIp];
+
         if (peer.state == PeerConnState::INIT) {
             peer.state = PeerConnState::PERPARING;
-            peer.tunIp = tunIp;
-            peer.tickCount = 0;
-            peer.updateKey(this->password);
-            spdlog::debug("create peer public info: tun ip {:x}", tunIp);
+            spdlog::info("peer state changed: peer {:x} INIT -> PERPARING", tunIp);
+        } else if (peer.state == PeerConnState::SYNCHRONIZING) {
+            peer.state = PeerConnState::CONNECTING;
+            spdlog::info("peer state changed: peer {:x} SYNCHRONIZING -> CONNECTING", tunIp);
+        } else {
+            return 0;
         }
+
+        peer.tunIp = tunIp;
+        peer.tickCount = 0;
+        peer.updateKey(this->password);
+        spdlog::debug("create peer public info: tun ip {:x}", tunIp);
     }
     return 0;
 }
@@ -211,8 +238,6 @@ PeerConnState Dispatcher::getPeerState(uint32_t ip) {
     if (!this->running) {
         return PeerConnState::FAILED;
     }
-
-    std::shared_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
 
     auto it = this->ipPeerMap.find(ip);
     if (it == this->ipPeerMap.end()) {
@@ -384,21 +409,43 @@ int Dispatcher::tick() {
     while (this->running) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        std::shared_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
+        std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
         for (auto &[ip, peer] : this->ipPeerMap) {
             // 初始状态或者已经确定连接失败的不再做处理
             if (peer.state == PeerConnState::INIT || peer.state == PeerConnState::FAILED) {
                 continue;
             }
-            // 处于主动连接或被动连接状态,在当前状态超过了 60 秒,进入失败状态
-            if ((peer.state == PeerConnState::PERPARING || peer.state == PeerConnState::CONNECTING) && peer.tickCount > 60) {
-                peer.state = PeerConnState::FAILED;
-                continue;
+            // 主动待连接状态,此时不发包
+            if (peer.state == PeerConnState::PERPARING) {
+                if (peer.tickCount > 5) {
+                    peer.state = PeerConnState::INIT;
+                    spdlog::info("peer state changed: peer {:x} PERPARING -> INIT", ip);
+                    continue;
+                }
             }
-            // 处于连接状态,当收到心跳后, tickCount 会重置,已经超过 3 秒没有重置,标记为断开连接
-            if (peer.state == PeerConnState::CONNECTED && peer.tickCount > 3) {
-                peer.state = PeerConnState::INIT;
-                continue;
+            // 被动待连接状态,此时不发包
+            if (peer.state == PeerConnState::SYNCHRONIZING) {
+                if (peer.tickCount > 3) {
+                    peer.state = PeerConnState::INIT;
+                    spdlog::info("peer state changed: peer {:x} SYNCHRONIZING -> INIT", ip);
+                    continue;
+                }
+            }
+            // 尝试连接状态,连续发包,最多尝试 5 次
+            if (peer.state == PeerConnState::CONNECTING) {
+                if (peer.tickCount > 5) {
+                    peer.state = PeerConnState::FAILED;
+                    spdlog::info("peer state changed: peer {:x} CONNECTING -> FAILED", ip);
+                    continue;
+                }
+            }
+            // 处于连接状态,当收到心跳后, tickCount 会重置,已经超过 2 秒没有重置,标记为初始状态,有新包会重新开始连接
+            if (peer.state == PeerConnState::CONNECTED) {
+                if (peer.tickCount > 2) {
+                    peer.state = PeerConnState::INIT;
+                    spdlog::info("peer state changed: peer {:x} CONNECTED -> INIT", ip);
+                    continue;
+                }
             }
             // 发送心跳
             if (peer.state == PeerConnState::CONNECTING || peer.state == PeerConnState::CONNECTED) {
@@ -456,7 +503,7 @@ int Dispatcher::handleHeartbeatMsg(const std::string &msg, uint32_t pubIp, uint1
         return -1;
     }
 
-    std::shared_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
+    std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
 
     PeerMessageHeartbeat *heartbeat = (PeerMessageHeartbeat *)msg.c_str();
     if (!this->ipPeerMap.contains(Address::netToHost(heartbeat->tunIp))) {
@@ -465,10 +512,14 @@ int Dispatcher::handleHeartbeatMsg(const std::string &msg, uint32_t pubIp, uint1
         spdlog::debug("peer heartbeat unknown tun ip: {}", address.getIpStr());
         return -1;
     }
+
     Peer &peer = this->ipPeerMap[Address::netToHost(heartbeat->tunIp)];
     if (pubIp != peer.pubIp || pubPort != peer.pubPort) {
         spdlog::debug("the source address does not match: ip {:x} {:x} port {} {}", pubIp, peer.pubIp, pubPort, peer.pubPort);
         return -1;
+    }
+    if (peer.state != PeerConnState::CONNECTED) {
+        spdlog::info("peer state changed: peer {:x} CONNECTED", peer.tunIp);
     }
     peer.state = PeerConnState::CONNECTED;
     peer.tickCount = 0;
@@ -567,6 +618,9 @@ int Dispatcher::recvRawUdp(uint32_t &ip, uint16_t &port, std::string &msg) {
 
 #if defined(__linux__) || defined(__linux)
 int Dispatcher::handleStunResponse(const std::string &msg) {
+    uint32_t ip = 0;
+    uint16_t port = 0;
+
     if (msg.length() < sizeof(stun_response)) {
         spdlog::warn("invalid stun response length: {}", msg.length());
         return -1;
@@ -582,23 +636,34 @@ int Dispatcher::handleStunResponse(const std::string &msg) {
         // mapped address
         if (Address::netToHost(*(uint16_t *)(attr + pos)) == 0x0001) {
             pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
-            this->pubPort = Address::netToHost(*(uint16_t *)(attr + pos));
+            port = Address::netToHost(*(uint16_t *)(attr + pos));
             pos += 2; // 跳过2字节端口号,指向地址
-            this->pubIp = Address::netToHost(*(uint32_t *)(attr + pos));
+            ip = Address::netToHost(*(uint32_t *)(attr + pos));
             break;
         }
         // xor mapped address
         if (Address::netToHost(*(uint16_t *)(attr + pos)) == 0x0020) {
             pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
-            this->pubPort = Address::netToHost(*(uint16_t *)(attr + pos)) ^ 0x2112;
+            port = Address::netToHost(*(uint16_t *)(attr + pos)) ^ 0x2112;
             pos += 2; // 跳过2字节端口号,指向地址
-            this->pubIp = Address::netToHost(*(uint32_t *)(attr + pos)) ^ 0x2112a442;
+            ip = Address::netToHost(*(uint32_t *)(attr + pos)) ^ 0x2112a442;
             break;
         }
         // 跳过 2 字节类型,指向属性长度
         pos += 2;
         // 跳过 2 字节长度和用该属性其他内容
         pos += 2 + Address::netToHost(*(uint16_t *)(attr + pos));
+    }
+    if (ip && port) {
+        spdlog::info("stun response: ip {:x} port {}", ip, port);
+        this->pubIp = ip;
+        this->pubPort = port;
+    } else {
+        spdlog::warn("stun response parse failed: {:n}", spdlog::to_hex(msg));
+    }
+    {
+        std::lock_guard<std::mutex> lock(this->pubMutex);
+        this->stunResponded = true;
     }
     pubCondition.notify_one();
     return 0;

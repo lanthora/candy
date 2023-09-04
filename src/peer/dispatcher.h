@@ -44,12 +44,12 @@ public:
     // 从 STUN 服务端获取公网地址和端口
     int fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort);
 
-    // 状态从 INIT 切换到 PREPARING,只在对端为 INIT 状态的时候从 STUN 获取自己的公网信息并发送给对方,
-    // PREPARING 状态时不再从 STUN 服务器获取公网信息.
-    int createPeerPublicInfo(uint32_t tunIp);
-
     // 收到对端发送的公网信息,连接状态切换为 CONNECTING, 并开始向对方发包尝试建立连接,
     int updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pubPort);
+
+    // 状态从 INIT 切换到 PREPARING,只在对端为 INIT 状态的时候从 STUN 获取自己的公网信息并发送给对方,
+    // PREPARING 状态时不再从 STUN 服务器获取公网信息.
+    int updatePeerState(uint32_t tunIp);
 
     // Client 获取对端状态,当状态为 INIT 时,调用 fetchPublicInfo 获取本机地址,并通过服务端发送给目标机器,尝试建立连接.
     // 只有状态为 CONNECTED 时,直接发送,否则都要通过 Server 转发.
@@ -88,6 +88,7 @@ private:
     uint32_t stunIp;
     uint16_t stunPort;
 
+    bool stunResponded;
     uint32_t pubIp;
     uint16_t pubPort;
     std::mutex pubMutex;
