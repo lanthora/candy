@@ -264,16 +264,16 @@ void Client::handleTunMessage() {
         if (peerState == PeerConnState::INIT || peerState == PeerConnState::SYNCHRONIZING) {
             uint32_t pubIp;
             uint16_t pubPort;
-            if (this->dispatcher.fetchPublicInfo(pubIp, pubPort)) {
-                spdlog::warn("fetch public info failed");
-            }
-            if (peerState == PeerConnState::INIT) {
-                sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 1);
+            if (!this->dispatcher.fetchPublicInfo(pubIp, pubPort)) {
+                if (peerState == PeerConnState::INIT) {
+                    sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 1);
+                } else {
+                    sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 0);
+                }
+                this->dispatcher.updatePeerState(peerIp);
             } else {
-                sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 0);
+                spdlog::debug("fetch public info failed");
             }
-
-            this->dispatcher.updatePeerState(peerIp);
         }
 
         // 通过 WebSocket 转发
@@ -393,7 +393,7 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
 
 void Client::handlePeerConnMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(PeerConnMessage)) {
-        spdlog::warn("invalid peer message: {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("invalid peer conn message: {:n}", spdlog::to_hex(message.buffer));
     }
     PeerConnMessage *header = (PeerConnMessage *)message.buffer.c_str();
 
@@ -405,11 +405,6 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
 
     if (tunDestIp != this->tun.getIP()) {
         spdlog::warn("peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
-    }
-
-    if (this->dispatcher.getPeerState(tunSrcIp) == PeerConnState::CONNECTED) {
-        spdlog::info("ignore peer conn connected message");
-        return;
     }
 
     this->dispatcher.updatePeerPublicInfo(tunSrcIp, pubIp, pubPort, forceSync);
