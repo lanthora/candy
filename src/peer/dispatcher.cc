@@ -209,7 +209,7 @@ int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pu
         peer.pubPort = pubPort;
         peer.tickCount = 0;
         peer.updateKey(this->password);
-        spdlog::debug("update peer public info: tun ip {:x} pub ip {:x} pub port {}", tunIp, pubIp, pubPort);
+        spdlog::debug("update peer public info: tun {:x} ip {:x} port {}", tunIp, pubIp, pubPort);
     }
     return 0;
 }
@@ -232,7 +232,6 @@ int Dispatcher::updatePeerState(uint32_t tunIp) {
         peer.tunIp = tunIp;
         peer.tickCount = 0;
         peer.updateKey(this->password);
-        spdlog::debug("create peer public info: tun ip {:x}", tunIp);
     }
     return 0;
 }
@@ -518,15 +517,21 @@ int Dispatcher::handleHeartbeatMsg(const std::string &msg, uint32_t pubIp, uint1
     }
 
     Peer &peer = this->ipPeerMap[Address::netToHost(heartbeat->tunIp)];
-    if (pubIp != peer.pubIp || pubPort != peer.pubPort) {
-        spdlog::debug("the source address does not match: ip {:x} {:x} port {} {}", pubIp, peer.pubIp, pubPort, peer.pubPort);
+    if (pubIp != peer.pubIp) {
+        spdlog::debug("heartbeat address does not match: ip {:x} {:x}", pubIp, peer.pubIp);
         return -1;
     }
-    if (peer.state != PeerConnState::CONNECTED) {
-        spdlog::debug("conn state: peer {:x} CONNECTED", peer.tunIp);
+    if (peer.pubPort != pubPort) {
+        spdlog::debug("heartbeat port does not match, update peer port: new {} old {}", pubPort, peer.pubPort);
+        peer.pubPort = pubPort;
     }
-    peer.state = PeerConnState::CONNECTED;
+    if (peer.state == PeerConnState::CONNECTED) {
+        peer.tickCount = 0;
+        return 0;
+    }
     peer.tickCount = 0;
+    peer.state = PeerConnState::CONNECTED;
+    spdlog::debug("conn state: peer {:x} CONNECTED", peer.tunIp);
     return 0;
 }
 
