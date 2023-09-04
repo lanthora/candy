@@ -55,6 +55,7 @@ struct PeerConnMessage {
     uint32_t tunDestIp;
     uint32_t pubIp;
     uint16_t pubPort;
+    uint8_t forceSync;
 
     PeerConnMessage();
 } __attribute__((packed));

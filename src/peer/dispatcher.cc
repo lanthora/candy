@@ -183,7 +183,7 @@ int Dispatcher::fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort) {
 }
 #endif
 
-int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pubPort) {
+int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync) {
     if (this->running) {
         std::unique_lock<std::shared_mutex> lock(this->ipPeerMapMutex);
         Peer &peer = this->ipPeerMap[tunIp];
@@ -195,8 +195,13 @@ int Dispatcher::updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pu
             peer.state = PeerConnState::SYNCHRONIZING;
             spdlog::info("peer state changed: peer {:x} FAILED -> SYNCHRONIZING", tunIp);
         } else if (peer.state == PeerConnState::PERPARING) {
-            peer.state = PeerConnState::CONNECTING;
-            spdlog::info("peer state changed: peer {:x} PERPARING -> CONNECTING", tunIp);
+            if (forceSync) {
+                peer.state = PeerConnState::SYNCHRONIZING;
+                spdlog::info("peer state changed: peer {:x} PERPARING -> SYNCHRONIZING", tunIp);
+            } else {
+                peer.state = PeerConnState::CONNECTING;
+                spdlog::info("peer state changed: peer {:x} PERPARING -> CONNECTING", tunIp);
+            }
         } else {
             return 0;
         }
@@ -415,15 +420,16 @@ int Dispatcher::tick() {
             if (peer.state == PeerConnState::INIT || peer.state == PeerConnState::FAILED) {
                 continue;
             }
-            // 主动待连接状态,此时不发包
+            // 主动待连接状态
             if (peer.state == PeerConnState::PERPARING) {
-                if (peer.tickCount > 5) {
-                    peer.state = PeerConnState::INIT;
-                    spdlog::info("peer state changed: peer {:x} PERPARING -> INIT", ip);
+                // 对方不在线或者对方版本不支持对等连接才会超时,标记为 FAILED 不再尝试连接.
+                if (peer.tickCount > 30) {
+                    peer.state = PeerConnState::FAILED;
+                    spdlog::info("peer state changed: peer {:x} PERPARING -> FAILED", ip);
                     continue;
                 }
             }
-            // 被动待连接状态,此时不发包
+            // 被动待连接状态
             if (peer.state == PeerConnState::SYNCHRONIZING) {
                 if (peer.tickCount > 3) {
                     peer.state = PeerConnState::INIT;
@@ -431,9 +437,9 @@ int Dispatcher::tick() {
                     continue;
                 }
             }
-            // 尝试连接状态,连续发包,最多尝试 5 次
+            // 尝试连接状态
             if (peer.state == PeerConnState::CONNECTING) {
-                if (peer.tickCount > 5) {
+                if (peer.tickCount > 60) {
                     peer.state = PeerConnState::FAILED;
                     spdlog::info("peer state changed: peer {:x} CONNECTING -> FAILED", ip);
                     continue;

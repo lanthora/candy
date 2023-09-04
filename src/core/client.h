@@ -51,7 +51,7 @@ private:
 
     void sendDynamicAddressMessage();
     void sendAuthMessage();
-    void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort);
+    void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync);
 
     void handleForwardMessage(WebSocketMessage &message);
     void handleDynamicAddressMessage(WebSocketMessage &message);

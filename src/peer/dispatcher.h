@@ -45,7 +45,7 @@ public:
     int fetchPublicInfo(uint32_t &pubIp, uint16_t &pubPort);
 
     // 收到对端发送的公网信息,连接状态切换为 CONNECTING, 并开始向对方发包尝试建立连接,
-    int updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pubPort);
+    int updatePeerPublicInfo(uint32_t tunIp, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync);
 
     // 状态从 INIT 切换到 PREPARING,只在对端为 INIT 状态的时候从 STUN 获取自己的公网信息并发送给对方,
     // PREPARING 状态时不再从 STUN 服务器获取公网信息.
