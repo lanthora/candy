@@ -261,16 +261,16 @@ void Server::handlePeerConnMessage(WebSocketMessage &message) {
     PeerConnMessage *header = (PeerConnMessage *)message.buffer.data();
     Address auth, source, destination;
     auth.ipUpdate(this->wsIpMap[message.conn]);
-    source.ipUpdate(Address::netToHost(header->tunSrcIp));
-    if (this->wsIpMap[message.conn] != Address::netToHost(header->tunSrcIp)) {
+    source.ipUpdate(Address::netToHost(header->src));
+    if (this->wsIpMap[message.conn] != Address::netToHost(header->src)) {
         spdlog::debug("peer source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
         return;
     }
-    if (!this->ipWsMap.contains(Address::netToHost(header->tunDestIp))) {
+    if (!this->ipWsMap.contains(Address::netToHost(header->dst))) {
         spdlog::debug("peer dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
         return;
     }
-    message.conn = this->ipWsMap[Address::netToHost(header->tunDestIp)];
+    message.conn = this->ipWsMap[Address::netToHost(header->dst)];
     this->ws.write(message);
     return;
 }
