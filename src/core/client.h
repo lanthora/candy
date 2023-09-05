@@ -2,13 +2,21 @@
 #ifndef CANDY_CORE_CLIENT_H
 #define CANDY_CORE_CLIENT_H
 
-#include "peer/dispatcher.h"
+#include "peer/peer.h"
 #include "tun/tun.h"
 #include "websocket/client.h"
+#include <map>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 
 namespace Candy {
+
+struct StunCache {
+    uint32_t ip;
+    uint16_t port;
+    std::string uri;
+};
 
 class Client {
 public:
@@ -38,43 +46,57 @@ public:
     int shutdown();
 
 private:
+    // Common
+    std::string password;
+    bool running = false;
+
+    // WebSocket
     int startWsThread();
-    int startTunThread();
-    int startDispatcherThread();
-
-    // 处理来自 WebSocket 服务端的消息
     void handleWebSocketMessage();
-    // 处理来自 TUN 设备的消息
-    void handleTunMessage();
-    // 处理来自 Dispatcher 的消息
-    void handleDispatcherMessage();
-
     void sendDynamicAddressMessage();
     void sendAuthMessage();
-    void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync);
-
+    void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port);
     void handleForwardMessage(WebSocketMessage &message);
     void handleDynamicAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
 
-    std::string tunName;
-    std::string password;
+    WebSocketClient ws;
     std::string wsUri;
-    // tunThread 和 dispatcherThread 运行依赖正确的 localAddress, 赋值后才能启动这两个线程
-    std::string localAddress;
-    std::string dynamicAddress;
-
-    std::string stun;
-
     std::thread wsThread;
-    std::thread tunThread;
-    std::thread dispatcherThread;
 
-    bool running = false;
+    // TUN
+    int startTunThread();
+    void handleTunMessage();
 
     Tun tun;
-    WebSocketClient ws;
-    Dispatcher dispatcher;
+    std::string tunName;
+    std::string localAddress;
+    std::string dynamicAddress;
+    std::thread tunThread;
+
+    // P2P
+    int startUdpThread();
+    int startTickThread();
+    void handleUdpMessage();
+    void tick();
+    std::string encrypt(const std::string &key, const std::string &plaintext);
+    std::string decrypt(const std::string &key, const std::string &ciphertext);
+    int sendStunRequest();
+    bool isStunResponse(const UdpMessage &message);
+    int handleStunResponse(const std::string &buffer);
+    bool isHeartbeatMessage(const UdpMessage &message);
+    int handleHeartbeatMessage(const UdpMessage &message);
+    int sendHeartbeat(const PeerInfo &peer);
+    bool isIPv4Message(const UdpMessage &message);
+    int handleIPv4Message(const UdpMessage &message);
+
+    UdpHolder udpHolder;
+    StunCache stun;
+    PeerInfo selfInfo;
+    std::shared_mutex ipPeerMutex;
+    std::map<uint32_t, PeerInfo> ipPeerMap;
+    std::thread udpThread;
+    std::thread tickThread;
 };
 
 }; // namespace Candy

@@ -7,8 +7,19 @@
 #include "utility/uri.h"
 #include <bit>
 #include <functional>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+
+namespace {
+
+static constexpr size_t AES_256_GCM_IV_LEN = 12;
+static constexpr size_t AES_256_GCM_TAG_LEN = 16;
+static constexpr size_t AES_256_GCM_KEY_LEN = 32;
+
+}; // namespace
 
 namespace Candy {
 
@@ -47,7 +58,7 @@ int Client::setDynamicAddress(const std::string &cidr) {
 }
 
 int Client::setStun(const std::string &stun) {
-    this->stun = stun;
+    this->stun.uri = stun;
     return 0;
 }
 
@@ -59,6 +70,11 @@ int Client::run() {
     this->running = true;
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
+        Candy::shutdown();
+        return -1;
+    }
+    if (startTickThread()) {
+        spdlog::critical("start tick thread failed");
         Candy::shutdown();
         return -1;
     }
@@ -78,11 +94,13 @@ int Client::shutdown() {
     if (this->tunThread.joinable()) {
         this->tunThread.join();
     }
-    if (this->dispatcherThread.joinable()) {
-        this->dispatcherThread.join();
+    if (this->udpThread.joinable()) {
+        this->udpThread.join();
+    }
+    if (this->tickThread.joinable()) {
+        this->tickThread.join();
     }
 
-    this->dispatcher.shutdown();
     this->tun.down();
     this->ws.disconnect();
     return 0;
@@ -126,26 +144,23 @@ int Client::startTunThread() {
     return 0;
 }
 
-int Client::startDispatcherThread() {
-    if (this->stun.empty()) {
-        spdlog::info("stun is empty, peer-to-peer connections are not enabled");
-        return 0;
-    }
-    if (this->dispatcher.setPassword(this->password)) {
+int Client::startUdpThread() {
+    this->selfInfo.tun = this->tun.getIP();
+    if (this->selfInfo.updateKey(this->password)) {
         return -1;
     }
-    if (this->dispatcher.setStun(this->stun)) {
-        return -1;
-    }
-    if (this->dispatcher.setTunIP(this->tun.getIP())) {
-        return -1;
-    }
-    if (this->dispatcher.run()) {
-        return -1;
-    }
+    sendStunRequest();
+    this->udpThread = std::move(std::thread([&] { this->handleUdpMessage(); }));
+    return 0;
+}
 
-    this->dispatcherThread = std::move(std::thread([&] { this->handleDispatcherMessage(); }));
-
+int Client::startTickThread() {
+    this->tickThread = std::move(std::thread([&] {
+        while (this->running) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            this->tick();
+        }
+    }));
     return 0;
 }
 
@@ -190,8 +205,8 @@ void Client::handleWebSocketMessage() {
                     Candy::shutdown();
                     break;
                 }
-                if (startDispatcherThread()) {
-                    spdlog::critical("start dispatcher thread failed");
+                if (startUdpThread()) {
+                    spdlog::critical("start udp thread failed");
                     Candy::shutdown();
                     break;
                 }
@@ -223,7 +238,6 @@ void Client::handleWebSocketMessage() {
 
 void Client::handleTunMessage() {
     int error;
-
     std::string buffer;
     IPv4Header *header;
 
@@ -250,29 +264,19 @@ void Client::handleTunMessage() {
             continue;
         }
 
-        // 获取当前对端状态机的状态
-        uint32_t peerIp = Address::netToHost(header->daddr);
-        PeerConnState peerState = this->dispatcher.getPeerState(peerIp);
-
-        // 处于连接状态,直接发送,不需要其他操作
-        if (peerState == PeerConnState::CONNECTED) {
-            this->dispatcher.write(buffer);
-            continue;
-        }
-
-        // 先发送建连的包
-        if (peerState == PeerConnState::INIT || peerState == PeerConnState::SYNCHRONIZING) {
-            uint32_t pubIp;
-            uint16_t pubPort;
-            if (!this->dispatcher.fetchPublicInfo(pubIp, pubPort)) {
-                if (peerState == PeerConnState::INIT) {
-                    sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 1);
-                } else {
-                    sendPeerConnMessage(this->tun.getIP(), peerIp, pubIp, pubPort, 0);
-                }
-                this->dispatcher.updatePeerState(peerIp);
-            } else {
-                spdlog::debug("fetch public info failed");
+        {
+            // 发包时检查对端是否为 CONNECTED,是的话直接发送,否则走服务端转发
+            std::unique_lock lock(this->ipPeerMutex);
+            PeerInfo &peer = this->ipPeerMap[Address::netToHost(header->daddr)];
+            if (peer.getState() == PeerState::CONNECTED) {
+                UdpMessage message;
+                message.ip = peer.ip;
+                message.port = peer.port;
+                message.buffer.push_back(PeerMessageType::IPv4);
+                message.buffer.append(buffer);
+                message.buffer = encrypt(peer.getKey(), message.buffer);
+                this->udpHolder.write(message);
+                continue;
             }
         }
 
@@ -286,21 +290,69 @@ void Client::handleTunMessage() {
     return;
 }
 
-void Client::handleDispatcherMessage() {
-    std::string buffer;
-    int len;
+void Client::handleUdpMessage() {
+    int error;
+    UdpMessage message;
+
     while (this->running) {
-        len = this->dispatcher.read(buffer);
-        if (len == 0) {
+        error = this->udpHolder.read(message);
+        if (error == 0) {
             continue;
         }
-        if (len < 0) {
-            spdlog::error("handle dispatcher message error");
+        if (error < 0) {
+            spdlog::critical("udp read failed. error {}", error);
+            break;
+        }
+        if (isStunResponse(message)) {
+            handleStunResponse(message.buffer);
             continue;
         }
-        this->tun.write(buffer);
+        message.buffer = decrypt(selfInfo.getKey(), message.buffer);
+        if (message.buffer.empty()) {
+            spdlog::warn("peer message is empty");
+            continue;
+        }
+        if (isHeartbeatMessage(message)) {
+            handleHeartbeatMessage(message);
+            continue;
+        }
+        if (isIPv4Message(message)) {
+            handleIPv4Message(message);
+            continue;
+        }
+        spdlog::warn("unknown peer message type");
     }
-    return;
+}
+
+void Client::tick() {
+    std::unique_lock lock(this->ipPeerMutex);
+    bool needSendStunRequest = false;
+    for (auto &[ip, peer] : this->ipPeerMap) {
+        // 遍历所有虚拟地址到公网信息映射中的元素,如果有 PREPARING 状态的元素,在遍历结束后发送一次 STUN 请求
+        if (peer.getState() == PeerState::PERPARING) {
+            needSendStunRequest = true;
+        }
+        // CONNECTING 状态下,进行超时检测,超时后设置为 FAILED,否则发送心跳
+        if (peer.getState() == PeerState::CONNECTING) {
+            if (peer.count > 10) {
+                peer.updateState(PeerState::FAILED);
+                continue;
+            }
+            sendHeartbeat(peer);
+        }
+        // CONNECTED 状态下,进行超时检测,超时后清空对端信息,否则发送心跳
+        if (peer.getState() == PeerState::CONNECTED) {
+            if (peer.count > 3) {
+                peer.reset();
+                continue;
+            }
+            sendHeartbeat(peer);
+        }
+        ++peer.count;
+    }
+    if (needSendStunRequest) {
+        sendStunRequest();
+    }
 }
 
 void Client::sendDynamicAddressMessage() {
@@ -337,19 +389,18 @@ void Client::sendAuthMessage() {
     return;
 }
 
-void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t pubIp, uint16_t pubPort, uint8_t forceSync) {
+void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port) {
     PeerConnMessage header;
-    header.tunSrcIp = Address::hostToNet(src);
-    header.tunDestIp = Address::hostToNet(dst);
-    header.pubIp = Address::hostToNet(pubIp);
-    header.pubPort = Address::hostToNet(pubPort);
-    header.forceSync = forceSync;
+    header.src = Address::hostToNet(src);
+    header.dst = Address::hostToNet(dst);
+    header.ip = Address::hostToNet(ip);
+    header.port = Address::hostToNet(port);
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
     this->ws.write(message);
 
-    spdlog::debug("send peer message: src {:x} dst {:x} ip {:x} port {}", src, dst, pubIp, pubPort);
+    spdlog::debug("send peer conn message: src {:x} dst {:x} ip {:x} port {}", src, dst, ip, port);
     return;
 }
 
@@ -374,8 +425,8 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
         Candy::shutdown();
         return;
     }
-    if (startDispatcherThread()) {
-        spdlog::critical("start dispatcher thread failed");
+    if (startUdpThread()) {
+        spdlog::critical("start udp thread failed");
         Candy::shutdown();
         return;
     }
@@ -389,6 +440,16 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
     const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
     const size_t len = message.buffer.length() - sizeof(ForwardHeader::type);
     this->tun.write(std::string(src, len));
+
+    const IPv4Header *header = (const IPv4Header *)src;
+
+    // 收到转发包,判断源地址的状态是否为 INIT,是则进入 PREPARING 状态,其他状态忽略
+    std::unique_lock lock(this->ipPeerMutex);
+    PeerInfo &peer = this->ipPeerMap[Address::netToHost(header->saddr)];
+    if (peer.getState() == PeerState::INIT) {
+        peer.tun = Address::netToHost(header->saddr);
+        peer.updateState(PeerState::PERPARING);
+    }
 }
 
 void Client::handlePeerConnMessage(WebSocketMessage &message) {
@@ -397,18 +458,310 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     }
     PeerConnMessage *header = (PeerConnMessage *)message.buffer.c_str();
 
-    uint32_t tunSrcIp = Address::netToHost(header->tunSrcIp);
-    uint32_t tunDestIp = Address::netToHost(header->tunDestIp);
-    uint32_t pubIp = Address::netToHost(header->pubIp);
-    uint16_t pubPort = Address::netToHost(header->pubPort);
-    uint8_t forceSync = header->forceSync;
+    uint32_t src = Address::netToHost(header->src);
+    uint32_t dst = Address::netToHost(header->dst);
+    uint32_t ip = Address::netToHost(header->ip);
+    uint16_t port = Address::netToHost(header->port);
 
-    if (tunDestIp != this->tun.getIP()) {
+    if (dst != this->tun.getIP()) {
         spdlog::warn("peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
     }
 
-    this->dispatcher.updatePeerPublicInfo(tunSrcIp, pubIp, pubPort, forceSync);
+    std::unique_lock lock(this->ipPeerMutex);
+    PeerInfo &peer = this->ipPeerMap[src];
+    peer.tun = src;
+    peer.ip = ip;
+    peer.port = port;
+    peer.count = 0;
+    peer.updateKey(this->password);
+    peer.updateState(peer.getState() == PeerState::SYNCHRONIZING ? PeerState::CONNECTING : PeerState::PERPARING);
     return;
+}
+
+std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
+    if (key.size() != AES_256_GCM_KEY_LEN) {
+        spdlog::error("invalid key size: {}", key.size());
+        return "";
+    }
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        spdlog::error("failed to create cipher context");
+        return "";
+    }
+    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to initialize cipher context");
+        return "";
+    }
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to set IV length");
+        return "";
+    }
+    unsigned char iv[AES_256_GCM_IV_LEN];
+    if (!RAND_bytes(iv, AES_256_GCM_IV_LEN)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to generate random IV");
+        return "";
+    }
+    if (!EVP_EncryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to set key and IV");
+        return "";
+    }
+    int len;
+    unsigned char ciphertext[plaintext.size()];
+    if (!EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)plaintext.data(), plaintext.size())) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to encrypt plaintext");
+        return "";
+    }
+    int ciphertextLen = len;
+    if (!EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to finalize encryption");
+        return "";
+    }
+    ciphertextLen += len;
+    unsigned char tag[AES_256_GCM_TAG_LEN];
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AES_256_GCM_TAG_LEN, tag)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to get tag");
+        return "";
+    }
+    EVP_CIPHER_CTX_free(ctx);
+
+    std::string result;
+    result.append((char *)iv, AES_256_GCM_IV_LEN);
+    result.append((char *)tag, AES_256_GCM_TAG_LEN);
+    result.append((char *)ciphertext, ciphertextLen);
+    return result;
+}
+
+std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
+    if (key.size() != AES_256_GCM_KEY_LEN) {
+        spdlog::error("invalid key length: {}", key.size());
+        return "";
+    }
+    if (ciphertext.size() < AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN) {
+        spdlog::error("invalid ciphertext length");
+        return "";
+    }
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        spdlog::error("failed to create cipher context");
+        return "";
+    }
+    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to initialize cipher context");
+        return "";
+    }
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to set IV length");
+        return "";
+    }
+
+    unsigned char iv[AES_256_GCM_IV_LEN];
+    unsigned char tag[AES_256_GCM_TAG_LEN];
+    unsigned char *enc = (unsigned char *)ciphertext.data();
+
+    memcpy(iv, enc, AES_256_GCM_IV_LEN);
+    memcpy(tag, enc + AES_256_GCM_IV_LEN, AES_256_GCM_TAG_LEN);
+    enc += AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN;
+
+    if (!EVP_DecryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to set key and IV");
+        return "";
+    }
+
+    int len;
+    unsigned char plaintext[ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN];
+    if (!EVP_DecryptUpdate(ctx, plaintext, &len, enc, ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to decrypt ciphertext");
+        return "";
+    }
+
+    int plaintextLen = len;
+
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AES_256_GCM_TAG_LEN, tag)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to set tag");
+        return "";
+    }
+
+    if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::error("failed to finalize decryption");
+        return "";
+    }
+
+    plaintextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    std::string result;
+    result.append((char *)plaintext, plaintextLen);
+
+    return result;
+}
+#if defined(__linux__) || defined(__linux)
+#include <netdb.h>
+int Client::sendStunRequest() {
+    struct addrinfo hints = {}, *info = NULL;
+
+    bzero(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    Uri uri(this->stun.uri);
+    if (!uri.isValid()) {
+        spdlog::warn("invalid stun uri: {}", this->stun.uri);
+        return -1;
+    }
+    if (getaddrinfo(uri.host().c_str(), uri.port().empty() ? "3478" : uri.port().c_str(), &hints, &info)) {
+        spdlog::debug("resolve stun server domain name failed");
+        return -1;
+    }
+
+    this->stun.ip = Address::netToHost(((struct sockaddr_in *)info->ai_addr)->sin_addr.s_addr);
+    this->stun.port = Address::netToHost(((struct sockaddr_in *)info->ai_addr)->sin_port);
+
+    UdpMessage message;
+    StunRequest request;
+    message.ip = this->stun.ip;
+    message.port = this->stun.port;
+    message.buffer.assign((char *)&request, sizeof(request));
+    if (this->udpHolder.write(message) != message.buffer.size()) {
+        spdlog::debug("send stun request failed");
+    }
+    return 0;
+}
+#else
+int Client::sendStunRequest() {
+    spdlog::error("send stun request unimplemented");
+    return 0;
+}
+#endif
+
+bool Client::isStunResponse(const UdpMessage &message) {
+    return message.ip == this->stun.ip && message.port == this->stun.port;
+}
+
+int Client::handleStunResponse(const std::string &buffer) {
+    if (buffer.length() < sizeof(StunResponse)) {
+        spdlog::debug("invalid stun response length: {}", buffer.length());
+        return -1;
+    }
+    StunResponse *response = (StunResponse *)buffer.c_str();
+    if (Address::netToHost(response->type) != 0x0101) {
+        spdlog::debug("stun not success response");
+        return -1;
+    }
+
+    int pos = 0;
+    uint32_t ip = 0;
+    uint16_t port = 0;
+    uint8_t *attr = response->attr;
+    while (pos < Address::netToHost(response->length)) {
+        // mapped address
+        if (Address::netToHost(*(uint16_t *)(attr + pos)) == 0x0001) {
+            pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
+            port = Address::netToHost(*(uint16_t *)(attr + pos));
+            pos += 2; // 跳过2字节端口号,指向地址
+            ip = Address::netToHost(*(uint32_t *)(attr + pos));
+            break;
+        }
+        // xor mapped address
+        if (Address::netToHost(*(uint16_t *)(attr + pos)) == 0x0020) {
+            pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
+            port = Address::netToHost(*(uint16_t *)(attr + pos)) ^ 0x2112;
+            pos += 2; // 跳过2字节端口号,指向地址
+            ip = Address::netToHost(*(uint32_t *)(attr + pos)) ^ 0x2112a442;
+            break;
+        }
+        // 跳过 2 字节类型,指向属性长度
+        pos += 2;
+        // 跳过 2 字节长度和用该属性其他内容
+        pos += 2 + Address::netToHost(*(uint16_t *)(attr + pos));
+    }
+    if (!ip || !port) {
+        spdlog::debug("stun response parse failed: {:n}", spdlog::to_hex(buffer));
+        return -1;
+    }
+
+    // 收到 STUN 响应后,向所有 PREPARING 状态的对端发送自己的公网信息,如果当前持有对端公网信息,就将状态调整为 CONNECTING,
+    // 否则调整为 SYNCHRONIZING
+    std::unique_lock lock(this->ipPeerMutex);
+    for (auto &[tun, peer] : this->ipPeerMap) {
+        if (peer.getState() == PeerState::PERPARING) {
+            sendPeerConnMessage(this->tun.getIP(), peer.tun, ip, port);
+            peer.updateState(peer.ip && peer.port ? PeerState::CONNECTING : PeerState::SYNCHRONIZING);
+        }
+    }
+
+    return 0;
+}
+
+bool Client::isHeartbeatMessage(const UdpMessage &message) {
+    return message.buffer.front() == PeerMessageType::HEARTBEAT;
+}
+
+int Client::handleHeartbeatMessage(const UdpMessage &message) {
+    if (message.buffer.length() < sizeof(PeerHeartbeatMessage)) {
+        spdlog::debug("invalid heartbeat length: {}", message.buffer.length());
+        return -1;
+    }
+
+    // 收到对端的心跳,检查地址,更新端口,并将状态调整为 CONNECTED
+    PeerHeartbeatMessage *heartbeat = (PeerHeartbeatMessage *)message.buffer.c_str();
+    std::unique_lock lock(this->ipPeerMutex);
+    PeerInfo &peer = this->ipPeerMap[Address::netToHost(heartbeat->tun)];
+    if (peer.ip != message.ip) {
+        spdlog::debug("peer address does not match: {:x} {:x}", peer.ip, message.ip);
+        return -1;
+    }
+    if (peer.port != message.port) {
+        spdlog::debug("peer port does not match, update: old {:x} new {:x}", peer.ip, message.ip);
+        peer.port = message.port;
+    }
+    peer.count = 0;
+    peer.updateState(PeerState::CONNECTED);
+    return 0;
+}
+
+int Client::sendHeartbeat(const PeerInfo &peer) {
+    PeerHeartbeatMessage heartbeat;
+    heartbeat.type = PeerMessageType::HEARTBEAT;
+    heartbeat.tun = Address::hostToNet(this->tun.getIP());
+    heartbeat.ip = Address::hostToNet(this->stun.ip);
+    heartbeat.port = Address::hostToNet(this->stun.port);
+
+    UdpMessage message;
+    message.ip = peer.ip;
+    message.port = peer.port;
+    message.buffer = encrypt(peer.getKey(), std::string((char *)&heartbeat, sizeof(heartbeat)));
+    this->udpHolder.write(message);
+    return 0;
+}
+
+bool Client::isIPv4Message(const UdpMessage &message) {
+    return message.buffer.front() == PeerMessageType::IPv4;
+}
+
+int Client::handleIPv4Message(const UdpMessage &message) {
+    if (message.buffer.length() < sizeof(PeerRawIPv4Message)) {
+        spdlog::debug("invalid raw ipv4 length: {}", message.buffer.length());
+        return -1;
+    }
+
+    const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
+    const size_t len = message.buffer.length() - sizeof(ForwardHeader::type);
+    this->tun.write(std::string(src, len));
+    return 0;
 }
 
 }; // namespace Candy

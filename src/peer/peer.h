@@ -2,12 +2,13 @@
 #ifndef CANDY_PEER_PEER_H
 #define CANDY_PEER_PEER_H
 
+#include <any>
 #include <cstdint>
 #include <string>
 
 namespace Candy {
 
-enum class PeerConnState {
+enum class PeerState {
     INIT,
     PERPARING,
     SYNCHRONIZING,
@@ -16,22 +17,41 @@ enum class PeerConnState {
     FAILED,
 };
 
-struct Peer {
-    uint32_t tunIp;
-    // 对端公网地址和端口
-    uint32_t pubIp;
-    uint16_t pubPort;
+class PeerInfo {
+public:
+    uint32_t tun;
+    uint32_t ip;
+    uint16_t port;
+    uint32_t count;
 
-    // 每个对端维护一个状态,并在 tick 时更新状态机
-    PeerConnState state;
-
-    // 相同状态 tick 的次数.做出超时检查的效果.
-    int tickCount;
-
-    // 密钥
-    std::string key;
-
+    void reset();
     int updateKey(const std::string &password);
+    std::string getKey() const;
+    void updateState(PeerState state);
+    PeerState getState() const;
+
+private:
+    std::string getStateStr(PeerState state);
+    PeerState state;
+    std::string key;
+};
+
+class UdpMessage {
+public:
+    uint32_t ip;
+    uint16_t port;
+    std::string buffer;
+};
+
+class UdpHolder {
+public:
+    UdpHolder();
+    ~UdpHolder();
+    size_t read(UdpMessage &message);
+    size_t write(const UdpMessage &message);
+
+private:
+    std::any socket;
 };
 
 }; // namespace Candy

@@ -51,13 +51,51 @@ struct DynamicAddressMessage {
 
 struct PeerConnMessage {
     uint8_t type;
-    uint32_t tunSrcIp;
-    uint32_t tunDestIp;
-    uint32_t pubIp;
-    uint16_t pubPort;
-    uint8_t forceSync;
+    uint32_t src;
+    uint32_t dst;
+    uint32_t ip;
+    uint16_t port;
 
     PeerConnMessage();
+} __attribute__((packed));
+
+struct StunRequest {
+    uint8_t type[2] = {0x00, 0x01};
+    uint8_t length[2] = {0x00, 0x08};
+    uint8_t cookie[4] = {0x21, 0x12, 0xa4, 0x42};
+    uint8_t id[12] = {0x00};
+    struct {
+        uint8_t type[2] = {0x00, 0x03};
+        uint8_t length[2] = {0x00, 0x04};
+        uint8_t notset[4] = {0x00};
+    } attr;
+};
+
+struct StunResponse {
+    uint16_t type;
+    uint16_t length;
+    uint32_t cookie;
+    uint8_t id[12];
+    uint8_t attr[0];
+};
+
+namespace PeerMessageType {
+
+constexpr uint8_t HEARTBEAT = 0;
+constexpr uint8_t IPv4 = 1;
+
+}; // namespace PeerMessageType
+
+struct PeerHeartbeatMessage {
+    uint8_t type;
+    uint32_t tun;
+    uint32_t ip;
+    uint16_t port;
+} __attribute__((packed));
+
+struct PeerRawIPv4Message {
+    uint8_t type;
+    IPv4Header iph;
 } __attribute__((packed));
 
 }; // namespace Candy
