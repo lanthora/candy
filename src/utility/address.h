@@ -53,6 +53,8 @@ public:
     static uint16_t netToHost(uint16_t port);
     static uint16_t hostToNet(uint16_t port);
 
+    static std::string ipToStr(uint32_t ip);
+
 private:
     int prefixStrToMaskStr(const std::string &netPrefixStr, std::string &maskStr);
     int prefixToMask(uint32_t prefix, uint32_t &mask);
