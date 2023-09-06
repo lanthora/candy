@@ -145,6 +145,9 @@ int Client::startTunThread() {
 }
 
 int Client::startUdpThread() {
+    if (this->stun.uri.empty()) {
+        return 0;
+    }
     this->selfInfo.tun = this->tun.getIP();
     if (this->selfInfo.updateKey(this->password)) {
         return -1;
@@ -155,6 +158,9 @@ int Client::startUdpThread() {
 }
 
 int Client::startTickThread() {
+    if (this->stun.uri.empty()) {
+        return 0;
+    }
     this->tickThread = std::move(std::thread([&] {
         while (this->running) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -332,6 +338,13 @@ void Client::tick() {
         if (peer.getState() == PeerState::PERPARING) {
             needSendStunRequest = true;
         }
+        // SYNCHRONIZING 情况下对方不回包,对方版本不支持或者没有启用对等连接
+        if (peer.getState() == PeerState::SYNCHRONIZING) {
+            if (peer.count > 10) {
+                peer.updateState(PeerState::FAILED);
+                continue;
+            }
+        }
         // CONNECTING 状态下,进行超时检测,超时后设置为 FAILED,否则发送心跳
         if (peer.getState() == PeerState::CONNECTING) {
             if (peer.count > 10) {
@@ -448,7 +461,11 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
     PeerInfo &peer = this->ipPeerMap[Address::netToHost(header->saddr)];
     if (peer.getState() == PeerState::INIT) {
         peer.tun = Address::netToHost(header->saddr);
-        peer.updateState(PeerState::PERPARING);
+        if (this->stun.uri.empty()) {
+            peer.updateState(PeerState::FAILED);
+        } else {
+            peer.updateState(PeerState::PERPARING);
+        }
     }
 }
 
@@ -474,7 +491,13 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     peer.port = port;
     peer.count = 0;
     peer.updateKey(this->password);
-    peer.updateState(peer.getState() == PeerState::SYNCHRONIZING ? PeerState::CONNECTING : PeerState::PERPARING);
+    if (this->stun.uri.empty()) {
+        peer.updateState(PeerState::FAILED);
+    } else if (peer.getState() == PeerState::SYNCHRONIZING) {
+        peer.updateState(PeerState::CONNECTING);
+    } else {
+        peer.updateState(PeerState::PERPARING);
+    }
     return;
 }
 
@@ -619,11 +642,11 @@ int Client::sendStunRequest() {
 
     Uri uri(this->stun.uri);
     if (!uri.isValid()) {
-        spdlog::warn("invalid stun uri: {}", this->stun.uri);
+        spdlog::error("invalid stun uri: {}", this->stun.uri);
         return -1;
     }
     if (getaddrinfo(uri.host().c_str(), uri.port().empty() ? "3478" : uri.port().c_str(), &hints, &info)) {
-        spdlog::debug("resolve stun server domain name failed");
+        spdlog::warn("resolve stun server domain name failed: {}:{}", uri.host(), uri.port());
         return -1;
     }
 
@@ -699,7 +722,11 @@ int Client::handleStunResponse(const std::string &buffer) {
     for (auto &[tun, peer] : this->ipPeerMap) {
         if (peer.getState() == PeerState::PERPARING) {
             sendPeerConnMessage(this->tun.getIP(), peer.tun, ip, port);
-            peer.updateState(peer.ip && peer.port ? PeerState::CONNECTING : PeerState::SYNCHRONIZING);
+            if (peer.ip && peer.port) {
+                peer.updateState(PeerState::CONNECTING);
+            } else {
+                peer.updateState(PeerState::SYNCHRONIZING);
+            }
         }
     }
 
