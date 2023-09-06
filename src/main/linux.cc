@@ -3,6 +3,7 @@
 
 #include "core/client.h"
 #include "core/server.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include <argp.h>
 #include <condition_variable>
 #include <csignal>
@@ -59,7 +60,9 @@ struct argp_option options[] = {
 };
 
 int disableLogTimestamp() {
-    spdlog::set_pattern("[%^%l%$] %v");
+    auto logger = spdlog::stdout_color_mt("candy");
+    logger->set_pattern("[%^%l%$] %v");
+    spdlog::set_default_logger(logger);
     return 0;
 }
 
