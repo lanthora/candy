@@ -36,7 +36,7 @@ void PeerInfo::updateState(PeerState state) {
     if (this->state != state) {
         Address address;
         address.ipUpdate(this->tun);
-        spdlog::debug("conn state: {} {} -> {}", address.getIpStr(), getStateStr(this->state), getStateStr(state));
+        spdlog::info("conn state: {} {} -> {}", address.getIpStr(), getStateStr(this->state), getStateStr(state));
         this->state = state;
     }
 }
