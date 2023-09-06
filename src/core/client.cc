@@ -351,6 +351,8 @@ void Client::tick() {
                 peer.updateState(PeerState::FAILED);
                 continue;
             }
+            spdlog::info("connecting: {} {}:{} => {}:{}", Address::ipToStr(peer.tun), Address::ipToStr(this->selfInfo.ip),
+                         this->selfInfo.port, Address::ipToStr(peer.ip), peer.port);
             sendHeartbeat(peer);
         }
         // CONNECTED 状态下,进行超时检测,超时后清空对端信息,否则发送心跳
@@ -413,7 +415,7 @@ void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
     this->ws.write(message);
 
-    spdlog::debug("send peer conn message: src {:x} dst {:x} ip {:x} port {}", src, dst, ip, port);
+    spdlog::debug("send peer conn message: src {:08x} dst {:08x} ip {:08x} port {}", src, dst, ip, port);
     return;
 }
 
@@ -716,6 +718,9 @@ int Client::handleStunResponse(const std::string &buffer) {
         return -1;
     }
 
+    this->selfInfo.ip = ip;
+    this->selfInfo.port = port;
+
     // 收到 STUN 响应后,向所有 PREPARING 状态的对端发送自己的公网信息,如果当前持有对端公网信息,就将状态调整为 CONNECTING,
     // 否则调整为 SYNCHRONIZING
     std::unique_lock lock(this->ipPeerMutex);
@@ -748,11 +753,11 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[Address::netToHost(heartbeat->tun)];
     if (peer.ip != message.ip) {
-        spdlog::debug("peer address does not match: {:x} {:x}", peer.ip, message.ip);
+        spdlog::debug("peer address does not match: {:08x} {:08x}", peer.ip, message.ip);
         return -1;
     }
     if (peer.port != message.port) {
-        spdlog::debug("peer port does not match, update: old {:x} new {:x}", peer.ip, message.ip);
+        spdlog::debug("peer port does not match, update: old {:08x} new {:08x}", peer.ip, message.ip);
         peer.port = message.port;
     }
     peer.count = 0;
@@ -764,8 +769,8 @@ int Client::sendHeartbeat(const PeerInfo &peer) {
     PeerHeartbeatMessage heartbeat;
     heartbeat.type = PeerMessageType::HEARTBEAT;
     heartbeat.tun = Address::hostToNet(this->tun.getIP());
-    heartbeat.ip = Address::hostToNet(this->stun.ip);
-    heartbeat.port = Address::hostToNet(this->stun.port);
+    heartbeat.ip = Address::hostToNet(this->selfInfo.ip);
+    heartbeat.port = Address::hostToNet(this->selfInfo.port);
 
     UdpMessage message;
     message.ip = peer.ip;

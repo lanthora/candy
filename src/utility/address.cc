@@ -167,6 +167,12 @@ uint16_t Address::hostToNet(uint16_t port) {
     return netToHost(port);
 }
 
+std::string Address::ipToStr(uint32_t ip) {
+    Address address;
+    address.ipUpdate(ip);
+    return address.getIpStr();
+}
+
 int Address::prefixStrToMaskStr(const std::string &prefixStr, std::string &maskStr) {
     uint32_t prefix = std::stoi(prefixStr);
     uint32_t mask = 0;
