@@ -26,7 +26,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
 
 include_directories(${DEPENDENCIES_INCLUDEDIR})
 include_directories(${ixwebsocket_SOURCE_DIR})
-include_directories(${spdlog_SOURCE_DIR}/include)
 
 add_subdirectory(${SOURCE}/core)
 add_subdirectory(${SOURCE}/websocket)
