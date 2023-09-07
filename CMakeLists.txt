@@ -15,6 +15,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(
     DEPENDENCIES
     REQUIRED
+    spdlog
     libconfig++
     liburiparser
 )
@@ -22,7 +23,6 @@ pkg_check_modules(
 find_library(ARGP_LIB argp)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/spdlog.cmake)
 
 include_directories(${DEPENDENCIES_INCLUDEDIR})
 include_directories(${ixwebsocket_SOURCE_DIR})
@@ -41,7 +41,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE spdlog)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${DEPENDENCIES_LIBRARIES})
 if(ARGP_LIB)
