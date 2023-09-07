@@ -85,7 +85,7 @@ bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
 void parseConfigFile(struct arguments *arguments, std::string config) {
     try {
         libconfig::Config cfg;
-        cfg.readFile(config);
+        cfg.readFile(config.c_str());
         cfg.lookupValue("mode", arguments->mode);
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);

@@ -1,11 +1,16 @@
-FROM alpine as base
-RUN apk update
-RUN apk add spdlog openssl libconfig++ uriparser zlib
+FROM debian as base
+RUN apt-get -y update \
+  && apt-get -y install ca-certificates libspdlog-dev libssl-dev libconfig++-dev liburiparser-dev zlib1g-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 FROM base as builder
-RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev libconfig-dev uriparser-dev zlib-dev argp-standalone linux-headers
+RUN apt-get update \
+  && apt-get -y install git cmake ninja-build pkgconf g++ libconfig++-dev liburiparser-dev zlib1g-dev linux-headers-amd64
 COPY . candy
-RUN cd candy/build && cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release .. && cmake --build . && cmake --install .
+RUN cd candy/build \
+  && cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release .. \
+  && cmake --build . \
+  && cmake --install .
 
 FROM base as production
 COPY --from=builder /usr/bin/candy /usr/bin/candy
