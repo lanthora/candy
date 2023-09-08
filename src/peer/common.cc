@@ -12,6 +12,7 @@ void PeerInfo::reset() {
     this->ip = 0;
     this->port = 0;
     this->count = 0;
+    this->ack = 0;
     this->key.clear();
 }
 

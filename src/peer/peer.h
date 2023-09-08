@@ -23,6 +23,7 @@ public:
     uint32_t ip;
     uint16_t port;
     uint32_t count;
+    uint8_t ack;
 
     void reset();
     int updateKey(const std::string &password);
