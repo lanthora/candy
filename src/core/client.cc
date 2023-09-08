@@ -760,8 +760,13 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         spdlog::debug("peer port does not match, update: old {:08x} new {:08x}", peer.ip, message.ip);
         peer.port = message.port;
     }
-    peer.count = 0;
-    peer.updateState(PeerState::CONNECTED);
+    if (!peer.ack) {
+        peer.ack = 1;
+    }
+    if (heartbeat->ack) {
+        peer.count = 0;
+        peer.updateState(PeerState::CONNECTED);
+    }
     return 0;
 }
 
@@ -771,6 +776,7 @@ int Client::sendHeartbeat(const PeerInfo &peer) {
     heartbeat.tun = Address::hostToNet(this->tun.getIP());
     heartbeat.ip = Address::hostToNet(this->selfInfo.ip);
     heartbeat.port = Address::hostToNet(this->selfInfo.port);
+    heartbeat.ack = peer.ack;
 
     UdpMessage message;
     message.ip = peer.ip;

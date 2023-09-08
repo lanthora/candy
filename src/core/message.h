@@ -91,6 +91,7 @@ struct PeerHeartbeatMessage {
     uint32_t tun;
     uint32_t ip;
     uint16_t port;
+    uint8_t ack;
 } __attribute__((packed));
 
 struct PeerRawIPv4Message {
