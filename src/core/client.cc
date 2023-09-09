@@ -5,6 +5,7 @@
 #include "utility/address.h"
 #include "utility/time.h"
 #include "utility/uri.h"
+#include <algorithm>
 #include <bit>
 #include <functional>
 #include <openssl/evp.h>
@@ -334,34 +335,55 @@ void Client::tick() {
     std::unique_lock lock(this->ipPeerMutex);
     bool needSendStunRequest = false;
     for (auto &[ip, peer] : this->ipPeerMap) {
-        // 遍历所有虚拟地址到公网信息映射中的元素,如果有 PREPARING 状态的元素,在遍历结束后发送一次 STUN 请求
-        if (peer.getState() == PeerState::PERPARING) {
+        switch (peer.getState()) {
+        case PeerState::INIT:
+            // 收到对方通过服务器转发的数据的时候,会切换为 PERPARING,这里不做处理
+            break;
+
+        case PeerState::PERPARING:
+            // 有 PREPARING 状态的元素,在遍历结束后发送一次 STUN 请求
             needSendStunRequest = true;
-        }
-        // SYNCHRONIZING 情况下对方不回包,对方版本不支持或者没有启用对等连接
-        if (peer.getState() == PeerState::SYNCHRONIZING) {
+            break;
+
+        case PeerState::SYNCHRONIZING:
+            // 对方版本不支持或者没有启用对等连接,超时后进入 FAILED
             if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
-                continue;
             }
-        }
-        // CONNECTING 状态下,进行超时检测,超时后设置为 FAILED,否则发送心跳
-        if (peer.getState() == PeerState::CONNECTING) {
+            break;
+
+        case PeerState::CONNECTING:
+            // 进行超时检测,超时后进入 WAITTING 状态,否则发送心跳
             if (peer.count > 10) {
-                peer.updateState(PeerState::FAILED);
-                continue;
+                peer.updateState(PeerState::WAITTING);
+            } else {
+                sendHeartbeat(peer);
+                spdlog::debug("connecting: {} {}:{} => {}:{}", Address::ipToStr(peer.tun), Address::ipToStr(this->selfInfo.ip),
+                              this->selfInfo.port, Address::ipToStr(peer.ip), peer.port);
             }
-            spdlog::info("connecting: {} {}:{} => {}:{}", Address::ipToStr(peer.tun), Address::ipToStr(this->selfInfo.ip),
-                         this->selfInfo.port, Address::ipToStr(peer.ip), peer.port);
-            sendHeartbeat(peer);
-        }
-        // CONNECTED 状态下,进行超时检测,超时后清空对端信息,否则发送心跳
-        if (peer.getState() == PeerState::CONNECTED) {
+            break;
+
+        case PeerState::CONNECTED:
+            // 进行超时检测,超时后清空对端信息,否则发送心跳
             if (peer.count > 3) {
                 peer.reset();
-                continue;
+            } else {
+                sendHeartbeat(peer);
             }
-            sendHeartbeat(peer);
+            break;
+
+        case PeerState::WAITTING:
+            // 指数退避算法
+            if (peer.count > peer.retry) {
+                uint32_t next = std::min(peer.retry * 2, 3600U);
+                peer.reset();
+                peer.retry = next;
+            }
+            break;
+
+        case PeerState::FAILED:
+            // 两端任意一方不支持或者未启用对等连接功能,进入失败状态,不再主动重连
+            break;
         }
         ++peer.count;
     }
@@ -414,8 +436,6 @@ void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
     this->ws.write(message);
-
-    spdlog::debug("send peer conn message: src {:08x} dst {:08x} ip {:08x} port {}", src, dst, ip, port);
     return;
 }
 
@@ -465,7 +485,9 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
         peer.tun = Address::netToHost(header->saddr);
         if (this->stun.uri.empty()) {
             peer.updateState(PeerState::FAILED);
-        } else {
+            return;
+        }
+        if (peer.getState() != PeerState::CONNECTING) {
             peer.updateState(PeerState::PERPARING);
         }
     }
@@ -661,7 +683,7 @@ int Client::sendStunRequest() {
     message.port = this->stun.port;
     message.buffer.assign((char *)&request, sizeof(request));
     if (this->udpHolder.write(message) != message.buffer.size()) {
-        spdlog::debug("send stun request failed");
+        spdlog::warn("send stun request failed");
     }
     return 0;
 }
@@ -714,7 +736,7 @@ int Client::handleStunResponse(const std::string &buffer) {
         pos += 2 + Address::netToHost(*(uint16_t *)(attr + pos));
     }
     if (!ip || !port) {
-        spdlog::debug("stun response parse failed: {:n}", spdlog::to_hex(buffer));
+        spdlog::warn("stun response parse failed: {:n}", spdlog::to_hex(buffer));
         return -1;
     }
 
@@ -753,11 +775,11 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[Address::netToHost(heartbeat->tun)];
     if (peer.ip != message.ip) {
-        spdlog::debug("peer address does not match: {:08x} {:08x}", peer.ip, message.ip);
+        spdlog::warn("heartbeat address does not match: {:08x} {:08x}", peer.ip, message.ip);
         return -1;
     }
     if (peer.port != message.port) {
-        spdlog::debug("peer port does not match, update: old {:08x} new {:08x}", peer.ip, message.ip);
+        spdlog::info("heartbeat port does not match, update: old {:08x} new {:08x}", peer.ip, message.ip);
         peer.port = message.port;
     }
     if (!peer.ack) {
