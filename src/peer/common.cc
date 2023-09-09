@@ -6,13 +6,17 @@
 
 namespace Candy {
 
+PeerInfo::PeerInfo() {
+    reset();
+}
+
 void PeerInfo::reset() {
     updateState(PeerState::INIT);
     this->tun = 0;
     this->ip = 0;
     this->port = 0;
-    this->count = 0;
     this->ack = 0;
+    this->retry = 30;
     this->key.clear();
 }
 
@@ -34,8 +38,9 @@ std::string PeerInfo::getKey() const {
 }
 
 void PeerInfo::updateState(PeerState state) {
+    this->count = 0;
     if (this->state != state) {
-        spdlog::info("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
+        spdlog::debug("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
         this->state = state;
     }
 }
@@ -56,6 +61,8 @@ std::string PeerInfo::getStateStr(PeerState state) {
         return "CONNECTING";
     case PeerState::CONNECTED:
         return "CONNECTED";
+    case PeerState::WAITTING:
+        return "WAITTING";
     case PeerState::FAILED:
         return "FAILED";
     default:

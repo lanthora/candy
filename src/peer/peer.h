@@ -14,6 +14,7 @@ enum class PeerState {
     SYNCHRONIZING,
     CONNECTING,
     CONNECTED,
+    WAITTING,
     FAILED,
 };
 
@@ -22,14 +23,17 @@ public:
     uint32_t tun;
     uint32_t ip;
     uint16_t port;
-    uint32_t count;
     uint8_t ack;
 
+    uint32_t count;
+    uint32_t retry;
     void reset();
     int updateKey(const std::string &password);
     std::string getKey() const;
     void updateState(PeerState state);
     PeerState getState() const;
+
+    PeerInfo();
 
 private:
     std::string getStateStr(PeerState state);
