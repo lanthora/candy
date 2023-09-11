@@ -157,15 +157,15 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
 
     Address address;
     if (address.ipUpdate(Address::netToHost(header->ip))) {
-        spdlog::info("invalid auth ip: buffer {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("invalid auth ip: buffer {:n}", spdlog::to_hex(message.buffer));
         return;
     }
     if (this->ipWsMap.contains(address.getIp())) {
         this->ws.close(this->ipWsMap[address.getIp()]);
-        spdlog::info("ip conflict, old connection kicked out: {}", address.getIpStr());
+        spdlog::debug("ip conflict, kick out old clinet: {}", address.getIpStr());
     }
 
-    spdlog::info("new client connected: {}", address.getIpStr());
+    spdlog::debug("client connected: {}", address.getIpStr());
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
 }
@@ -284,7 +284,7 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
     if (this->ipWsMap[it->second] == message.conn) {
         Address address;
         if (!address.ipUpdate(it->second)) {
-            spdlog::info("client disconnected: {}", address.getIpStr());
+            spdlog::debug("client disconnected: {}", address.getIpStr());
         }
         this->ipWsMap.erase(it->second);
     }
