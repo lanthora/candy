@@ -1,8 +1,9 @@
 # Candy
 
 - Index
-- [Design](design.md)
 - [Specification](specification.md)
+- [Forward](forward.md)
+- [Peer to Peer](peer-to-peer.md)
 
 ## Candy Is A VPN, Not A Proxy
 

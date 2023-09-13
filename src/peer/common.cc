@@ -53,8 +53,8 @@ std::string PeerInfo::getStateStr(PeerState state) {
     switch (state) {
     case PeerState::INIT:
         return "INIT";
-    case PeerState::PERPARING:
-        return "PERPARING";
+    case PeerState::PREPARING:
+        return "PREPARING";
     case PeerState::SYNCHRONIZING:
         return "SYNCHRONIZING";
     case PeerState::CONNECTING:
