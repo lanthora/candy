@@ -1,8 +1,9 @@
-# Design
+# Forward
 
 - [Index](index.md)
-- Design
 - [Specification](specification.md)
+- Forward
+- [Peer to Peer](peer-to-peer.md)
 
 ## The Simplest Usage of TUN/TAP
 

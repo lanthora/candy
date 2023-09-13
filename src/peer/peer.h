@@ -10,7 +10,7 @@ namespace Candy {
 
 enum class PeerState {
     INIT,
-    PERPARING,
+    PREPARING,
     SYNCHRONIZING,
     CONNECTING,
     CONNECTED,

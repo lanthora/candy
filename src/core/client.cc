@@ -340,7 +340,7 @@ void Client::tick() {
             // 收到对方通过服务器转发的数据的时候,会切换为 PERPARING,这里不做处理
             break;
 
-        case PeerState::PERPARING:
+        case PeerState::PREPARING:
             // 有 PREPARING 状态的元素,在遍历结束后发送一次 STUN 请求
             needSendStunRequest = true;
             break;
@@ -487,9 +487,7 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
             peer.updateState(PeerState::FAILED);
             return;
         }
-        if (peer.getState() != PeerState::CONNECTING) {
-            peer.updateState(PeerState::PERPARING);
-        }
+        peer.updateState(PeerState::PREPARING);
     }
 }
 
@@ -519,8 +517,8 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
         peer.updateState(PeerState::FAILED);
     } else if (peer.getState() == PeerState::SYNCHRONIZING) {
         peer.updateState(PeerState::CONNECTING);
-    } else {
-        peer.updateState(PeerState::PERPARING);
+    } else if (peer.getState() != PeerState::CONNECTING) {
+        peer.updateState(PeerState::PREPARING);
     }
     return;
 }
@@ -747,7 +745,7 @@ int Client::handleStunResponse(const std::string &buffer) {
     // 否则调整为 SYNCHRONIZING
     std::unique_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
-        if (peer.getState() == PeerState::PERPARING) {
+        if (peer.getState() == PeerState::PREPARING) {
             sendPeerConnMessage(this->tun.getIP(), peer.tun, ip, port);
             if (peer.ip && peer.port) {
                 peer.updateState(PeerState::CONNECTING);

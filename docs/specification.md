@@ -1,8 +1,9 @@
 # Specification
 
 - [Index](index.md)
-- [Design](design.md)
 - Specification
+- [Forward](forward.md)
+- [Peer to Peer](peer-to-peer.md)
 
 ## Handshake Message
 
