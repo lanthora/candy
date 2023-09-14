@@ -2,9 +2,7 @@
 
 [中文](README.md) | English
 
-A WebSocket and TUN based VPN for Linux.
-
-This project aims to overcome the problem of mainstream VPN traffic being easily detected and blocked by firewalls.
+A easy-to-deploy, firewall-penetrating, and peer-to-peer virtual private network.
 
 ## Usage
 
