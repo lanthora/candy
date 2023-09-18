@@ -771,7 +771,12 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     // 收到对端的心跳,检查地址,更新端口,并将状态调整为 CONNECTED
     PeerHeartbeatMessage *heartbeat = (PeerHeartbeatMessage *)message.buffer.c_str();
     std::unique_lock lock(this->ipPeerMutex);
-    PeerInfo &peer = this->ipPeerMap[Address::netToHost(heartbeat->tun)];
+    uint32_t tun = Address::netToHost(heartbeat->tun);
+    PeerInfo &peer = this->ipPeerMap[tun];
+    if (peer.getState() != PeerState::CONNECTING && peer.getState() != PeerState::CONNECTED) {
+        spdlog::debug("heartbeat peer state invalid: {} {}", Address::ipToStr(tun), peer.getStateStr());
+        return -1;
+    }
     if (peer.ip != message.ip) {
         spdlog::warn("heartbeat address does not match: {:08x} {:08x}", peer.ip, message.ip);
         return -1;
