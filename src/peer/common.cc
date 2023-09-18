@@ -7,6 +7,7 @@
 namespace Candy {
 
 PeerInfo::PeerInfo() {
+    this->state = PeerState::INIT;
     reset();
 }
 
@@ -47,6 +48,10 @@ void PeerInfo::updateState(PeerState state) {
 
 PeerState PeerInfo::getState() const {
     return this->state;
+}
+
+std::string PeerInfo::getStateStr() const {
+    return getStateStr(this->state);
 }
 
 std::string PeerInfo::getStateStr(PeerState state) {

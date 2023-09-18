@@ -24,19 +24,20 @@ public:
     uint32_t ip;
     uint16_t port;
     uint8_t ack;
-
     uint32_t count;
     uint32_t retry;
+
+public:
+    PeerInfo();
     void reset();
     int updateKey(const std::string &password);
     std::string getKey() const;
     void updateState(PeerState state);
     PeerState getState() const;
-
-    PeerInfo();
+    std::string getStateStr() const;
 
 private:
-    std::string getStateStr(PeerState state);
+    static std::string getStateStr(PeerState state);
     PeerState state;
     std::string key;
 };
