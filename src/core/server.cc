@@ -214,7 +214,10 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     }
 
     Address address;
-    address.cidrUpdate(header->cidr);
+    if (address.cidrUpdate(header->cidr)) {
+        spdlog::warn("dynamic address header cidr invalid: {}", header->cidr);
+        return;
+    }
 
     // 期望使用的地址不在当前网络或已经被分配
     if (!dynamic.inSameNetwork(address) || this->ipWsMap.contains(address.getIp())) {
