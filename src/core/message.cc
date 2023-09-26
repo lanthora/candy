@@ -20,9 +20,11 @@ void AuthHeader::updateHash(const std::string &password) {
 }
 
 bool AuthHeader::check(const std::string &password) {
-    // 检查时间戳
-    if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
-        spdlog::warn("auth header timestamp check failed. timestamp {}", Time::netToHost(this->timestamp));
+    // 检查时间
+    int64_t localTime = Time::unixTime();
+    int64_t remoteTime = Time::netToHost(this->timestamp);
+    if (std::abs(localTime - remoteTime) > 30) {
+        spdlog::warn("auth header timestamp check failed: server {} client {}", localTime, remoteTime);
         return false;
     }
 
@@ -59,9 +61,11 @@ void DynamicAddressMessage::updateHash(const std::string &password) {
 }
 
 bool DynamicAddressMessage::check(const std::string &password) {
-    // 检查时间戳
-    if (std::abs(Time::unixTime() - (int64_t)Time::netToHost(this->timestamp)) > 30) {
-        spdlog::warn("dynamic address header timestamp check failed: timestamp {}", Time::netToHost(this->timestamp));
+    // 检查时间
+    int64_t localTime = Time::unixTime();
+    int64_t remoteTime = Time::netToHost(this->timestamp);
+    if (std::abs(localTime - remoteTime) > 30) {
+        spdlog::warn("dynamic address header timestamp check failed: server {} client {}", localTime, remoteTime);
         return false;
     }
 
