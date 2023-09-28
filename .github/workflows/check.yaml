@@ -8,8 +8,10 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: jidicula/clang-format-action@v4.11.0
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: check format
+        uses: jidicula/clang-format-action@v4.11.0
         with:
           check-path: 'src'
 
@@ -17,14 +19,17 @@ jobs:
     needs: format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: docker build .
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: build
+        run: docker build .
 
   windows:
     needs: format
     runs-on: windows-latest
     steps:
-    - uses: msys2/setup-msys2@v2
+    - name: install deps
+      uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
         update: true
@@ -35,7 +40,9 @@ jobs:
           mingw-w64-x86_64-libconfig
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-uriparser
-    - uses: actions/checkout@v3
-    - shell: msys2 {0}
+    - name: checkout
+      uses: actions/checkout@v3
+    - name: build
+      shell: msys2 {0}
       working-directory: build
       run: cmake .. && cmake --build .
