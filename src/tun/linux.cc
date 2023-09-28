@@ -176,7 +176,7 @@ private:
     int timeout;
     int tunFd;
 };
-}; // namespace
+} // namespace
 
 namespace Candy {
 
@@ -262,6 +262,6 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

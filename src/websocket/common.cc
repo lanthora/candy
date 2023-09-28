@@ -22,4 +22,4 @@ bool WebSocketConn::operator==(const WebSocketConn &other) const {
     return thisConn.lock() == otherConn.lock();
 }
 
-}; // namespace Candy
+} // namespace Candy

@@ -88,4 +88,4 @@ PeerConnMessage::PeerConnMessage() {
     this->type = MessageType::PEER;
 }
 
-}; // namespace Candy
+} // namespace Candy

@@ -63,4 +63,4 @@ std::string Uri::fromList(UriPathSegmentA *xs, const std::string &delim) const {
     return accum;
 }
 
-}; // namespace Candy
+} // namespace Candy

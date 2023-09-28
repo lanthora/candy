@@ -18,7 +18,7 @@ constexpr uint8_t FORWARD = 1;
 constexpr uint8_t DHCP = 2;
 constexpr uint8_t PEER = 3;
 
-}; // namespace MessageType
+} // namespace MessageType
 
 struct AuthHeader {
     uint8_t type;
@@ -84,7 +84,7 @@ namespace PeerMessageType {
 constexpr uint8_t HEARTBEAT = 0;
 constexpr uint8_t IPv4 = 1;
 
-}; // namespace PeerMessageType
+} // namespace PeerMessageType
 
 struct PeerHeartbeatMessage {
     uint8_t type;
@@ -99,6 +99,6 @@ struct PeerRawIPv4Message {
     IPv4Header iph;
 } __attribute__((packed));
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

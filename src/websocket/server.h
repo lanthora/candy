@@ -31,6 +31,6 @@ private:
     std::any impl;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

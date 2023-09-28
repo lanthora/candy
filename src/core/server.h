@@ -43,6 +43,6 @@ private:
     std::map<WebSocketConn, uint32_t> wsIpMap;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

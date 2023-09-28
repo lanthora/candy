@@ -29,6 +29,6 @@ private:
     std::string fromList(UriPathSegmentA *xs, const std::string &delim) const;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

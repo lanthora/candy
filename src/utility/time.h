@@ -13,6 +13,6 @@ public:
     static int64_t netToHost(int64_t net);
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif
