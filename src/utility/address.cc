@@ -223,4 +223,4 @@ int Address::maskToPrefix(uint32_t mask, uint32_t &prefix) {
     return 0;
 }
 
-}; // namespace Candy
+} // namespace Candy

@@ -141,4 +141,4 @@ int64_t Time::netToHost(int64_t net) {
     return Time::hostToNet(net);
 }
 
-}; // namespace Candy
+} // namespace Candy

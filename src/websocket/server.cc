@@ -119,7 +119,7 @@ private:
     }
 };
 
-}; // namespace
+} // namespace
 
 namespace Candy {
 
@@ -169,4 +169,4 @@ int WebSocketServer::close(WebSocketConn conn) {
     return server->close(conn);
 }
 
-}; // namespace Candy
+} // namespace Candy

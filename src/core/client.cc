@@ -20,7 +20,7 @@ static constexpr size_t AES_256_GCM_IV_LEN = 12;
 static constexpr size_t AES_256_GCM_TAG_LEN = 16;
 static constexpr size_t AES_256_GCM_KEY_LEN = 32;
 
-}; // namespace
+} // namespace
 
 namespace Candy {
 
@@ -827,4 +827,4 @@ int Client::handleIPv4Message(const UdpMessage &message) {
     return 0;
 }
 
-}; // namespace Candy
+} // namespace Candy

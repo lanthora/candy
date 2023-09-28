@@ -186,7 +186,7 @@ std::string getLastestAddress(const std::string &name) {
     return ss.str();
 }
 
-}; // namespace
+} // namespace
 
 namespace Candy {
 void shutdown() {

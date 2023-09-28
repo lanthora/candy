@@ -102,7 +102,7 @@ private:
     }
 };
 
-}; // namespace
+} // namespace
 
 namespace Candy {
 
@@ -146,4 +146,4 @@ int WebSocketClient::write(const WebSocketMessage &message) {
     return client->write(message);
 }
 
-}; // namespace Candy
+} // namespace Candy

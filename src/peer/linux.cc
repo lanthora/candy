@@ -87,6 +87,6 @@ size_t UdpHolder::write(const UdpMessage &message) {
     return len;
 }
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

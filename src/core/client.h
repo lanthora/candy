@@ -99,6 +99,6 @@ private:
     std::thread tickThread;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

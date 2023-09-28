@@ -295,4 +295,4 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
     this->wsIpMap.erase(it);
 }
 
-}; // namespace Candy
+} // namespace Candy

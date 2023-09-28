@@ -60,6 +60,6 @@ private:
     std::any socket;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif

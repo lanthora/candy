@@ -75,4 +75,4 @@ std::string PeerInfo::getStateStr(PeerState state) {
     }
 }
 
-}; // namespace Candy
+} // namespace Candy

@@ -77,6 +77,6 @@ private:
     std::string cidr;
 };
 
-}; // namespace Candy
+} // namespace Candy
 
 #endif
