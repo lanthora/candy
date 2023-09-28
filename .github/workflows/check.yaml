@@ -1,4 +1,4 @@
-name: Build Check
+name: Check
 
 on:
   pull_request:
@@ -8,11 +8,8 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      
-      - name: Check Code Format
-        uses: jidicula/clang-format-action@v4.11.0
+      - uses: actions/checkout@v3
+      - uses: jidicula/clang-format-action@v4.11.0
         with:
           check-path: 'src'
 
@@ -21,8 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Linux Build Check
-        run: docker build .
+      - run: docker build .
 
   windows:
     needs: format
@@ -39,9 +35,7 @@ jobs:
           mingw-w64-x86_64-libconfig
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-uriparser
-
     - uses: actions/checkout@v3
-    - name: Windows Build Check
-      shell: msys2 {0}
+    - shell: msys2 {0}
       working-directory: build
       run: cmake .. && cmake --build .
