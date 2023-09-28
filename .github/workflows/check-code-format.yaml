@@ -1,4 +1,4 @@
-name: Pull Request Check
+name: Check Code Format
 
 on:
   pull_request:
@@ -11,10 +11,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       
-      - name: Code Format
+      - name: Check Code Format
         uses: jidicula/clang-format-action@v4.11.0
         with:
           check-path: 'src'
-
-      - name: Build
-        run: docker build .
