@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 #include "utility/address.h"
-#include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 
 #if defined(__linux__) || defined(__linux)

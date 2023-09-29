@@ -17,5 +17,3 @@ podman run --rm --privileged=true --net=host --device /dev/net/tun docker.io/lan
 ```bash
 podman run --rm docker.io/lanthora/candy:latest --help
 ```
-
-反馈问题可以加入 [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1).
