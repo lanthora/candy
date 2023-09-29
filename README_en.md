@@ -17,5 +17,3 @@ If you want to set up your own virtual private network, it's also easy. For deta
 ```bash
 podman run --rm docker.io/lanthora/candy:latest --help
 ```
-
-We also welcome you to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1) and share your feedback with us.

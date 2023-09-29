@@ -162,10 +162,10 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
     }
     if (this->ipWsMap.contains(address.getIp())) {
         this->ws.close(this->ipWsMap[address.getIp()]);
-        spdlog::debug("ip conflict, kick out old clinet: {}", address.getIpStr());
+        spdlog::info("ip conflict, kick out old clinet: {}", address.getIpStr());
     }
 
-    spdlog::debug("client connected: {}", address.getIpStr());
+    spdlog::info("client connected: {}", address.getIpStr());
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
 }
@@ -287,7 +287,7 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
     if (this->ipWsMap[it->second] == message.conn) {
         Address address;
         if (!address.ipUpdate(it->second)) {
-            spdlog::debug("client disconnected: {}", address.getIpStr());
+            spdlog::info("client disconnected: {}", address.getIpStr());
         }
         this->ipWsMap.erase(it->second);
     }
