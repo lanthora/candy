@@ -215,7 +215,7 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
 
     Address address;
     if (address.cidrUpdate(header->cidr)) {
-        spdlog::warn("dynamic address header cidr invalid: {}", header->cidr);
+        spdlog::warn("dynamic address header cidr invalid: buffer {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "utility/address.h"
+#include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 
 #if defined(__linux__) || defined(__linux)
@@ -13,6 +14,10 @@
 namespace Candy {
 
 int Address::cidrUpdate(const std::string &cidr) {
+    if (cidr.empty()) {
+        spdlog::error("cidr is empty");
+        return -1;
+    }
     std::size_t pos = cidr.find('/');
     if (pos == std::string::npos) {
         spdlog::error("invalid cidr format: {}", cidr);
