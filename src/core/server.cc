@@ -91,7 +91,7 @@ int Server::startWsThread() {
         return -1;
     }
 
-    this->wsThread = std::move(std::thread([&] { this->handleWebSocketMessage(); }));
+    this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
     return 0;
 }
 

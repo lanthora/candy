@@ -118,7 +118,7 @@ int Client::startWsThread() {
     }
 
     // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
-    this->wsThread = std::move(std::thread([&] { this->handleWebSocketMessage(); }));
+    this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
     return 0;
 }
 
@@ -139,7 +139,7 @@ int Client::startTunThread() {
         return -1;
     }
 
-    this->tunThread = std::move(std::thread([&] { this->handleTunMessage(); }));
+    this->tunThread = std::thread([&] { this->handleTunMessage(); });
 
     sendAuthMessage();
     return 0;
@@ -154,7 +154,7 @@ int Client::startUdpThread() {
         return -1;
     }
     sendStunRequest();
-    this->udpThread = std::move(std::thread([&] { this->handleUdpMessage(); }));
+    this->udpThread = std::thread([&] { this->handleUdpMessage(); });
     return 0;
 }
 
@@ -162,12 +162,12 @@ int Client::startTickThread() {
     if (this->stun.uri.empty()) {
         return 0;
     }
-    this->tickThread = std::move(std::thread([&] {
+    this->tickThread = std::thread([&] {
         while (this->running) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             this->tick();
         }
-    }));
+    });
     return 0;
 }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-#if defined(__linux__) || defined(__linux)
+#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
 
 #include "peer/peer.h"
 #include "utility/address.h"

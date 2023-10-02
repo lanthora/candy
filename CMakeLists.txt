@@ -7,7 +7,7 @@ include_directories(${SOURCE})
 aux_source_directory(${SOURCE}/main DIR_SRCS)
 add_executable(${CMAKE_PROJECT_NAME} ${DIR_SRCS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++23 -Wall -Werror -Wfatal-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++2b -Wall -Werror -Wfatal-errors")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2")
 
