@@ -33,7 +33,7 @@ struct ntp_packet {
 
 } // namespace
 
-#if defined(__linux__) || defined(__linux)
+#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
 #include <limits>
 #include <netdb.h>
 
@@ -103,7 +103,7 @@ out:
     return retval;
 }
 #else
-// TODO: 支持 Windows 和 MacOS
+// TODO: 支持 Windows
 static int64_t ntpTime() {
     return 0;
 }
