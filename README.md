@@ -9,11 +9,11 @@
 一行命令即可加入我们的网络.
 
 ```bash
-podman run --rm --privileged=true --net=host --device /dev/net/tun docker.io/lanthora/candy:latest
+docker run --rm --privileged=true --net=host --device /dev/net/tun docker.io/lanthora/candy:latest
 ```
 
 你可以轻松搭建自己的网络,具体方法参考帮助文档.
 
 ```bash
-podman run --rm docker.io/lanthora/candy:latest --help
+docker run --rm docker.io/lanthora/candy:latest --help
 ```
