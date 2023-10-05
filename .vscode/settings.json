@@ -10,4 +10,5 @@
     "editor.formatOnSaveMode": "modifications",
     "files.insertFinalNewline": true,
     "json.format.enable": true,
+    "cmake.configureOnOpen": false,
 }
