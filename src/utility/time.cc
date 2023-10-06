@@ -103,7 +103,7 @@ out:
     return retval;
 }
 #else
-// TODO: 支持 Windows
+// TODO(windows): 从网络上获取当前时间戳
 static int64_t ntpTime() {
     return 0;
 }

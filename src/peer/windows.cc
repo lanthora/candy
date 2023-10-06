@@ -7,7 +7,7 @@
 
 namespace Candy {
 
-// TODO: 实现对等连接 UDP 收发,这部分与操作系统相关,封装 UDP 操作
+// TODO(windows): 实现对等连接 UDP 收发,这部分与操作系统相关,封装 UDP 操作
 UdpHolder::UdpHolder() {
     return;
 }
