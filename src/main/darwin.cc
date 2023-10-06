@@ -5,11 +5,11 @@
 
 namespace Candy {
 void shutdown() {
-    // TODO: 补充全局退出函数,调用这个函数后,进程应该正常回收资源并退出
+    // TODO(macos): 补充全局退出函数,调用这个函数后,进程应该正常回收资源并退出
 }
 } // namespace Candy
 
-// TODO: 实现 MacOS 的主函数
+// TODO(macos): 实现 MacOS 的主函数
 int main() {
     Candy::Client client;
     client.setWebSocketServer("wss://zone.icandy.one/demo");
