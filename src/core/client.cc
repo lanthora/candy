@@ -778,11 +778,11 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         return -1;
     }
     if (peer.ip != message.ip) {
-        spdlog::warn("heartbeat address does not match: {:08x} {:08x}", peer.ip, message.ip);
+        spdlog::warn("heartbeat address mismatch: {} auth {:08x} real {:08x}", Address::ipToStr(tun), peer.ip, message.ip);
         return -1;
     }
     if (peer.port != message.port) {
-        spdlog::info("heartbeat port does not match, update: old {:08x} new {:08x}", peer.ip, message.ip);
+        spdlog::info("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
         peer.port = message.port;
     }
     if (!peer.ack) {
