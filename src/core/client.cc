@@ -307,7 +307,7 @@ void Client::handleUdpMessage() {
             continue;
         }
         if (error < 0) {
-            spdlog::critical("udp read failed. error {}", error);
+            spdlog::critical("udp read failed: error {}", error);
             break;
         }
         if (isStunResponse(message)) {
@@ -316,7 +316,7 @@ void Client::handleUdpMessage() {
         }
         message.buffer = decrypt(selfInfo.getKey(), message.buffer);
         if (message.buffer.empty()) {
-            spdlog::warn("peer message is empty");
+            spdlog::warn("invalid peer message: ip {}", Address::ipToStr(message.ip));
             continue;
         }
         if (isHeartbeatMessage(message)) {
