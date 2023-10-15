@@ -84,6 +84,11 @@ static int64_t ntpTime() {
         goto out;
     }
 
+    if (len != sizeof(packet) || (packet.li_vn_mode & 0x07) != 4) {
+        spdlog::warn("invalid ntp response");
+        goto out;
+    }
+
     retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
 
     // Fix ntp 2036 problem
