@@ -2,7 +2,7 @@
 
 [中文](README.md) | English
 
-A easy-to-deploy, firewall-penetrating, and peer-to-peer virtual private network.
+A easy-to-deploy and peer-to-peer virtual private network.
 
 ## Usage
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=A easy-to-deploy, firewall-penetrating, and peer-to-peer virtual private network
+Description=A easy-to-deploy and peer-to-peer virtual private network
 StartLimitIntervalSec=0
 
 [Service]
