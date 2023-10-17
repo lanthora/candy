@@ -14,18 +14,13 @@ spec:
       hostNetwork: true
       containers:
       - name: candy-demo
-        image: lanthora/candy:latest
+        image: docker.io/lanthora/candy:latest
         securityContext:
           privileged: true
         volumeMounts:
-        - name: dev-net-tun
-          mountPath: /dev/net/tun
         - name: var-lib-candy
           mountPath: /var/lib/candy
       volumes:
-      - name: dev-net-tun
-        hostPath:
-          path: /dev/net/tun
       - name: var-lib-candy
         hostPath:
           path: /var/lib/candy
