@@ -33,4 +33,4 @@ If you are not satisfied with the previous installation methods, you can start t
 
 Run the program and you will know how to use it.
 
-We also welcome you to join our [Telegram Group](https://t.me/+xR4K-Asvjz0zMjU1) and share your feedback with us.
+We also welcome you to join our [Telegram Group](https://t.me/CandyUserGroup) and share your feedback with us.
