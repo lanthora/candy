@@ -7,7 +7,6 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 ColumnLimit: 130
-SortIncludes: false
 IndentCaseLabels: false
 SortIncludes: true
 ...
