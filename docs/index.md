@@ -1,36 +1,58 @@
 # Candy
 
-- Index
-- [Specification](specification.md)
-- [Forward](forward.md)
-- [Peer to Peer](peer-to-peer.md)
+- 简介
+- [协议规范](specification.md)
+- [服务端转发基本原理](forward.md)
+- [对等连接状态机](peer-to-peer.md)
 
-## Candy Is A VPN, Not A Proxy
+## 组网工具而非代理工具
 
-VPN is an abbreviation for "Virtual Private Network", which is a technology that uses public networks (such as the Internet) to build private networks. VPN allows remote users to connect to the internal network of an enterprise or organization through an encrypted tunnel, and access internal resources and services.
+VPN 是"虚拟专用网络"的缩写,是一种利用公共网络(如互联网)构建专用网络的技术. VPN 允许远程用户通过加密隧道连接到企业或组织的内部网络,并访问内部资源和服务.
 
-Proxy is a common network security tool. Its role is to establish an intermediary service between the user and the target server, thereby hiding the user's real IP address and location information, and enhancing the privacy and security of network access.
+代理是一种常见的网络安全工具.其作用是在用户和目标服务器之间建立一个中介服务,从而隐藏用户的真实IP地址和位置信息,增强网络访问的私密性和安全性.
 
-## Why A New VPN Was Developed
+## 为什么要再开发一款 VPN
 
-Widely used VPNs, such as WireGuard and OpenVPN, can be blocked by GFW. Therefore, a VPN that can cross GFW is needed.
+典型的 VPN 有 OpenVPN 和 IPSec, 以及最近几年出现的 WireGuard. 它们能满足用户的绝大多数场景.我曾是 WireGuard 用户,但在国内众所周知的网络环境下,它们的设计存在明显的"缺陷",即明显的协议特征.这原本不是 VPN 需要考虑的问题,但当流量通过防火墙时,存在被丢包的风险.我就是在 WireGuard 被丢包后才决定实现一款不容易被防火墙探测的 VPN.
 
-## How To Install
+## 如何安装
 
 ### Docker
 
-The image has been uploaded to [Docker Hub](https://hub.docker.com/r/lanthora/candy) and [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy), we recommend all users to use the Docker image.
+镜像已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy),我们建议所有用户使用 Docker 镜像.
 
 ### AUR
 
-If you don't like Docker and you are an Arch Linux user, you can use [AUR](https://aur.archlinux.org/packages/candy).
+如果你是 Arch Linux 用户,并且不喜欢容器化部署,推荐使用 [AUR](https://aur.archlinux.org/packages/candy).
 
-### Build From Source
+### 从源码构建
 
-If you are not satisfied with the previous installation methods, you can start the installation from the source code, the code is hosted on [Github](https://github.com/lanthora/candy).
+你也可以从源码构建,代码托管在 [Github](https://github.com/lanthora/candy).
 
-## How To Use
+## 如何使用
 
-Run the program and you will know how to use it.
+能够启动客户端的最简单命令.此时会连接到我们公开的测试服务器环境.虚拟网络的地址范围是 172.16.0.0/16, 你的客户端会被随机分配一个地址,请确保没有地址冲突.
 
-We also welcome you to join our [Telegram Group](https://t.me/CandyUserGroup) and share your feedback with us.
+```bash
+candy -m client -w wss://zone.icandy.one/demo
+```
+
+如果要使用客户端之间的对等连接.可以配置 [STUN](https://en.wikipedia.org/wiki/STUN) 服务器.这也是 Docker 容器启动的默认命令.
+
+```bash
+candy -m client -w wss://zone.icandy.one/demo -s stun://stun.cloudflare.com
+```
+
+如果你使用的代理,可能会让客户端误判本地的公网信息,把 `stun.cloudflare.com` 换成 `stun.qq.com` 可以解决这个问题.
+
+```bash
+candy -m client -w wss://zone.icandy.one/demo -s stun://stun.qq.com
+```
+
+更多使用使用细节参考
+
+```bash
+candy --help
+```
+
+或者加入 [Telegram Group](https://t.me/CandyUserGroup) 直接反馈.
