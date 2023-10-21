@@ -1,9 +1,9 @@
-# 服务端转发基本原理
+# 服务端转发原理
 
 - [简介](index.md)
 - [协议规范](specification.md)
-- 服务端转发基本原理
-- [对等连接状态机](peer-to-peer.md)
+- 服务端转发原理
+- [对等连接](peer-to-peer.md)
 
 ## 最简单的 TUN 使用方式
 
