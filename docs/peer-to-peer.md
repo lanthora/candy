@@ -1,36 +1,36 @@
 # Peer to Peer
 
-- [Index](index.md)
-- [Specification](specification.md)
-- [Forward](forward.md)
-- Peer to Peer
+- [简介](index.md)
+- [协议规范](specification.md)
+- [服务端转发基本原理](forward.md)
+- 对等连接状态机
 
-## State Machine
+## 状态机
 
 ### INIT
 
-When receiving an IPv4 packet forwarded by the server, check whether the source address is in the INIT state. If yes, enter the PREPARING state. If the peer-to-peer connection feature is not enabled, switch to the FAILED state. Ignore other states.
+当收到服务器通过 WebSocket 转发的 IPv4 报文时,检查源地址是否处于 INIT 状态.如果是,则进入 PREPARING 状态.如果点对点连接功能未启用,则切换到 FAILED 状态。忽略其他状态.
 
 ### PREPARING
 
-Tick checks whether there are any peers in the PREPARING state. If there are, it sends a STUN request after traversing all the peers. When receiving a STUN response, it sends its public network information to all the peers in the PREPARING state. If it does not have the public network information of the other peer, the state will be switched to SYNCHRONIZING, otherwise it will be switched to CONNECTING. STUN is UDP, which may lose packets, so it keeps sending STUN requests as long as there are peers in the PREPARING state.
+固定周期检查是否有处于 PREPARING 状态的对端.如果有,则在遍历所有对端后发送 STUN 请求.当收到 STUN 响应时,将其公共网络信息发送给所有处于 PREPARING 状态的对端.如果没有对端的公网信息,则状态切换为S YNCHRONIZING, 否则切换为 CONNECTING. STUN 是 UDP,可能会丢包，因此只要有处于 PREPARING 状态的对端,它就会不断发送 STUN 请求.
 
 ### SYNCHRONIZING
 
-This state means that it has sent its public network information to the other peer, but has not received the public network information of the other peer. At this time, the other peer may be sending, or the other peer’s version does not support, or the other peer’s version supports but does not enable peer-to-peer connection. After timeout, it enters FAILED.
+该状态表示已经成功获取了本机的公网信息,但尚未收到对端的公网信息.此时发送不带 ACK 的心跳.对方可能正在发送,或版本不支持,或未启用对等连接.超时后,进入 FAILED 状态.
 
 ### CONNECTING
 
-This state means that it has the public network information of the other peer, and has sent its public network information to the other peer. It means that both peers have enabled the peer-to-peer connection feature, and start sending UDP heartbeats to try to establish a connection. After the connection is successful, it enters CONNECTED. After timeout, it enters WAITTING.
+该状态表示自己拥有对端的公网信息,此时发送带 ACK 的心跳.收到对方发送的带有 ACK 的心跳表示连接成功,进入 CONNECTED 状态.超时未成功则进入WAITTING 状态.
 
 ### CONNECTED
 
-When TUN receives data, if the peer is in the CONNECTED state, it directly sends it via UDP. Tick sends heartbeats to the peer, and checks whether it has received the peer’s heartbeats recently. If not, it enters the INIT state. When UDP receives the peer’s heartbeats, it updates the state and records that it has received the heartbeats recently.
+TUN 接收数据时,如果对端处于 CONNECTED 状态,则直接通过UDP发送.周期性的向对端发送心跳,并检查最近是否收到对端的心跳.如果长时间没有收到对端心跳,则进入 INIT 状态.当 UDP 接收到对等方的心跳时,会重置心跳超时计数.
 
 ### WAITTING
 
-Using the exponential backoff algorithm, it re-enters the INIT state after a specific time. The retry interval ranges from 30 seconds to 1 hour, and eventually stays at 1 hour retry.
+使用指数退避算法在特定时间后重新进入 INIT 状态.重试时间间隔从 30 秒逐步增大到 1 小时.
 
 ### FAILED
 
-The FAILED state means that the peer does not support peer-to-peer connection at all, and no active measures are taken for the peer in this state. But if it receives the connection message from the peer, it will passively enter the PREPARING state. This corresponds to the situation where the peer switches from a client that does not support peer-to-peer connection to a client that supports peer-to-peer connection.
+FAILED 状态表示对端不支持对等连接,在此状态下的对端不采取任何主动措施.但如果收到对端的连接消息,就会被动进入 PREPARING 状态.这对应着对端从不支持对等连接的客户端切换到支持对等连接的客户端的情况.

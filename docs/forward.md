@@ -1,14 +1,13 @@
-# Forward
+# 服务端转发基本原理
 
-- [Index](index.md)
-- [Specification](specification.md)
-- Forward
-- [Peer to Peer](peer-to-peer.md)
+- [简介](index.md)
+- [协议规范](specification.md)
+- 服务端转发基本原理
+- [对等连接状态机](peer-to-peer.md)
 
-## The Simplest Usage of TUN/TAP
+## 最简单的 TUN 使用方式
 
-Refer to [simpletun](https://github.com/gregnietsky/simpletun) for the simplest peer-to-peer communication.
-Here the two peers are named Client A and client B.
+参考 [simpletun](https://github.com/gregnietsky/simpletun) 实现最简单的 P2P 连接.这里我们命名两个设备为 Client A 和 client B.
 
 ```plaintext
 ┌──────────┐  ┌──────────┐
@@ -16,10 +15,9 @@ Here the two peers are named Client A and client B.
 └──────────┘  └──────────┘
 ```
 
-## Server Traffic Forwarding
+## 服务端转发流量
 
-On the basis of peer-to-peer communication, a device is added in the middle for traffic forwarding.
-There is no change in the traffic sent and received by the two clients.
+在最简单的 P2P 连接基础上,添加一个中间设备进行流量转发,不改变报文内容,对于两个客户端来说与上一个场景的流量没有任何区别.
 
 ```plaintext
 ┌──────────┐  ┌────────┐  ┌──────────┐
@@ -27,25 +25,9 @@ There is no change in the traffic sent and received by the two clients.
 └──────────┘  └────────┘  └──────────┘
 ```
 
-## Server Traffic Routing
+## 添加路由功能
 
-On the basis of forwarding, the Server analyzes the IP data packets uploaded by the Client.
-Routing is performed according to the destination address, and the clients can communicate with each other
-
-```plaintext
-┌──────────┐   ┌────────┐   ┌──────────┐
-│ Client A ├───┤ Server ├───┤ Client B │
-└──────────┘   └───┬────┘   └──────────┘
-                   │
-              ┌────┴─────┐
-              │ Client C │
-              └──────────┘
-```
-
-## Access Server via VPN
-
-Deploy Client D on the physical machine where the Server is located. This Client is no different from other Clients.
-At this point, all devices can communicate with each other.
+服务端添加路由功能,记录每个客户端虚拟地址与连接之间的映射关系,分析原始 IPv4 报文的目的地址,并通过映射找到对应连接发送数据.
 
 ```plaintext
               ┌──────────┐
@@ -60,7 +42,3 @@ At this point, all devices can communicate with each other.
               │ Client C │
               └──────────┘
 ```
-
-## Network Traffic between Devices
-
-For some well-known reasons, TLS + WebSocket is used for communication.
