@@ -27,7 +27,7 @@ jobs:
     runs-on: macos-13
     steps:
     - name: depends
-      run: brew install libconfig spdlog uriparser
+      run: brew install libconfig spdlog uriparser argp-standalone
     - name: checkout
       uses: actions/checkout@v3
     - name: build
