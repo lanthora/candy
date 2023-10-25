@@ -26,11 +26,13 @@ void shutdown() {
 } // namespace Candy
 
 int main() {
+    spdlog::set_level(spdlog::level::debug);
     Candy::Client client;
 
     // TODO(macos): 用某种方式动态配置参数.现在的配置仅能用来连接 demo 环境.
     client.setWebSocketServer("wss://zone.icandy.one/demo");
     client.setName("candy-demo");
+    client.setStun("stun://stun.qq.com");
     client.run();
 
     spdlog::info("service started successfully");
