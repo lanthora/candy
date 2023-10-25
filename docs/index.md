@@ -42,12 +42,6 @@ candy -m client -w wss://zone.icandy.one/demo
 如果要使用客户端之间的对等连接.可以配置 [STUN](https://en.wikipedia.org/wiki/STUN) 服务器.这也是 Docker 容器启动的默认命令.
 
 ```bash
-candy -m client -w wss://zone.icandy.one/demo -s stun://stun.cloudflare.com
-```
-
-如果你使用的代理,可能会让客户端误判本地的公网信息,把 `stun.cloudflare.com` 换成 `stun.qq.com` 可以解决这个问题.
-
-```bash
 candy -m client -w wss://zone.icandy.one/demo -s stun://stun.qq.com
 ```
 
