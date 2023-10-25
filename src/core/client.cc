@@ -653,7 +653,7 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
 
     return result;
 }
-#if defined(__linux__) || defined(__linux)
+#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
 #include <netdb.h>
 int Client::sendStunRequest() {
     struct addrinfo hints = {}, *info = NULL;
