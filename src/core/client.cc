@@ -270,6 +270,11 @@ void Client::handleTunMessage() {
         if (Address::netToHost(header->saddr) != this->tun.getIP()) {
             continue;
         }
+        // 目的地址是本机,直接回写,在 macos 中遇到了这种情况
+        if (Address::netToHost(header->daddr) == this->tun.getIP()) {
+            this->tun.write(buffer);
+            continue;
+        }
 
         {
             // 发包时检查对端是否为 CONNECTED,是的话直接发送,否则走服务端转发
