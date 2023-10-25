@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-#if defined(__linux__) || defined(__linux)
+#if defined(__APPLE__) || defined(__MACH__) || defined(__linux__) || defined(__linux)
 
 #include "core/client.h"
 #include "core/server.h"
@@ -11,6 +11,7 @@
 #include <libconfig.h++>
 #include <mutex>
 #include <spdlog/spdlog.h>
+#include <sstream>
 #include <string>
 
 namespace {
