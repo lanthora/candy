@@ -33,7 +33,7 @@ VPN 是"虚拟专用网络"的缩写,是一种利用公共网络(如互联网)�
 
 ```bash
 # 添加第三方用户仓库
-brew tap lanthora/taps
+brew tap lanthora/repo
 # 安装
 brew install candy
 ```
