@@ -783,11 +783,12 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         return -1;
     }
     if (peer.ip != message.ip) {
-        spdlog::warn("heartbeat address mismatch: {} auth {:08x} real {:08x}", Address::ipToStr(tun), peer.ip, message.ip);
-        return -1;
+        spdlog::warn("heartbeat ip mismatch: {} auth {} real {}", Address::ipToStr(tun), Address::ipToStr(peer.ip),
+                     Address::ipToStr(message.ip));
+        peer.ip = message.ip;
     }
     if (peer.port != message.port) {
-        spdlog::info("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
+        spdlog::warn("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
         peer.port = message.port;
     }
     if (!peer.ack) {
