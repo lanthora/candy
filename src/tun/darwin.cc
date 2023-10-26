@@ -228,7 +228,7 @@ private:
     int timeout;
     int tunFd;
 
-    uint32_t packetinfo;
+    uint8_t packetinfo[4] = {0x00, 0x00, 0x00, 0x02};
 };
 } // namespace
 
