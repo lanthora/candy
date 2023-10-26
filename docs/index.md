@@ -21,11 +21,22 @@ VPN 是"虚拟专用网络"的缩写,是一种利用公共网络(如互联网)�
 
 ### Docker
 
-镜像已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy),我们建议所有用户使用 Docker 镜像.
+镜像已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy), 我们建议 Linux 用户使用 Docker 镜像.
 
 ### AUR
 
 如果你是 Arch Linux 用户,并且不喜欢容器化部署,推荐使用 [AUR](https://aur.archlinux.org/packages/candy).
+
+### Homebrew
+
+如果你是 Mac 用户,可以使用 Homebrew 安装.
+
+```bash
+# 添加第三方用户仓库
+brew tap lanthora/taps
+# 安装
+brew install candy
+```
 
 ### 从源码构建
 
