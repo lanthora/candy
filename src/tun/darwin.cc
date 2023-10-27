@@ -126,10 +126,15 @@ public:
             exit(1);
         }
 
-        // up 网卡
-        ifr.ifr_ifru.ifru_flags |= IFF_UP;
+        // 设置 flags
+        if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
+            spdlog::critical("get interface flags failed");
+            close(sockfd);
+            return -1;
+        }
+        ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
         if (ioctl(sockfd, SIOCSIFFLAGS, &ifr) == -1) {
-            spdlog::critical("interface up failed");
+            spdlog::critical("set interface flags failed");
             close(sockfd);
             return -1;
         }
