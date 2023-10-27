@@ -1,8 +1,0 @@
-services:
-  demo:
-    image: docker.io/lanthora/candy:latest
-    network_mode: host
-    privileged: true
-    volumes:
-      - /var/lib/candy:/var/lib/candy
-    restart: always
