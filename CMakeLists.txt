@@ -7,7 +7,7 @@ include_directories(${SOURCE})
 aux_source_directory(${SOURCE}/main DIR_SRCS)
 add_executable(${CMAKE_PROJECT_NAME} ${DIR_SRCS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++2b -Wall -Werror -Wfatal-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++2b -Wall -Werror -Wfatal-errors -Wno-unknown-pragmas")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2")
 
@@ -23,6 +23,10 @@ pkg_check_modules(
 find_library(ARGP_LIB argp)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/wintun.cmake)
+endif()
 
 include_directories(${DEPENDENCIES_INCLUDEDIR})
 include_directories(${ixwebsocket_SOURCE_DIR})
