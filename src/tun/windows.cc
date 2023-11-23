@@ -6,6 +6,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <wintun.h>
 
 namespace {
 class WindowsTun {
