@@ -154,7 +154,7 @@ bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
 
-void shutdown(int signal) {
+void signalHandler(int signal) {
     {
         std::lock_guard<std::mutex> lock(mutex);
         running = false;
@@ -191,7 +191,7 @@ std::string getLastestAddress(const std::string &name) {
 
 namespace Candy {
 void shutdown() {
-    ::shutdown(SIGQUIT);
+    signalHandler(SIGTERM);
 }
 } // namespace Candy
 
@@ -221,8 +221,8 @@ int main(int argc, char *argv[]) {
 
     spdlog::info("service started successfully");
 
-    std::signal(SIGINT, shutdown);
-    std::signal(SIGTERM, shutdown);
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
     {
         std::unique_lock<std::mutex> lock(mutex);
