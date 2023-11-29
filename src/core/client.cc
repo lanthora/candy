@@ -123,7 +123,7 @@ int Client::startWsThread() {
 }
 
 int Client::startTunThread() {
-    if (this->tun.setName(this->tunName.empty() ? "candy" : "candy-" + this->tunName)) {
+    if (this->tun.setName(this->tunName)) {
         return -1;
     }
     if (this->tun.setAddress(this->localAddress)) {
