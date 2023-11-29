@@ -3,12 +3,60 @@
 
 #include "tun/tun.h"
 #include "utility/address.h"
+#include <codecvt>
 #include <memory>
+#include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 #include <string>
+// clang-format off
+#include <winsock2.h>
+#include <windows.h>
+#include <ws2ipdef.h>
+#include <iphlpapi.h>
+#include <mstcpip.h>
+#include <winternl.h>
+#include <netioapi.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <wintun.h>
+// clang-format on
 
 namespace {
+
+WINTUN_CREATE_ADAPTER_FUNC *WintunCreateAdapter;
+WINTUN_CLOSE_ADAPTER_FUNC *WintunCloseAdapter;
+WINTUN_OPEN_ADAPTER_FUNC *WintunOpenAdapter;
+WINTUN_GET_ADAPTER_LUID_FUNC *WintunGetAdapterLUID;
+WINTUN_GET_RUNNING_DRIVER_VERSION_FUNC *WintunGetRunningDriverVersion;
+WINTUN_DELETE_DRIVER_FUNC *WintunDeleteDriver;
+WINTUN_SET_LOGGER_FUNC *WintunSetLogger;
+WINTUN_START_SESSION_FUNC *WintunStartSession;
+WINTUN_END_SESSION_FUNC *WintunEndSession;
+WINTUN_GET_READ_WAIT_EVENT_FUNC *WintunGetReadWaitEvent;
+WINTUN_RECEIVE_PACKET_FUNC *WintunReceivePacket;
+WINTUN_RELEASE_RECEIVE_PACKET_FUNC *WintunReleaseReceivePacket;
+WINTUN_ALLOCATE_SEND_PACKET_FUNC *WintunAllocateSendPacket;
+WINTUN_SEND_PACKET_FUNC *WintunSendPacket;
+
+HMODULE InitializeWintun(void) {
+    HMODULE Wintun = LoadLibraryExW(L"wintun.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!Wintun) {
+        return NULL;
+    }
+#define X(Name) ((*(FARPROC *)&Name = GetProcAddress(Wintun, #Name)) == NULL)
+    if (X(WintunCreateAdapter) || X(WintunCloseAdapter) || X(WintunOpenAdapter) || X(WintunGetAdapterLUID) ||
+        X(WintunGetRunningDriverVersion) || X(WintunDeleteDriver) || X(WintunSetLogger) || X(WintunStartSession) ||
+        X(WintunEndSession) || X(WintunGetReadWaitEvent) || X(WintunReceivePacket) || X(WintunReleaseReceivePacket) ||
+        X(WintunAllocateSendPacket) || X(WintunSendPacket))
+#undef X
+    {
+        FreeLibrary(Wintun);
+        return NULL;
+    }
+    return Wintun;
+}
+
 class WindowsTun {
 public:
     int setName(const std::string &name) {
@@ -41,29 +89,80 @@ public:
     }
 
     int up() {
-        // TODO(windows): 创建设备
-        // TODO(windows): 设置设备名
-        // TODO(windows): 设置地址
-        // TODO(windows): 设置掩码
-        // TODO(windows): 设置 MTU
-        // TODO(windows): 启动网卡
-        // TODO(windows): 设置路由
+        this->wintun = InitializeWintun();
+        if (!this->wintun) {
+            return -1;
+        }
+
+        GUID Guid = {0x4a6b8c0d, 0x2e5f, 0x7d91, {0xa4, 0xb6, 0x8c, 0x0d, 0x2e, 0x5f, 0x7d, 0x91}};
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
+        if (!this->adapter) {
+            return -1;
+        }
+
+        MIB_UNICASTIPADDRESS_ROW AddressRow;
+        InitializeUnicastIpAddressEntry(&AddressRow);
+        WintunGetAdapterLUID(this->adapter, &AddressRow.InterfaceLuid);
+        AddressRow.Address.Ipv4.sin_family = AF_INET;
+        AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = Candy::Address::hostToNet(this->ip);
+        AddressRow.OnLinkPrefixLength = 16; // TODO: 掩码变成前缀
+        AddressRow.DadState = IpDadStatePreferred;
+        if (CreateUnicastIpAddressEntry(&AddressRow) != ERROR_SUCCESS) {
+            return -1;
+        }
+
+        this->session = WintunStartSession(this->adapter, WINTUN_MIN_RING_CAPACITY);
+        if (!this->session) {
+            return -1;
+        }
         return 0;
     }
 
     int down() {
-        // TODO(windows): 关闭设备,同时要清除路由信息
+        if (this->session) {
+            WintunEndSession(this->session);
+            this->session = NULL;
+        }
+        if (this->adapter) {
+            WintunCloseAdapter(this->adapter);
+            this->adapter = NULL;
+        }
+        if (this->wintun) {
+            FreeLibrary(this->wintun);
+            this->wintun = NULL;
+        }
         return 0;
     }
 
     int read(std::string &buffer) {
-        // TODO(windows): 从 TUN 设备读数据,写入 buffer,返回写入的大小,返回 0 表示超时,超时时间为 1 秒
-        return 0;
+        DWORD size;
+        BYTE *packet = WintunReceivePacket(this->session, &size);
+        if (packet) {
+            buffer.assign((char *)packet, size);
+            WintunReleaseReceivePacket(this->session, packet);
+            return size;
+        }
+        if (GetLastError() == ERROR_NO_MORE_ITEMS) {
+            WaitForSingleObject(WintunGetReadWaitEvent(this->session), this->timeout * 1000);
+            return 0;
+        }
+        spdlog::error("wintun read failed: {}", GetLastError());
+        return -1;
     }
 
     int write(const std::string &buffer) {
-        // TODO(windows): buffer 中的数据写入 TUN 设备
-        return 0;
+        BYTE *packet = WintunAllocateSendPacket(this->session, buffer.size());
+        if (packet) {
+            memcpy(packet, buffer.c_str(), buffer.size());
+            WintunSendPacket(this->session, packet);
+            return buffer.size();
+        }
+        if (GetLastError() == ERROR_BUFFER_OVERFLOW) {
+            return 0;
+        }
+        spdlog::error("wintun write failed: {}", GetLastError());
+        return -1;
     }
 
 private:
@@ -72,6 +171,10 @@ private:
     uint32_t mask;
     int mtu;
     int timeout;
+
+    HMODULE wintun = NULL;
+    WINTUN_ADAPTER_HANDLE adapter = NULL;
+    WINTUN_SESSION_HANDLE session = NULL;
 };
 } // namespace
 
