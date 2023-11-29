@@ -48,7 +48,7 @@ int main() {
 
     Candy::Client client;
     client.setWebSocketServer("wss://zone.icandy.one/demo");
-    client.setName("candy-demo");
+    client.setName("demo");
     client.run();
 
     spdlog::info("service started successfully");

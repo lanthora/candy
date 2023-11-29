@@ -45,6 +45,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE iphlpapi)
+endif()
+
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${DEPENDENCIES_LIBRARIES})
 if(ARGP_LIB)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${ARGP_LIB})
