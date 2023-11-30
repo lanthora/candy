@@ -55,7 +55,7 @@ size_t UdpHolder::read(UdpMessage &message) {
     char buffer[1500];
     struct sockaddr_in from;
     socklen_t addr_len = sizeof(from);
-    bzero(&from, sizeof(from));
+    memset(&from, 0, sizeof(from));
 
     ssize_t len = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &addr_len);
     if (len == -1) {
@@ -75,7 +75,7 @@ size_t UdpHolder::write(const UdpMessage &message) {
         return -1;
     }
     struct sockaddr_in to;
-    bzero(&to, sizeof(to));
+    memset(&to, 0, sizeof(to));
     to.sin_family = AF_INET;
     to.sin_addr.s_addr = Address::hostToNet(message.ip);
     to.sin_port = Address::hostToNet(message.port);

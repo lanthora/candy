@@ -2,6 +2,13 @@
 #ifndef CANDY_CORE_COMMON_H
 #define CANDY_CORE_COMMON_H
 
+#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
+#include <netdb.h>
+#endif
+#if defined(_WIN32) || defined(_WIN64)
+#include <ws2tcpip.h>
+#endif
+
 // 各个系统需要独立实现以下函数
 namespace Candy {
 

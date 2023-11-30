@@ -23,11 +23,8 @@ void signalHandler(int signal) {
 }
 
 bool windowsNetworkStartup() {
-    WORD version;
     WSADATA data;
-
-    version = MAKEWORD(2, 2);
-    return WSAStartup(version, &data) == 0;
+    return WSAStartup(MAKEWORD(2, 2), &data) == 0;
 }
 
 bool windowsNetworkCleanup() {
@@ -46,9 +43,12 @@ void shutdown() {
 int main() {
     windowsNetworkStartup();
 
+    spdlog::set_level(spdlog::level::debug);
+
     Candy::Client client;
     client.setWebSocketServer("wss://zone.icandy.one/demo");
     client.setName("demo");
+    client.setStun("stun://stun.qq.com");
     client.run();
 
     spdlog::info("service started successfully");

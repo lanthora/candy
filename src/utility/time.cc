@@ -45,7 +45,7 @@ static int64_t ntpTime() {
     struct timeval timeout = {.tv_sec = 1};
     fd_set set;
 
-    bzero(&hints, sizeof(hints));
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 

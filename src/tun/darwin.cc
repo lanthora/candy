@@ -60,7 +60,7 @@ public:
         }
 
         struct ctl_info info;
-        bzero(&info, sizeof(info));
+        memset(&info, 0, sizeof(info));
         strncpy(info.ctl_name, UTUN_CONTROL_NAME, MAX_KCTL_NAME);
         if (ioctl(this->tunFd, CTLIOCGINFO, &info) == -1) {
             spdlog::critical("get control id failed: {}", strerror(errno));
@@ -68,7 +68,7 @@ public:
         }
 
         struct sockaddr_ctl ctl;
-        bzero(&ctl, sizeof(ctl));
+        memset(&ctl, 0, sizeof(ctl));
         ctl.sc_len = sizeof(ctl);
         ctl.sc_family = AF_SYSTEM;
         ctl.ss_sysaddr = AF_SYS_CONTROL;
@@ -89,7 +89,7 @@ public:
         spdlog::info("created utun interface: {}", ifname);
 
         struct ifreq ifr;
-        bzero(&ifr, sizeof(ifr));
+        memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
         // 创建 socket, 并通过这个 socket 更新网卡的其他配置
@@ -146,7 +146,7 @@ public:
             struct sockaddr_in addr[3];
         } msg;
 
-        bzero(&msg, sizeof(msg));
+        memset(&msg, 0, sizeof(msg));
         msg.msghdr.rtm_msglen = sizeof(msg);
         msg.msghdr.rtm_version = RTM_VERSION;
         msg.msghdr.rtm_type = RTM_ADD;

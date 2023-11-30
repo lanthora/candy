@@ -58,7 +58,7 @@ public:
 
         // 设置设备名
         struct ifreq ifr;
-        bzero(&ifr, sizeof(ifr));
+        memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
@@ -115,7 +115,7 @@ public:
 
         // 设置路由
         struct rtentry route;
-        bzero(&route, sizeof(route));
+        memset(&route, 0, sizeof(route));
 
         addr = (struct sockaddr_in *)&route.rt_dst;
         addr->sin_family = AF_INET;
