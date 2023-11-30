@@ -24,6 +24,7 @@ struct arguments {
     std::string stun;
 };
 
+int exitCode = 0;
 bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
@@ -74,6 +75,7 @@ std::string getLastestAddress(const std::string &name) {
 
 namespace Candy {
 void shutdown() {
+    exitCode = 1;
     signalHandler(SIGTERM);
 }
 } // namespace Candy
@@ -140,7 +142,7 @@ int main() {
     windowsNetworkCleanup();
 
     spdlog::info("service stopped successfully");
-    return 0;
+    return exitCode;
 }
 
 #endif
