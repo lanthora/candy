@@ -88,11 +88,15 @@ size_t UdpHolder::write(const UdpMessage &message) {
     to.sin_addr.s_addr = Address::hostToNet(message.ip);
     to.sin_port = Address::hostToNet(message.port);
     int len = sendto(winsock, message.buffer.c_str(), message.buffer.length(), 0, (struct sockaddr *)&to, sizeof(to));
-    if (len == SOCKET_ERROR) {
-        spdlog::warn("udp socket write failed: {}", WSAGetLastError());
-        return -1;
+    if (len != SOCKET_ERROR) {
+        return len;
     }
-    return len;
+    int error = WSAGetLastError();
+    if (error == WSAEWOULDBLOCK) {
+        return 0;
+    }
+    spdlog::warn("udp socket write failed: {}", error);
+    return -1;
 }
 
 } // namespace Candy
