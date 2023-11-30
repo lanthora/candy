@@ -73,8 +73,8 @@ public:
         return this->ip;
     }
 
-    int setMask(uint32_t mask) {
-        this->mask = mask;
+    int setPrefix(uint32_t prefix) {
+        this->prefix = prefix;
         return 0;
     }
 
@@ -106,7 +106,7 @@ public:
         WintunGetAdapterLUID(this->adapter, &AddressRow.InterfaceLuid);
         AddressRow.Address.Ipv4.sin_family = AF_INET;
         AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = Candy::Address::hostToNet(this->ip);
-        AddressRow.OnLinkPrefixLength = 16; // TODO: 掩码变成前缀
+        AddressRow.OnLinkPrefixLength = this->prefix;
         AddressRow.DadState = IpDadStatePreferred;
         if (CreateUnicastIpAddressEntry(&AddressRow) != ERROR_SUCCESS) {
             return -1;
@@ -168,7 +168,7 @@ public:
 private:
     std::string name;
     uint32_t ip;
-    uint32_t mask;
+    uint32_t prefix;
     int mtu;
     int timeout;
 
@@ -208,7 +208,7 @@ int Tun::setAddress(const std::string &cidr) {
     if (tun->setIP(address.getIp())) {
         return -1;
     }
-    if (tun->setMask(address.getMask())) {
+    if (tun->setPrefix(address.getPrefix())) {
         return -1;
     }
     return 0;
