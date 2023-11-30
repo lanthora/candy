@@ -658,12 +658,11 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
 
     return result;
 }
-#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
-#include <netdb.h>
+
 int Client::sendStunRequest() {
     struct addrinfo hints = {}, *info = NULL;
 
-    bzero(&hints, sizeof(hints));
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 
@@ -677,8 +676,8 @@ int Client::sendStunRequest() {
         return -1;
     }
 
-    this->stun.ip = Address::netToHost(((struct sockaddr_in *)info->ai_addr)->sin_addr.s_addr);
-    this->stun.port = Address::netToHost(((struct sockaddr_in *)info->ai_addr)->sin_port);
+    this->stun.ip = Address::netToHost((uint32_t)((struct sockaddr_in *)info->ai_addr)->sin_addr.s_addr);
+    this->stun.port = Address::netToHost((uint16_t)((struct sockaddr_in *)info->ai_addr)->sin_port);
 
     UdpMessage message;
     StunRequest request;
@@ -690,12 +689,6 @@ int Client::sendStunRequest() {
     }
     return 0;
 }
-#else
-int Client::sendStunRequest() {
-    spdlog::error("send stun request unimplemented");
-    return 0;
-}
-#endif
 
 bool Client::isStunResponse(const UdpMessage &message) {
     return message.ip == this->stun.ip && message.port == this->stun.port;
