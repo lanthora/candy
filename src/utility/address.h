@@ -33,6 +33,7 @@ public:
     // 获取地址里的参数
     uint32_t getIp() const;
     uint32_t getMask() const;
+    uint32_t getPrefix() const;
     uint32_t getNet() const;
     uint32_t getHost() const;
     std::string getIpStr() const;

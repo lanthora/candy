@@ -133,6 +133,10 @@ uint32_t Address::getMask() const {
     return this->mask;
 }
 
+uint32_t Address::getPrefix() const {
+    return this->prefix;
+}
+
 uint32_t Address::getNet() const {
     return this->net;
 }
