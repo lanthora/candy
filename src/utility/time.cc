@@ -3,6 +3,7 @@
 #include "utility/address.h"
 #include <bit>
 #include <chrono>
+#include <limits>
 #include <spdlog/spdlog.h>
 
 namespace {
@@ -34,7 +35,6 @@ struct ntp_packet {
 } // namespace
 
 #if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
-#include <limits>
 #include <netdb.h>
 
 static int64_t ntpTime() {
@@ -108,11 +108,80 @@ out:
     return retval;
 }
 #else
-// TODO(windows): 从网络上获取当前时间戳
-static int64_t ntpTime() {
-    return 0;
-}
 
+#include <ws2tcpip.h>
+
+static int64_t ntpTime() {
+    struct addrinfo hints = {}, *info = NULL;
+    SOCKET winsock = INVALID_SOCKET;
+    int len = 0;
+    struct ntp_packet packet = {};
+    int64_t retval = 0;
+    struct timeval timeout = {.tv_sec = 1};
+    fd_set set;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if (getaddrinfo("pool.ntp.org", "123", &hints, &info)) {
+        spdlog::warn("resolve ntp server domain name failed");
+        goto out;
+    }
+
+    winsock = socket(info->ai_family, info->ai_socktype, IPPROTO_UDP);
+    if (winsock == INVALID_SOCKET) {
+        spdlog::warn("create udp socket failed");
+        goto out;
+    }
+
+    FD_ZERO(&set);
+    FD_SET(winsock, &set);
+
+    len = sendto(winsock, (const char *)&packet, sizeof(packet), 0, info->ai_addr, info->ai_addrlen);
+    if (len == SOCKET_ERROR) {
+        spdlog::warn("send ntp request failed");
+        goto out;
+    }
+
+    len = select(0, &set, NULL, NULL, &timeout);
+    if (len == 0) {
+        goto out;
+    }
+    if (len < 0) {
+        spdlog::warn("ntp client select failed");
+        goto out;
+    }
+
+    len = recv(winsock, (char *)&packet, sizeof(packet), 0);
+    if (len == -1) {
+        spdlog::warn("recv ntp response failed");
+        goto out;
+    }
+
+    if (len != sizeof(packet) || (packet.li_vn_mode & 0x07) != 4) {
+        spdlog::warn("invalid ntp response");
+        goto out;
+    }
+
+    retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+
+    // Fix ntp 2036 problem
+    if (!(retval & 0x80000000)) {
+        retval += UINT32_MAX;
+    }
+
+    retval -= 2208988800U;
+
+out:
+    if (info) {
+        freeaddrinfo(info);
+    }
+    if (winsock != INVALID_SOCKET) {
+        closesocket(winsock);
+    }
+    return retval;
+}
 #endif
 
 namespace Candy {
