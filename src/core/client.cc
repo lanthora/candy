@@ -313,6 +313,7 @@ void Client::handleUdpMessage() {
         }
         if (error < 0) {
             spdlog::critical("udp read failed: error {}", error);
+            Candy::shutdown();
             break;
         }
         if (isStunResponse(message)) {
