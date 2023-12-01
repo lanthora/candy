@@ -24,7 +24,7 @@ struct arguments {
     std::string stun;
 };
 
-int exitCode = 0;
+volatile int exitCode = 0;
 bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
