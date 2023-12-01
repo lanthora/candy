@@ -60,10 +60,15 @@ static int64_t ntpTime() {
         goto out;
     }
 
+    if (connect(sockfd, info->ai_addr, info->ai_addrlen)) {
+        spdlog::warn("connect ntp server failed");
+        goto out;
+    }
+
     FD_ZERO(&set);
     FD_SET(sockfd, &set);
 
-    len = sendto(sockfd, &packet, sizeof(packet), 0, info->ai_addr, info->ai_addrlen);
+    len = send(sockfd, &packet, sizeof(packet), 0);
     if (len == -1) {
         spdlog::warn("send ntp request failed");
         goto out;
@@ -186,22 +191,37 @@ out:
 
 namespace Candy {
 
+bool Time::useSystemTime = false;
+
 int64_t Time::unixTime() {
-    int64_t timestamp = 0;
-    for (int i = 0; i < 3 && timestamp == 0; ++i) {
+    using namespace std::chrono;
+
+    int64_t sysTime;
+    int64_t netTime;
+
+    if (useSystemTime) {
+        sysTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+        return sysTime;
+    }
+
+    netTime = 0;
+    for (int i = 0; i < 3 && netTime == 0; ++i) {
         if (i > 0) {
             spdlog::debug("get time from ntp server failed: retry {}", i);
         }
-        timestamp = ntpTime();
+        netTime = ntpTime();
     }
 
-    if (timestamp) {
-        return timestamp;
+    sysTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+    if (std::abs(netTime - sysTime) < 3) {
+        useSystemTime = true;
+    }
+    if (netTime) {
+        return netTime;
     }
 
-    using namespace std::chrono;
     spdlog::warn("unable to get the time from the network, please make sure the local time is accurate");
-    return duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+    return sysTime;
 }
 
 int64_t Time::hostToNet(int64_t host) {
