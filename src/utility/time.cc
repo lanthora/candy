@@ -140,10 +140,15 @@ static int64_t ntpTime() {
         goto out;
     }
 
+    if (connect(winsock, info->ai_addr, info->ai_addrlen) == SOCKET_ERROR) {
+        spdlog::warn("connect ntp server failed");
+        goto out;
+    }
+
     FD_ZERO(&set);
     FD_SET(winsock, &set);
 
-    len = sendto(winsock, (const char *)&packet, sizeof(packet), 0, info->ai_addr, info->ai_addrlen);
+    len = send(winsock, (const char *)&packet, sizeof(packet), 0);
     if (len == SOCKET_ERROR) {
         spdlog::warn("send ntp request failed");
         goto out;
