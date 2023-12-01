@@ -183,6 +183,7 @@ void Client::handleWebSocketMessage() {
         }
         if (error < 0) {
             spdlog::critical("webSocket client read failed: error {}", error);
+            Candy::shutdown();
             break;
         }
         if (message.type == WebSocketMessageType::Message) {
@@ -231,15 +232,16 @@ void Client::handleWebSocketMessage() {
         // 连接断开,可能是地址冲突,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Close) {
             spdlog::info("client websocket close: {}", message.buffer);
+            Candy::shutdown();
             break;
         }
         // 通信出现错误,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Error) {
             spdlog::critical("client websocket error: {}", message.buffer);
+            Candy::shutdown();
             break;
         }
     }
-    Candy::shutdown();
     return;
 }
 
@@ -255,6 +257,7 @@ void Client::handleTunMessage() {
         }
         if (error < 0) {
             spdlog::critical("tun read failed. error {}", error);
+            Candy::shutdown();
             break;
         }
         if (buffer.length() < sizeof(IPv4Header)) {
@@ -298,7 +301,6 @@ void Client::handleTunMessage() {
         message.buffer.append(buffer);
         ws.write(message);
     }
-    Candy::shutdown();
     return;
 }
 
