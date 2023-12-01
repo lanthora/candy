@@ -142,6 +142,7 @@ int main() {
     windowsNetworkCleanup();
 
     spdlog::info("service stopped successfully");
+    spdlog::info("exit code: {}", exitCode);
     return exitCode;
 }
 

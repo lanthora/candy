@@ -106,6 +106,7 @@ void Server::handleWebSocketMessage() {
         }
         if (error < 0) {
             spdlog::error("websocket server read failed: error {}", error);
+            Candy::shutdown();
             break;
         }
 
@@ -136,10 +137,10 @@ void Server::handleWebSocketMessage() {
         }
         if (message.type == WebSocketMessageType::Error) {
             spdlog::critical("server websocket error: {}", message.buffer);
+            Candy::shutdown();
             break;
         }
     }
-    Candy::shutdown();
     return;
 }
 
