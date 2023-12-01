@@ -98,9 +98,10 @@ public:
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
+            spdlog::critical("create wintun adapter failed");
             return -1;
         }
-
+        int Error;
         MIB_UNICASTIPADDRESS_ROW AddressRow;
         InitializeUnicastIpAddressEntry(&AddressRow);
         WintunGetAdapterLUID(this->adapter, &AddressRow.InterfaceLuid);
@@ -108,12 +109,31 @@ public:
         AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = Candy::Address::hostToNet(this->ip);
         AddressRow.OnLinkPrefixLength = this->prefix;
         AddressRow.DadState = IpDadStatePreferred;
-        if (CreateUnicastIpAddressEntry(&AddressRow) != ERROR_SUCCESS) {
+        Error = CreateUnicastIpAddressEntry(&AddressRow);
+        if (Error != ERROR_SUCCESS) {
+            spdlog::critical("create unicast ip address entry failed: {}", Error);
             return -1;
         }
 
-        this->session = WintunStartSession(this->adapter, WINTUN_MIN_RING_CAPACITY);
+        MIB_IPINTERFACE_ROW Interface = {0};
+        Interface.Family = AF_INET;
+        Interface.InterfaceLuid = AddressRow.InterfaceLuid;
+        Error = GetIpInterfaceEntry(&Interface);
+        if (Error != NO_ERROR) {
+            spdlog::critical("get ip interface entry failed: {}", Error);
+            return -1;
+        }
+        Interface.SitePrefixLength = 0;
+        Interface.NlMtu = this->mtu;
+        Error = SetIpInterfaceEntry(&Interface);
+        if (Error != NO_ERROR) {
+            spdlog::critical("set ip interface entry failed: {}", Error);
+            return -1;
+        }
+
+        this->session = WintunStartSession(this->adapter, WINTUN_MAX_RING_CAPACITY);
         if (!this->session) {
+            spdlog::critical("start wintun session failed");
             return -1;
         }
         return 0;
