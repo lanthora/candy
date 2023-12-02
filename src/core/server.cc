@@ -167,6 +167,7 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
     }
 
     spdlog::info("client connected: {}", address.getIpStr());
+    this->ws.keepalive(message.conn);
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
 }

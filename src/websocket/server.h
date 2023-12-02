@@ -27,6 +27,9 @@ public:
     // 关闭单个客户端连接
     int close(WebSocketConn conn);
 
+    // 服务端主动探测客户端连接状态
+    int keepalive(WebSocketConn conn);
+
 private:
     std::any impl;
 };
