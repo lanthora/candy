@@ -2,12 +2,14 @@
 
 [中文](README.md) | English
 
-A easy-to-deploy and peer-to-peer virtual private network.
+A virtual private network tool that is easy to deploy and supports peer-to-peer connections. Please refer to [the documentation](https://icandy.one) for more information.
 
-## Usage
+## Features
 
-We provide a network for testing, 172.16.0.0/16, which dynamically assigns addresses from the server side. You can join this network with one command. For more usage, please refer to the [document](https://icandy.one).
+- Easy to use: Simple configuration to complete the network setup
+- Cross-platform compatible: Supports Linux, MacOS and Windows
+- Efficient and reliable: The hosts will try to establish peer-to-peer connections first, and use server forwarding if they fail to ensure connection availability.
 
-```bash
-docker run --rm --privileged=true --net=host docker.io/lanthora/candy:latest
-```
+## Contact us
+
+[Telegram Group](https://t.me/CandyUserGroup)
