@@ -147,18 +147,21 @@ void Server::handleWebSocketMessage() {
 void Server::handleAuthMessage(WebSocketMessage &message) {
     if (message.buffer.length() < sizeof(AuthHeader)) {
         spdlog::warn("invalid auth message: len {}", message.buffer.length());
+        this->ws.close(message.conn);
         return;
     }
 
     AuthHeader *header = (AuthHeader *)message.buffer.data();
     if (!header->check(this->password)) {
         spdlog::warn("auth header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
+        this->ws.close(message.conn);
         return;
     }
 
     Address address;
     if (address.ipUpdate(Address::netToHost(header->ip))) {
         spdlog::warn("invalid auth ip: buffer {:n}", spdlog::to_hex(message.buffer));
+        this->ws.close(message.conn);
         return;
     }
     if (this->ipWsMap.contains(address.getIp())) {
@@ -205,18 +208,21 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
 void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (message.buffer.length() < sizeof(DynamicAddressMessage)) {
         spdlog::warn("invalid dynamic address message: len {}", message.buffer.length());
+        this->ws.close(message.conn);
         return;
     }
 
     DynamicAddressMessage *header = (DynamicAddressMessage *)message.buffer.data();
     if (!header->check(this->password)) {
         spdlog::warn("dynamic address header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
+        this->ws.close(message.conn);
         return;
     }
 
     Address address;
     if (address.cidrUpdate(header->cidr)) {
         spdlog::warn("dynamic address header cidr invalid: buffer {:n}", spdlog::to_hex(message.buffer));
+        this->ws.close(message.conn);
         return;
     }
 
@@ -224,6 +230,7 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (!dynamic.inSameNetwork(address) || this->ipWsMap.contains(address.getIp())) {
         if (!this->dynamicAddrEnabled) {
             spdlog::warn("the client requests a dynamic address, but the server does not enable this function");
+            this->ws.close(message.conn);
             return;
         }
         // 生成下一个动态地址并检查是否可用
@@ -233,11 +240,13 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
             // 获取下一个地址失败,一般不会发生,除非输入的配置错误
             if (this->dynamic.next()) {
                 spdlog::error("unable to get next available address");
+                this->ws.close(message.conn);
                 return;
             }
             newip = dynamic.getIp();
             if (oldip == newip) {
                 spdlog::warn("all addresses in the network are assigned");
+                this->ws.close(message.conn);
                 return;
             }
         } while (this->ipWsMap.contains(newip));
