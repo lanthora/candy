@@ -43,7 +43,9 @@ docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/ca
 
 ### Windows
 
-目前已经编译出可直接运行的二进制,由于没有找到可靠的打包和服务管理方式还没有达到发布统一部署方式的完成度. Windows 版本不接受命令行参数,启动时直接读取安装目录的配置文件.
+目前已经通过 MSYS2 编译出可直接运行的二进制,并通过 WinSW 包装成服务.由于没有找到与 Linux 或 MacOS 类似的发布方式,因此在 [Release](https://github.com/lanthora/candy/releases) 中提供压缩包,用户需要根据压缩包中的 README 指引完成安装. Windows 版本不接受命令行参数,启动时直接读取安装目录的配置文件.
+
+需要注意 WSL(Windows Subsystem for Linux) 在这种场景下无效.
 
 ### 从源码构建
 
@@ -51,7 +53,9 @@ docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/ca
 
 ## 如何使用
 
-这是能够启动 Linux 和 Mac 客户端的最简单命令.此时会连接到公开的测试服务器环境.虚拟网络的地址范围是 172.16.0.0/16, 请确保网络没有冲突.
+以下命令行参数仅适用于 Linux 和 MacOS, Windows 需要修改配置文件中的相关配置项目.
+
+这个命令会连接到公开的测试服务器环境.虚拟网络的地址范围是 172.16.0.0/16, 请确保网络没有冲突.
 
 ```bash
 candy -m client -w wss://zone.icandy.one/demo
@@ -63,7 +67,7 @@ candy -m client -w wss://zone.icandy.one/demo
 candy -m client -w wss://zone.icandy.one/demo -s stun://stun.qq.com
 ```
 
-更多使用使用细节参考
+启动服务端或更多客户端使用细节参考
 
 ```bash
 candy --help
