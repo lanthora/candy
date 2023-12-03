@@ -150,6 +150,7 @@ struct argp config = {
     .parser = parseOption,
 };
 
+volatile int exitCode = 0;
 bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
@@ -191,6 +192,7 @@ std::string getLastestAddress(const std::string &name) {
 
 namespace Candy {
 void shutdown() {
+    exitCode = 1;
     signalHandler(SIGTERM);
 }
 } // namespace Candy
@@ -219,8 +221,6 @@ int main(int argc, char *argv[]) {
         client.run();
     }
 
-    spdlog::info("service started successfully");
-
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
@@ -236,9 +236,13 @@ int main(int argc, char *argv[]) {
         saveLatestAddress(arguments.name, client.getAddress());
     }
 
-    spdlog::info("service stopped successfully");
+    if (exitCode == 0) {
+        spdlog::info("service exit: normal");
+    } else {
+        spdlog::warn("service exit: internal exception");
+    }
 
-    return 0;
+    return exitCode;
 }
 
 #endif

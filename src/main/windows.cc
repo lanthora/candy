@@ -122,8 +122,6 @@ int main() {
         client.run();
     }
 
-    spdlog::info("service started successfully");
-
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
@@ -141,8 +139,12 @@ int main() {
 
     windowsNetworkCleanup();
 
-    spdlog::info("service stopped successfully");
-    spdlog::info("exit code: {}", exitCode);
+    if (exitCode == 0) {
+        spdlog::info("service exit: normal");
+    } else {
+        spdlog::warn("service exit: internal exception");
+    }
+
     return exitCode;
 }
 
