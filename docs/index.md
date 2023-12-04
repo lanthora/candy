@@ -41,11 +41,13 @@ docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/ca
 
 请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 仓库中提供的方法安装.
 
+Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠时收到网络包唤醒. Candy 运行过程中每 30 秒产生一个心跳,这会导致机器被频繁唤醒.对于作为服务器长期开机的 Mac 设备来说,可以关闭睡眠功能;对于作为普通设备的笔记本来说,可以关闭网络唤醒功能.参考苹果官网[睡眠与唤醒](https://support.apple.com/zh-cn/guide/mac-help/mchle41a6ccd/mac)完成设置.
+
 ### Windows
 
 目前已经通过 MSYS2 编译出可直接运行的二进制,并通过 WinSW 包装成服务.由于没有找到与 Linux 或 MacOS 类似的发布方式,因此在 [Release](https://github.com/lanthora/candy/releases) 中提供压缩包,用户需要根据压缩包中的 README 指引完成安装. Windows 版本不接受命令行参数,启动时直接读取安装目录的配置文件.
 
-需要注意 WSL(Windows Subsystem for Linux) 在这种场景下无效.
+测试过程中发现睡眠会导致 Windows 网络断开连接,进程将进入异常处理流程回收资源后退出.唤醒后 WinSW 可能会不按照预期重启服务.此时需要手动启动服务或者重启计算机,或者关闭 Windows 的睡眠功能.
 
 ### 从源码构建
 
