@@ -3,6 +3,7 @@
 
 #include "core/client.h"
 #include "core/server.h"
+#include "utility/random.h"
 #include <argp.h>
 #include <condition_variable>
 #include <csignal>
@@ -164,10 +165,10 @@ void signalHandler(int signal) {
 }
 
 int saveLatestAddress(const std::string &name, const std::string &cidr) {
-    std::string cfgFile = "/var/lib/candy/address/";
-    cfgFile += name.empty() ? "__noname__" : name;
-    std::filesystem::create_directories(std::filesystem::path(cfgFile).parent_path());
-    std::ofstream ofs(cfgFile);
+    std::string cache = "/var/lib/candy/address/";
+    cache += name.empty() ? "__noname__" : name;
+    std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
+    std::ofstream ofs(cache);
     if (ofs.is_open()) {
         ofs << cidr;
         ofs.close();
@@ -176,15 +177,43 @@ int saveLatestAddress(const std::string &name, const std::string &cidr) {
 }
 
 std::string getLastestAddress(const std::string &name) {
-    std::string cfgFile = "/var/lib/candy/address/";
-    cfgFile += name.empty() ? "__noname__" : name;
-    std::ifstream ifs(cfgFile);
-    if (!ifs.is_open()) {
-        return "";
+    std::string cache = "/var/lib/candy/address/";
+    cache += name.empty() ? "__noname__" : name;
+    std::ifstream ifs(cache);
+    if (ifs.is_open()) {
+        std::stringstream ss;
+        ss << ifs.rdbuf();
+        ifs.close();
+        return ss.str();
     }
+    return "";
+}
+
+std::string getVirtualMac(const std::string &name) {
+    std::string cache = "/var/lib/candy/vmac/";
+    cache += name.empty() ? "__noname__" : name;
+    std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
+
+    char buffer[16];
     std::stringstream ss;
-    ss << ifs.rdbuf();
-    ifs.close();
+
+    std::ifstream ifs(cache);
+    if (ifs.is_open()) {
+        ifs.read(buffer, sizeof(buffer));
+        if (ifs) {
+            for (int i = 0; i < (int)sizeof(buffer); i++) {
+                ss << std::hex << buffer[i];
+            }
+        }
+        ifs.close();
+    } else {
+        ss << Candy::randomHexString(sizeof(buffer));
+        std::ofstream ofs(cache);
+        if (ofs.is_open()) {
+            ofs << ss.str();
+            ofs.close();
+        }
+    }
     return ss.str();
 }
 
@@ -217,6 +246,7 @@ int main(int argc, char *argv[]) {
         client.setStun(arguments.stun);
         client.setLocalAddress(arguments.tun);
         client.setDynamicAddress(getLastestAddress(arguments.name));
+        client.setVirtualMac(getVirtualMac(arguments.name));
         client.setName(arguments.name);
         client.run();
     }

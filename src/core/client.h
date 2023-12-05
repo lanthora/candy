@@ -34,6 +34,8 @@ public:
 
     // 设置默认动态 IP 地址,向服务端建议使用这个地址,这个地址不可用时服务端将返回一个可用的新地址
     int setDynamicAddress(const std::string &cidr);
+    //
+    int setVirtualMac(const std::string &vmac);
 
     // 设置 STUN 服务端,用于开启对等连接
     int setStun(const std::string &stun);
@@ -72,6 +74,7 @@ private:
     std::string tunName;
     std::string localAddress;
     std::string dynamicAddress;
+    std::string virtualMac;
     std::thread tunThread;
 
     // P2P
