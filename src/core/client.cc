@@ -58,6 +58,11 @@ int Client::setDynamicAddress(const std::string &cidr) {
     return 0;
 }
 
+int Client::setVirtualMac(const std::string &vmac) {
+    this->virtualMac = vmac;
+    return 0;
+}
+
 int Client::setStun(const std::string &stun) {
     this->stun.uri = stun;
     return 0;

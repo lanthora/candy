@@ -3,6 +3,7 @@
 
 #include "core/client.h"
 #include "core/server.h"
+#include "utility/random.h"
 #include <condition_variable>
 #include <filesystem>
 #include <fstream>
@@ -71,6 +72,34 @@ std::string getLastestAddress(const std::string &name) {
     return ss.str();
 }
 
+std::string getVirtualMac(const std::string &name) {
+    std::string cache = "vmac/";
+    cache += name.empty() ? "__noname__" : name;
+    std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
+
+    char buffer[16];
+    std::stringstream ss;
+
+    std::ifstream ifs(cache);
+    if (ifs.is_open()) {
+        ifs.read(buffer, sizeof(buffer));
+        if (ifs) {
+            for (int i = 0; i < (int)sizeof(buffer); i++) {
+                ss << std::hex << buffer[i];
+            }
+        }
+        ifs.close();
+    } else {
+        ss << Candy::randomHexString(sizeof(buffer));
+        std::ofstream ofs(cache);
+        if (ofs.is_open()) {
+            ofs << ss.str();
+            ofs.close();
+        }
+    }
+    return ss.str();
+}
+
 } // namespace
 
 namespace Candy {
@@ -118,6 +147,7 @@ int main() {
         client.setStun(arguments.stun);
         client.setLocalAddress(arguments.tun);
         client.setDynamicAddress(getLastestAddress(arguments.name));
+        client.setVirtualMac(getVirtualMac(arguments.name));
         client.setName(arguments.name);
         client.run();
     }
