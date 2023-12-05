@@ -65,15 +65,6 @@ public:
         return 0;
     }
 
-    int keepalive(WebSocketConn conn) {
-        std::weak_ptr<ix::WebSocket> weakConn = std::any_cast<std::weak_ptr<ix::WebSocket>>(conn.conn);
-        auto ws = weakConn.lock();
-        if (ws) {
-            ws->setPingInterval(30);
-        }
-        return 0;
-    }
-
     int close(WebSocketConn conn) {
         std::weak_ptr<ix::WebSocket> weakConn = std::any_cast<std::weak_ptr<ix::WebSocket>>(conn.conn);
         auto ws = weakConn.lock();
@@ -176,12 +167,6 @@ int WebSocketServer::close(WebSocketConn conn) {
     std::shared_ptr<WebSockeServerImpl> server;
     server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
     return server->close(conn);
-}
-
-int WebSocketServer::keepalive(WebSocketConn conn) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->keepalive(conn);
 }
 
 } // namespace Candy
