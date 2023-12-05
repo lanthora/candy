@@ -27,6 +27,7 @@ private:
     void handleForwardMessage(WebSocketMessage &message);
     void handleDynamicAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
+    void handleVirtualMacMessage(WebSocketMessage &message);
     void handleCloseMessage(WebSocketMessage &message);
 
     bool running = false;
@@ -41,6 +42,7 @@ private:
 
     std::map<uint32_t, WebSocketConn> ipWsMap;
     std::map<WebSocketConn, uint32_t> wsIpMap;
+    std::map<WebSocketConn, std::string> wsMacMap;
 };
 
 } // namespace Candy

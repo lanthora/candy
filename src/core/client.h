@@ -55,6 +55,7 @@ private:
     // WebSocket
     int startWsThread();
     void handleWebSocketMessage();
+    void sendVirtualMacMessage();
     void sendDynamicAddressMessage();
     void sendAuthMessage();
     void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port);

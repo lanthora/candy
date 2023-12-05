@@ -17,6 +17,7 @@ constexpr uint8_t AUTH = 0;
 constexpr uint8_t FORWARD = 1;
 constexpr uint8_t DHCP = 2;
 constexpr uint8_t PEER = 3;
+constexpr uint8_t VMAC = 4;
 
 } // namespace MessageType
 
@@ -57,6 +58,17 @@ struct PeerConnMessage {
     uint16_t port;
 
     PeerConnMessage();
+} __attribute__((packed));
+
+struct VMacMessage {
+    uint8_t type;
+    uint8_t vmac[16];
+    int64_t timestamp;
+    uint8_t hash[SHA256_DIGEST_LENGTH];
+
+    VMacMessage(const std::string &vmac);
+    void updateHash(const std::string &password);
+    bool check(const std::string &password);
 } __attribute__((packed));
 
 struct StunRequest {
