@@ -223,6 +223,12 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
         return;
     }
 
+    if (!this->dynamicAddrEnabled) {
+        spdlog::warn("the client requests a dynamic address, but the server does not enable this function");
+        this->ws.close(message.conn);
+        return;
+    }
+
     Address address;
     if (address.cidrUpdate(header->cidr)) {
         spdlog::warn("dynamic address header cidr invalid: buffer {:n}", spdlog::to_hex(message.buffer));
@@ -230,18 +236,32 @@ void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
         return;
     }
 
-    // 期望使用的地址不在当前网络或已经被分配
-    if (!dynamic.inSameNetwork(address) || this->ipWsMap.contains(address.getIp())) {
-        if (!this->dynamicAddrEnabled) {
-            spdlog::warn("the client requests a dynamic address, but the server does not enable this function");
-            this->ws.close(message.conn);
-            return;
+    bool needGenNewAddr = [&]() {
+        if (!dynamic.inSameNetwork(address)) {
+            return true;
         }
-        // 生成下一个动态地址并检查是否可用
+        auto oldWs = this->ipWsMap.find(address.getIp());
+        if (oldWs == this->ipWsMap.end()) {
+            return false;
+        }
+        auto newMac = this->wsMacMap.find(message.conn);
+        if (newMac == this->wsMacMap.end()) {
+            return true;
+        }
+        auto oldMac = this->wsMacMap.find(oldWs->second);
+        if (oldMac == this->wsMacMap.end()) {
+            return true;
+        }
+        if (newMac->second == oldMac->second) {
+            return false;
+        }
+        return true;
+    }();
+
+    if (needGenNewAddr) {
         uint32_t oldip = dynamic.getIp();
         uint32_t newip = 0;
         do {
-            // 获取下一个地址失败,一般不会发生,除非输入的配置错误
             if (this->dynamic.next()) {
                 spdlog::error("unable to get next available address");
                 this->ws.close(message.conn);
