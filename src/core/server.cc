@@ -115,6 +115,10 @@ void Server::handleWebSocketMessage() {
                 handleForwardMessage(message);
                 continue;
             }
+            if (message.buffer.front() == MessageType::VMAC) {
+                handleVirtualMacMessage(message);
+                continue;
+            }
             if (message.buffer.front() == MessageType::AUTH) {
                 handleAuthMessage(message);
                 continue;
@@ -127,7 +131,7 @@ void Server::handleWebSocketMessage() {
                 handlePeerConnMessage(message);
                 continue;
             }
-            spdlog::warn("unknown message type. type {}", message.buffer.front());
+            spdlog::warn("unknown message type: {}", (int)message.buffer.front());
             continue;
         }
 
@@ -288,21 +292,37 @@ void Server::handlePeerConnMessage(WebSocketMessage &message) {
     return;
 }
 
-void Server::handleCloseMessage(WebSocketMessage &message) {
-    auto it = this->wsIpMap.find(message.conn);
-    if (it == this->wsIpMap.end()) {
+void Server::handleVirtualMacMessage(WebSocketMessage &message) {
+    if (message.buffer.length() < sizeof(VMacMessage)) {
+        spdlog::warn("invalid vmac message: len {}", message.buffer.length());
         return;
     }
 
-    if (this->ipWsMap[it->second] == message.conn) {
-        Address address;
-        if (!address.ipUpdate(it->second)) {
-            spdlog::info("client disconnected: {}", address.getIpStr());
-        }
-        this->ipWsMap.erase(it->second);
+    VMacMessage *header = (VMacMessage *)message.buffer.data();
+    if (!header->check(this->password)) {
+        spdlog::warn("vmac message check failed: buffer {:n}", spdlog::to_hex(message.buffer));
+        this->ws.close(message.conn);
+        return;
     }
+    std::string vmac((char *)header->vmac, sizeof(header->vmac));
 
-    this->wsIpMap.erase(it);
+    this->wsMacMap[message.conn] = vmac;
+    return;
+}
+
+void Server::handleCloseMessage(WebSocketMessage &message) {
+    auto it = this->wsIpMap.find(message.conn);
+    if (it != this->wsIpMap.end()) {
+        if (this->ipWsMap[it->second] == message.conn) {
+            Address address;
+            if (!address.ipUpdate(it->second)) {
+                spdlog::info("client disconnected: {}", address.getIpStr());
+            }
+            this->ipWsMap.erase(it->second);
+        }
+        this->wsIpMap.erase(it);
+    }
+    this->wsMacMap.erase(message.conn);
 }
 
 } // namespace Candy

@@ -212,6 +212,9 @@ void Client::handleWebSocketMessage() {
         }
 
         if (message.type == WebSocketMessageType::Open) {
+
+            sendVirtualMacMessage();
+
             if (!this->localAddress.empty()) {
                 if (startTunThread()) {
                     spdlog::critical("start tun thread with static address failed");
@@ -405,6 +408,16 @@ void Client::tick() {
     }
 }
 
+void Client::sendVirtualMacMessage() {
+    VMacMessage buffer(this->virtualMac);
+    buffer.updateHash(this->password);
+
+    WebSocketMessage message;
+    message.buffer.assign((char *)(&buffer), sizeof(buffer));
+    this->ws.write(message);
+    return;
+}
+
 void Client::sendDynamicAddressMessage() {
     Address address;
     if (address.cidrUpdate(this->dynamicAddress)) {
@@ -417,7 +430,7 @@ void Client::sendDynamicAddressMessage() {
     header.updateHash(this->password);
 
     WebSocketMessage message;
-    message.buffer.assign((char *)(&header), sizeof(DynamicAddressMessage));
+    message.buffer.assign((char *)(&header), sizeof(header));
     this->ws.write(message);
     return;
 }
