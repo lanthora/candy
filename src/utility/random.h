@@ -1,7 +1,9 @@
+#include <cstdint>
 #include <string>
 
 namespace Candy {
 
+uint32_t randomUint32();
 int randomHex();
 std::string randomHexString(int length);
 

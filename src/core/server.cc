@@ -3,6 +3,7 @@
 #include "core/common.h"
 #include "core/message.h"
 #include "utility/address.h"
+#include "utility/random.h"
 #include "utility/uri.h"
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
@@ -48,7 +49,8 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
         spdlog::critical("dynamic address generator init failed");
         return -1;
     }
-    if (this->dynamic.ipMaskUpdate(this->dynamic.getNet(), this->dynamic.getMask())) {
+    uint32_t randomHost = (~this->dynamic.getMask()) & randomUint32();
+    if (this->dynamic.ipMaskUpdate(this->dynamic.getNet() | randomHost, this->dynamic.getMask())) {
         return -1;
     }
     this->dynamicAddrEnabled = true;
