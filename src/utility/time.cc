@@ -4,7 +4,9 @@
 #include <bit>
 #include <chrono>
 #include <limits>
+#include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+#include <string>
 
 namespace {
 
@@ -95,6 +97,10 @@ static int64_t ntpTime() {
     }
 
     retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+    if (retval == 0) {
+        spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
+        goto out;
+    }
 
     // Fix ntp 2036 problem
     if (!(retval & 0x80000000)) {
@@ -175,6 +181,10 @@ static int64_t ntpTime() {
     }
 
     retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+    if (retval == 0) {
+        spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
+        goto out;
+    }
 
     // Fix ntp 2036 problem
     if (!(retval & 0x80000000)) {
