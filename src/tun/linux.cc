@@ -49,10 +49,19 @@ public:
 
     // 上面的所有操作都只是保存变量,在这里真正开始执行操作
     int up() {
-        // 从 /dev/net/tun 里取一个 tun 设备的文件描述符,只有 Linux 可以这样,其他系统需要其他手段
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
             spdlog::critical("open /dev/net/tun failed");
+            return -1;
+        }
+        int flags = fcntl(this->tunFd, F_GETFL, 0);
+        if (flags < 0) {
+            spdlog::error("get tun flags failed: {}", strerror(errno));
+            return -1;
+        }
+        flags |= O_NONBLOCK;
+        if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
+            spdlog::error("set non-blocking tun failed: {}", strerror(errno));
             return -1;
         }
 
@@ -144,29 +153,25 @@ public:
     }
 
     int read(std::string &buffer) {
-        struct timeval timeout = {.tv_sec = this->timeout};
-        fd_set set;
-
-        FD_ZERO(&set);
-        FD_SET(this->tunFd, &set);
-
-        int ret = select(this->tunFd + 1, &set, NULL, NULL, &timeout);
-        if (ret < 0) {
-            spdlog::error("select failed: error {}", ret);
-            return -1;
-        }
-        if (ret == 0) {
-            return 0;
-        }
-
         buffer.resize(this->mtu);
         int n = ::read(this->tunFd, buffer.data(), buffer.size());
-        if (n <= 0) {
-            spdlog::warn("tun read failed: error {}", n);
-            return -1;
+        if (n >= 0) {
+            buffer.resize(n);
+            return n;
         }
-        buffer.resize(n);
-        return n;
+
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            struct timeval timeout = {.tv_sec = this->timeout};
+            fd_set set;
+
+            FD_ZERO(&set);
+            FD_SET(this->tunFd, &set);
+
+            select(this->tunFd + 1, &set, NULL, NULL, &timeout);
+            return 0;
+        }
+        spdlog::warn("tun read failed: {}", strerror(errno));
+        return -1;
     }
 
     int write(const std::string &buffer) {

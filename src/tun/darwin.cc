@@ -184,21 +184,6 @@ public:
     }
 
     int read(std::string &buffer) {
-        struct timeval timeout = {.tv_sec = this->timeout};
-        fd_set set;
-
-        FD_ZERO(&set);
-        FD_SET(this->tunFd, &set);
-
-        int ret = select(this->tunFd + 1, &set, NULL, NULL, &timeout);
-        if (ret < 0) {
-            spdlog::error("select failed: error {}", ret);
-            return -1;
-        }
-        if (ret == 0) {
-            return 0;
-        }
-
         buffer.resize(this->mtu);
         struct iovec iov[2];
         iov[0].iov_base = &this->packetinfo;
@@ -207,13 +192,24 @@ public:
         iov[1].iov_len = buffer.size();
 
         int n = ::readv(this->tunFd, iov, sizeof(iov) / sizeof(iov[0]));
-        if (n <= 0) {
-            spdlog::warn("tun read failed: error {}", n);
-            return -1;
+        if (n >= 0) {
+            buffer.resize(n - sizeof(this->packetinfo));
+            return n;
         }
 
-        buffer.resize(n - sizeof(this->packetinfo));
-        return n;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            struct timeval timeout = {.tv_sec = this->timeout};
+            fd_set set;
+
+            FD_ZERO(&set);
+            FD_SET(this->tunFd, &set);
+
+            select(this->tunFd + 1, &set, NULL, NULL, &timeout);
+            return 0;
+        }
+
+        spdlog::warn("tun read failed: error {}", n);
+        return -1;
     }
 
     int write(const std::string &buffer) {
