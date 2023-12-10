@@ -131,7 +131,7 @@ public:
             return -1;
         }
 
-        this->session = WintunStartSession(this->adapter, WINTUN_MAX_RING_CAPACITY);
+        this->session = WintunStartSession(this->adapter, WINTUN_MIN_RING_CAPACITY);
         if (!this->session) {
             spdlog::critical("start wintun session failed");
             return -1;
