@@ -9,6 +9,7 @@
 #include <spdlog/spdlog.h>
 #include <string>
 // clang-format off
+#include <combaseapi.h>
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2ipdef.h>
@@ -94,7 +95,11 @@ public:
             return -1;
         }
 
-        GUID Guid = {0x4a6b8c0d, 0x2e5f, 0x7d91, {0xa4, 0xb6, 0x8c, 0x0d, 0x2e, 0x5f, 0x7d, 0x91}};
+        GUID Guid;
+        if (CoCreateGuid(&Guid) != S_OK) {
+            spdlog::critical("create guid failed");
+            return -1;
+        }
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
