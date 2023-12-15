@@ -1,9 +1,6 @@
 # 协议规范
 
-- [简介](index.md)
-- 协议规范
-- [服务端转发原理](forward.md)
-- [对等连接](peer-to-peer.md)
+[主页](index.md) | 协议规范 | [服务端转发原理](forward.md) | [对等连接](peer-to-peer.md)
 
 ## 握手消息
 
