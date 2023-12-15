@@ -1,9 +1,6 @@
 # Candy
 
-- 简介
-- [协议规范](specification.md)
-- [服务端转发原理](forward.md)
-- [对等连接](peer-to-peer.md)
+主页 | [协议规范](specification.md) | [服务端转发原理](forward.md) | [对等连接](peer-to-peer.md)
 
 ## 组网工具而非代理工具
 
