@@ -95,13 +95,14 @@ public:
             return -1;
         }
 
-        GUID Guid;
-        if (CoCreateGuid(&Guid) != S_OK) {
-            spdlog::critical("create guid failed");
-            return -1;
-        }
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
+        const WCHAR *Name = converter.from_bytes(this->name).c_str();
+        if (!this->adapter) {
+            this->adapter = WintunOpenAdapter(Name);
+        }
+        if (!this->adapter) {
+            this->adapter = WintunCreateAdapter(Name, L"Candy", NULL);
+        }
         if (!this->adapter) {
             spdlog::critical("create wintun adapter failed");
             return -1;
@@ -151,6 +152,7 @@ public:
         }
         if (this->adapter) {
             WintunCloseAdapter(this->adapter);
+            WintunDeleteDriver();
             this->adapter = NULL;
         }
         if (this->wintun) {
