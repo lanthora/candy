@@ -5,11 +5,11 @@
 #include "utility/address.h"
 #include <codecvt>
 #include <memory>
+#include <openssl/sha.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 #include <string>
 // clang-format off
-#include <combaseapi.h>
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2ipdef.h>
@@ -96,10 +96,10 @@ public:
         }
 
         GUID Guid;
-        if (CoCreateGuid(&Guid) != S_OK) {
-            spdlog::critical("create guid failed");
-            return -1;
-        }
+        std::string data = "CandyGuid" + this->name;
+        unsigned char hash[SHA256_DIGEST_LENGTH];
+        SHA256((unsigned char *)data.c_str(), data.size(), hash);
+        memcpy(&Guid, hash, sizeof(Guid));
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
