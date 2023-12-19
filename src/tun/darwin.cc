@@ -58,6 +58,16 @@ public:
             spdlog::critical("create socket failed: {}", strerror(errno));
             return -1;
         }
+        int flags = fcntl(this->tunFd, F_GETFL, 0);
+        if (flags < 0) {
+            spdlog::error("get tun flags failed: {}", strerror(errno));
+            return -1;
+        }
+        flags |= O_NONBLOCK;
+        if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
+            spdlog::error("set non-blocking tun failed: {}", strerror(errno));
+            return -1;
+        }
 
         struct ctl_info info;
         memset(&info, 0, sizeof(info));

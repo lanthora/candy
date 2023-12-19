@@ -152,7 +152,7 @@ struct argp config = {
 };
 
 volatile int exitCode = 0;
-bool running = true;
+volatile bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
 
