@@ -172,10 +172,11 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
     }
     if (this->ipWsMap.contains(address.getIp())) {
         this->ws.close(this->ipWsMap[address.getIp()]);
-        spdlog::info("ip conflict, kick out old clinet: {}", address.getIpStr());
+        spdlog::debug("client reconnected: {}", address.getIpStr());
+    } else {
+        spdlog::info("client connected: {}", address.getIpStr());
     }
 
-    spdlog::info("client connected: {}", address.getIpStr());
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
 }
