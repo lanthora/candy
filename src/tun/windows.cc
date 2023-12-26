@@ -43,6 +43,7 @@ WINTUN_SEND_PACKET_FUNC *WintunSendPacket;
 HMODULE InitializeWintun(void) {
     HMODULE Wintun = LoadLibraryExW(L"wintun.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (!Wintun) {
+        spdlog::critical("load wintun.dll failed");
         return NULL;
     }
 #define X(Name) ((*(FARPROC *)&Name = GetProcAddress(Wintun, #Name)) == NULL)
@@ -52,6 +53,7 @@ HMODULE InitializeWintun(void) {
         X(WintunAllocateSendPacket) || X(WintunSendPacket))
 #undef X
     {
+        spdlog::critical("get function from wintun.dll failed");
         FreeLibrary(Wintun);
         return NULL;
     }
@@ -92,6 +94,7 @@ public:
     int up() {
         this->wintun = InitializeWintun();
         if (!this->wintun) {
+            spdlog::critical("init wintun failed");
             return -1;
         }
 
