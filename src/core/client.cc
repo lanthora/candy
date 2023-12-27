@@ -373,9 +373,15 @@ void Client::tick() {
             if (peer.count > 10) {
                 peer.updateState(PeerState::WAITTING);
             } else {
+                if (peer.count == 0) {
+                    std::string ip = Address::ipToStr(peer.tun);
+                    std::string saddr = Address::ipToStr(this->selfInfo.ip);
+                    std::string daddr = Address::ipToStr(peer.ip);
+                    uint16_t sport = this->selfInfo.port;
+                    uint16_t dport = peer.port;
+                    spdlog::debug("connecting: {} {}:{} => {}:{}", ip, saddr, sport, daddr, dport);
+                }
                 sendHeartbeat(peer);
-                spdlog::debug("connecting: {} {}:{} => {}:{}", Address::ipToStr(peer.tun), Address::ipToStr(this->selfInfo.ip),
-                              this->selfInfo.port, Address::ipToStr(peer.ip), peer.port);
             }
             break;
 
