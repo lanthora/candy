@@ -26,6 +26,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/wintun.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/argp-standalone.cmake)
 endif()
 
 include_directories(${DEPENDENCIES_INCLUDEDIR})
@@ -42,16 +43,16 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websocket)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE tun)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
-
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE iphlpapi)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE argp-standalone)    
 endif()
 
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${DEPENDENCIES_LIBRARIES})
 if(ARGP_LIB)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${ARGP_LIB})
 endif()
 
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${DEPENDENCIES_LIBRARIES})
 install(TARGETS ${CMAKE_PROJECT_NAME})

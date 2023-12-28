@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
-#if defined(__APPLE__) || defined(__MACH__) || defined(__linux__) || defined(__linux)
-
 #include "core/client.h"
 #include "core/server.h"
 #include "utility/random.h"
-#include <argp.h>
 #include <condition_variable>
-#include <csignal>
 #include <filesystem>
 #include <fstream>
 #include <libconfig.h++>
 #include <mutex>
+#include <signal.h>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock.h>
+#endif
+
+#include <argp.h>
 
 namespace {
 
@@ -31,32 +34,16 @@ const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
 
 struct argp_option options[] = {
-    {"mode", 'm', "MODE", 0,
-     "Select work mode. MODE must choose one of the following values: server, client. When MODE is server, the websocket service "
-     "will be started. When MODE is client, a connection will be initiated to the websocket service. At the same time, IP layer "
-     "data forwarding will be performed through tun."},
-    {"websocket", 'w', "URI", 0,
-     "Set websocket address and port. when running as a server, You can choose to encrypt traffic with nginx. This service only "
-     "handles unencrypted data. You can configure ws://127.0.0.1:80 only to monitor local requests. Except for testing needs, it "
-     "is recommended that the client configure TLS Encryption. e.g. wss://domain:443"},
-    {"tun", 't', "CIDR", 0,
-     "Set the virtual IP address and subnet. Use CIDR format, e.g. 172.16.1.1/16. Not setting this configuration means using the "
-     "address dynamically allocated by the server"},
-    {"dhcp", 'd', "CIDR", 0,
-     "The server automatically assigns the client IP address. The assigned address conforms to the current subnet. If this "
-     "option is not configured, this function is not enabled. e.g. 172.16.0.0/16"},
-    {"password", 'p', "TEXT", 0,
-     "The password used for authentication. Client and server require the same value, this value will not be passed across the "
-     "network"},
-    {"name", 'n', "TEXT", 0,
-     "Interface name suffix. Used to avoid name collisions when using multiple clients in the same network namespace"},
-    {"stun", 's', "URI", 0,
-     "stun server address, used to obtain the public network address of the peer communication. For example: stun://stun.qq.com"},
-    {"config", 'c', "PATH", 0,
-     "Configuration file path. All other configuration items can be configured through the configuration file"},
-    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0,
-     "Do not record the log time, in order to avoid redundant display of time with other tools such as systemd"},
-    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Output debug level log"},
+    {"mode", 'm', "TEXT", 0, "The process works in client or server mode"},
+    {"websocket", 'w', "URI", 0, "Server listening address"},
+    {"tun", 't', "CIDR", 0, "Static configured IP address"},
+    {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range"},
+    {"password", 'p', "TEXT", 0, "Authorization password consistent with the server"},
+    {"name", 'n', "TEXT", 0, "Network interface name"},
+    {"stun", 's', "URI", 0, "STUN service address"},
+    {"config", 'c', "PATH", 0, "Configuration file path"},
+    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
+    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {},
 };
 
@@ -164,8 +151,35 @@ void signalHandler(int signal) {
     condition.notify_one();
 }
 
+#if defined(_WIN32) || defined(_WIN64)
+
+bool netStartup() {
+    WSADATA data;
+    return WSAStartup(MAKEWORD(2, 2), &data) == 0;
+}
+
+bool netCleanup() {
+    return WSACleanup() == 0;
+}
+
+std::string storageDirectory = "C:/ProgramData/Candy/";
+
+#else
+
+bool netStartup() {
+    return true;
+}
+
+bool netCleanup() {
+    return true;
+}
+
+std::string storageDirectory = "/var/lib/candy/";
+
+#endif
+
 int saveLatestAddress(const std::string &name, const std::string &cidr) {
-    std::string cache = "/var/lib/candy/address/";
+    std::string cache = storageDirectory + "address/";
     cache += name.empty() ? "__noname__" : name;
     std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
     std::ofstream ofs(cache);
@@ -177,7 +191,7 @@ int saveLatestAddress(const std::string &name, const std::string &cidr) {
 }
 
 std::string getLastestAddress(const std::string &name) {
-    std::string cache = "/var/lib/candy/address/";
+    std::string cache = storageDirectory + "address/";
     cache += name.empty() ? "__noname__" : name;
     std::ifstream ifs(cache);
     if (ifs.is_open()) {
@@ -190,7 +204,7 @@ std::string getLastestAddress(const std::string &name) {
 }
 
 std::string getVirtualMac(const std::string &name) {
-    std::string cache = "/var/lib/candy/vmac/";
+    std::string cache = storageDirectory + "vmac/";
     cache += name.empty() ? "__noname__" : name;
     std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
 
@@ -227,6 +241,8 @@ void shutdown() {
 } // namespace Candy
 
 int main(int argc, char *argv[]) {
+    netStartup();
+
     Candy::Server server;
     Candy::Client client;
 
@@ -251,8 +267,8 @@ int main(int argc, char *argv[]) {
         client.run();
     }
 
-    std::signal(SIGINT, signalHandler);
-    std::signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
 
     {
         std::unique_lock<std::mutex> lock(mutex);
@@ -272,7 +288,7 @@ int main(int argc, char *argv[]) {
         spdlog::warn("service exit: internal exception");
     }
 
+    netCleanup();
+
     return exitCode;
 }
-
-#endif
