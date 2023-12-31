@@ -50,6 +50,9 @@ int Client::setWebSocketServer(const std::string &uri) {
 
 int Client::setLocalAddress(const std::string &cidr) {
     this->localAddress = cidr;
+
+    addressUpdateCallback(cidr);
+
     return 0;
 }
 
@@ -68,8 +71,9 @@ int Client::setStun(const std::string &stun) {
     return 0;
 }
 
-std::string Client::getAddress() {
-    return this->localAddress;
+int Client::setupAddressUpdateCallback(std::function<void(const std::string &)> callback) {
+    this->addressUpdateCallback = callback;
+    return 0;
 }
 
 int Client::run() {
@@ -486,7 +490,7 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
         return;
     }
 
-    this->localAddress = address.getCidr();
+    setLocalAddress(address.getCidr());
     if (startTunThread()) {
         spdlog::critical("start tun thread with dynamic address failed");
         Candy::shutdown();

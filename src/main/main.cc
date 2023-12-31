@@ -264,6 +264,7 @@ int main(int argc, char *argv[]) {
         client.setDynamicAddress(getLastestAddress(arguments.name));
         client.setVirtualMac(getVirtualMac(arguments.name));
         client.setName(arguments.name);
+        client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
         client.run();
     }
 
@@ -277,10 +278,6 @@ int main(int argc, char *argv[]) {
 
     server.shutdown();
     client.shutdown();
-
-    if (!client.getAddress().empty()) {
-        saveLatestAddress(arguments.name, client.getAddress());
-    }
 
     if (exitCode == 0) {
         spdlog::info("service exit: normal");
