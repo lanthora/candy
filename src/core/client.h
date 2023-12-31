@@ -5,6 +5,7 @@
 #include "peer/peer.h"
 #include "tun/tun.h"
 #include "websocket/client.h"
+#include <functional>
 #include <map>
 #include <shared_mutex>
 #include <string>
@@ -34,14 +35,15 @@ public:
 
     // 设置默认动态 IP 地址,向服务端建议使用这个地址,这个地址不可用时服务端将返回一个可用的新地址
     int setDynamicAddress(const std::string &cidr);
-    //
+
+    // 设置虚拟 Mac 地址
     int setVirtualMac(const std::string &vmac);
 
     // 设置 STUN 服务端,用于开启对等连接
     int setStun(const std::string &stun);
 
-    // 获取当前地址,设置的静态地址或者由服务端分发的动态地址
-    std::string getAddress();
+    // 设置本地地址更新时执行的回调函数
+    int setupAddressUpdateCallback(std::function<void(const std::string &)> callback);
 
     // 启停客户端用于处理任务的线程
     int run();
@@ -51,6 +53,7 @@ private:
     // Common
     std::string password;
     bool running = false;
+    std::function<void(const std::string &)> addressUpdateCallback;
 
     // WebSocket
     int startWsThread();
