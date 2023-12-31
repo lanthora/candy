@@ -257,6 +257,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (arguments.mode == "client") {
+        client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setStun(arguments.stun);
@@ -264,7 +265,6 @@ int main(int argc, char *argv[]) {
         client.setDynamicAddress(getLastestAddress(arguments.name));
         client.setVirtualMac(getVirtualMac(arguments.name));
         client.setName(arguments.name);
-        client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
         client.run();
     }
 
