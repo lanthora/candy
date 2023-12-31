@@ -50,9 +50,6 @@ int Client::setWebSocketServer(const std::string &uri) {
 
 int Client::setLocalAddress(const std::string &cidr) {
     this->localAddress = cidr;
-
-    addressUpdateCallback(cidr);
-
     return 0;
 }
 
@@ -151,6 +148,9 @@ int Client::startTunThread() {
     this->tunThread = std::thread([&] { this->handleTunMessage(); });
 
     sendAuthMessage();
+
+    addressUpdateCallback(this->localAddress);
+
     return 0;
 }
 
