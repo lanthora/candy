@@ -42,9 +42,7 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 ### Windows
 
-目前已经通过 MSYS2 编译出可直接运行的二进制,并通过 WinSW 包装成服务.由于没有找到与 Linux 或 MacOS 类似的发布方式,因此在 [Releases](https://github.com/lanthora/candy/releases) 中提供安装包,安装后将自动注册并启动服务.
-
-测试过程中发现睡眠会导致 Windows 网络断开连接,进程将进入异常处理流程回收资源后退出.唤醒后 WinSW 可能会不按照预期重启服务.此时需要手动启动服务或者重启计算机,或者关闭 Windows 的睡眠功能.
+由于没有找到与 Linux 或 MacOS 类似的发布方式,因此在 [Release](https://github.com/lanthora/candy/releases/latest/) 中提供安装包.对于无人值守的设备: 1.请确认系统不会休眠; 2.进程启动需要管理员权限设置虚拟网卡,请确认进程不会因为用户账户控制无法正常开机启动.
 
 ### 从源码构建
 
