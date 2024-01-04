@@ -2,6 +2,8 @@
 #include "websocket/server.h"
 #include "websocket/common.h"
 #include <functional>
+#include <ixwebsocket/IXHttp.h>
+#include <ixwebsocket/IXHttpServer.h>
 #include <ixwebsocket/IXWebSocketMessage.h>
 #include <ixwebsocket/IXWebSocketServer.h>
 #include <memory>
@@ -19,25 +21,29 @@ private:
     std::condition_variable condition;
     std::queue<WebSocketMessage> queue;
 
-    std::shared_ptr<ix::WebSocketServer> ixWsServer;
+    std::shared_ptr<ix::HttpServer> ixHttpServer;
 
 public:
     int listen(const std::string &ipStr, uint16_t port) {
         using namespace std::placeholders;
 
-        this->ixWsServer = std::make_shared<ix::WebSocketServer>(port, ipStr);
-        this->ixWsServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleConnection, this, _1, _2));
-        if (!this->ixWsServer->listen().first) {
+        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, ipStr);
+        this->ixHttpServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleHttpConnection, this, _1, _2));
+
+        auto ixWsServer = std::dynamic_pointer_cast<ix::WebSocketServer>(this->ixHttpServer);
+        ixWsServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleWsConnection, this, _1, _2));
+        ixWsServer->disablePerMessageDeflate();
+
+        if (!this->ixHttpServer->listen().first) {
             spdlog::critical("websocket server listen failed");
             return -1;
         }
-        this->ixWsServer->disablePerMessageDeflate();
-        this->ixWsServer->start();
+        this->ixHttpServer->start();
         return 0;
     }
 
     int stop() {
-        this->ixWsServer->stop();
+        this->ixHttpServer->stop();
         return 0;
     }
 
@@ -75,16 +81,22 @@ public:
     }
 
 private:
-    void handleConnection(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
+    ix::HttpResponsePtr handleHttpConnection(ix::HttpRequestPtr request, std::shared_ptr<ix::ConnectionState> connectionState) {
+        ix::WebSocketHttpHeaders responseHeaders;
+        responseHeaders["Location"] = "https://icandy.one/";
+        return std::make_shared<ix::HttpResponse>(302, "Redirect", ix::HttpErrorCode::Ok, responseHeaders);
+    }
+
+    void handleWsConnection(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
         using namespace std::placeholders;
         auto ws = webSocket.lock();
         if (ws) {
-            ws->setOnMessageCallback(std::bind(&WebSockeServerImpl::handleMessage, this, webSocket, connectionState, _1));
+            ws->setOnMessageCallback(std::bind(&WebSockeServerImpl::handleWsMessage, this, webSocket, connectionState, _1));
         }
     }
 
-    void handleMessage(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState,
-                       const ix::WebSocketMessagePtr &ixWsMsg) {
+    void handleWsMessage(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState,
+                         const ix::WebSocketMessagePtr &ixWsMsg) {
         WebSocketMessage msg;
         switch (ixWsMsg->type) {
         case ix::WebSocketMessageType::Message:
