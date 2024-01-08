@@ -83,12 +83,20 @@ public:
 private:
     ix::HttpResponsePtr handleHttpConnection(ix::HttpRequestPtr request, std::shared_ptr<ix::ConnectionState> connectionState) {
         std::string ip = [&] -> std::string {
-            auto it = request->headers.find("X-Forwarded-For");
-            if (it != request->headers.end()) {
+            ix::WebSocketHttpHeaders::iterator it;
+            it = request->headers.find("X-Real-IP");
+            if (it != request->headers.end() && !it->second.empty()) {
                 return it->second;
-            } else {
-                return connectionState->getRemoteIp();
             }
+            it = request->headers.find("True-Client-IP");
+            if (it != request->headers.end() && !it->second.empty()) {
+                return it->second;
+            }
+            it = request->headers.find("X-Forwarded-For");
+            if (it != request->headers.end() && !it->second.empty()) {
+                return it->second;
+            }
+            return connectionState->getRemoteIp();
         }();
         spdlog::info("unexpected http request: {} {} {}", ip, request->method, request->uri);
 
