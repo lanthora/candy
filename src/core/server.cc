@@ -203,13 +203,23 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
         return;
     }
 
-    if (!this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        spdlog::debug("forward dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
+    if (this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
+        message.conn = this->ipWsMap[Address::netToHost(header->iph.daddr)];
+        this->ws.write(message);
         return;
     }
 
-    message.conn = this->ipWsMap[Address::netToHost(header->iph.daddr)];
-    this->ws.write(message);
+    bool isBroadcast = !((~this->dynamic.getMask()) & (Address::netToHost(header->iph.daddr) + 1));
+    if (this->dynamicAddrEnabled && isBroadcast) {
+        for (auto conn : this->ipWsMap) {
+            message.conn = conn.second;
+            this->ws.write(message);
+        }
+        return;
+    }
+
+    spdlog::debug("forward dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
+    return;
 }
 
 void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
