@@ -82,9 +82,19 @@ public:
 
 private:
     ix::HttpResponsePtr handleHttpConnection(ix::HttpRequestPtr request, std::shared_ptr<ix::ConnectionState> connectionState) {
+        std::string ip = [&] -> std::string {
+            auto it = request->headers.find("X-Forwarded-For");
+            if (it != request->headers.end()) {
+                return it->second;
+            } else {
+                return connectionState->getRemoteIp();
+            }
+        }();
+        spdlog::info("unexpected http request: {} {} {}", ip, request->method, request->uri);
+
         ix::WebSocketHttpHeaders responseHeaders;
-        responseHeaders["Location"] = "https://icandy.one/";
-        return std::make_shared<ix::HttpResponse>(302, "Redirect", ix::HttpErrorCode::Ok, responseHeaders);
+        responseHeaders["Location"] = "https://github.com/lanthora/candy";
+        return std::make_shared<ix::HttpResponse>(302, "Found", ix::HttpErrorCode::Ok, responseHeaders);
     }
 
     void handleWsConnection(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
