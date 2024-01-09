@@ -193,27 +193,31 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     }
 
     ForwardHeader *header = (ForwardHeader *)message.buffer.data();
+    uint32_t saddr = Address::netToHost(header->iph.saddr);
+    uint32_t daddr = Address::netToHost(header->iph.daddr);
     Address auth, source, destination;
     auth.ipUpdate(this->wsIpMap[message.conn]);
-    source.ipUpdate(Address::netToHost(header->iph.saddr));
-    destination.ipUpdate(Address::netToHost(header->iph.daddr));
+    source.ipUpdate(saddr);
+    destination.ipUpdate(daddr);
 
-    if (this->wsIpMap[message.conn] != Address::netToHost(header->iph.saddr)) {
+    if (this->wsIpMap[message.conn] != saddr) {
         spdlog::debug("forward source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
         return;
     }
 
-    if (this->ipWsMap.contains(Address::netToHost(header->iph.daddr))) {
-        message.conn = this->ipWsMap[Address::netToHost(header->iph.daddr)];
+    if (this->ipWsMap.contains(daddr)) {
+        message.conn = this->ipWsMap[daddr];
         this->ws.write(message);
         return;
     }
 
-    bool isBroadcast = !((~this->dynamic.getMask()) & (Address::netToHost(header->iph.daddr) + 1));
+    bool isBroadcast = !((~this->dynamic.getMask()) & (daddr + 1));
     if (this->dynamicAddrEnabled && isBroadcast) {
         for (auto conn : this->ipWsMap) {
-            message.conn = conn.second;
-            this->ws.write(message);
+            if (conn.first != saddr) {
+                message.conn = conn.second;
+                this->ws.write(message);
+            }
         }
         return;
     }
