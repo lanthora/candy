@@ -9,11 +9,9 @@
 #include <ws2tcpip.h>
 #endif
 
-// 各个系统需要独立实现以下函数
 namespace Candy {
 
-// 调用 Candy::shutdown() 后客户端和服务端应当正常退出.
-// Linux 在主函数所在文件实现,模拟产生 SIGQUIT 信号,并在信号处理函数中调用客户端和服务端的 shutdown 函数.
+// 出现内部异常时调用,调整进程退出码为 1, 并模拟产生 SIGTERM, 进程将回收资源并退出
 void shutdown();
 
 } // namespace Candy

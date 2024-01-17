@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "utility/random.h"
 #include <iomanip>
 #include <iostream>

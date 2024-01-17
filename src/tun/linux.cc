@@ -47,7 +47,7 @@ public:
         return 0;
     }
 
-    // 上面的所有操作都只是保存变量,在这里真正开始执行操作
+    // 配置网卡,设置路由
     int up() {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
