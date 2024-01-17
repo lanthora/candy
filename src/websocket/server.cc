@@ -35,7 +35,7 @@ public:
         ixWsServer->disablePerMessageDeflate();
 
         if (!this->ixHttpServer->listen().first) {
-            spdlog::critical("websocket server listen failed");
+            spdlog::critical("ixwebsocket server listen failed");
             return -1;
         }
         this->ixHttpServer->start();
