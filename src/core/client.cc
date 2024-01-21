@@ -149,7 +149,9 @@ int Client::startTunThread() {
 
     sendAuthMessage();
 
-    addressUpdateCallback(this->localAddress);
+    if (addressUpdateCallback) {
+        addressUpdateCallback(this->localAddress);
+    }
 
     return 0;
 }
