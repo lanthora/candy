@@ -105,7 +105,7 @@ candy -m server -w ws://0.0.0.0:80 -d 10.0.0.0/24 -p 123456
 
 对应的配置文件内容为
 
-```ini
+```bash
 mode = "server"
 # 服务端不支持 wss, 需要由外部的服务加密,例如 nginx/caddy, 公网服务建议使用 wss
 websocket = "ws://0.0.0.0:80"
@@ -129,7 +129,7 @@ candy -m client -w ws://127.0.0.1:80 -p 123456 -n test
 
 对应的配置文件内容为
 
-```ini
+```bash
 mode = "client"
 # 客户端支持 wss 协议
 websocket = "ws://127.0.0.1:80"
