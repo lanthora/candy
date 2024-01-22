@@ -206,7 +206,11 @@ out:
 
 namespace Candy {
 
-bool Time::useSystemTime = false;
+bool Time::useSystemTime;
+
+void Time::reset() {
+    useSystemTime = false;
+}
 
 int64_t Time::unixTime() {
     using namespace std::chrono;
