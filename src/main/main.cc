@@ -13,6 +13,7 @@
 #include <string>
 
 #if defined(_WIN32) || defined(_WIN64)
+#include <winbase.h>
 #include <winsock.h>
 #endif
 
@@ -155,11 +156,17 @@ void signalHandler(int signal) {
 
 bool netStartup() {
     WSADATA data;
-    return WSAStartup(MAKEWORD(2, 2), &data) == 0;
+    WSAStartup(MAKEWORD(2, 2), &data);
+
+    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+    return true;
 }
 
 bool netCleanup() {
-    return WSACleanup() == 0;
+    SetThreadExecutionState(ES_CONTINUOUS);
+
+    WSACleanup();
+    return true;
 }
 
 std::string storageDirectory = "C:/ProgramData/Candy/";
