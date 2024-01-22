@@ -2,6 +2,8 @@
 #include "core/client.h"
 #include "core/server.h"
 #include "utility/random.h"
+#include "utility/time.h"
+#include <bit>
 #include <condition_variable>
 #include <filesystem>
 #include <fstream>
@@ -240,14 +242,12 @@ void shutdown() {
 }
 } // namespace Candy
 
-int main(int argc, char *argv[]) {
+namespace {
+int run(struct arguments &arguments) {
     netStartup();
 
     Candy::Server server;
     Candy::Client client;
-
-    struct arguments arguments;
-    argp_parse(&config, argc, argv, 0, 0, &arguments);
 
     if (arguments.mode == "server") {
         server.setPassword(arguments.password);
@@ -282,10 +282,24 @@ int main(int argc, char *argv[]) {
     if (exitCode == 0) {
         spdlog::info("service exit: normal");
     } else {
-        spdlog::warn("service exit: internal exception");
+        spdlog::info("service exit: internal exception");
     }
 
     netCleanup();
-
     return exitCode;
+}
+} // namespace
+
+int main(int argc, char *argv[]) {
+    struct arguments arguments;
+    argp_parse(&config, argc, argv, 0, 0, &arguments);
+
+    while (run(arguments)) {
+        exitCode = 0;
+        running = true;
+        Candy::Time::reset();
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+    }
+
+    return 0;
 }
