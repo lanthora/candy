@@ -30,10 +30,12 @@ struct arguments {
     std::string password;
     std::string name;
     std::string stun;
+    bool autoRestart = false;
 };
 
 const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
+const int OPT_AUTO_RESTART = 3;
 
 struct argp_option options[] = {
     {"mode", 'm', "TEXT", 0, "The process works in client or server mode"},
@@ -46,6 +48,7 @@ struct argp_option options[] = {
     {"config", 'c', "PATH", 0, "Configuration file path"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
+    {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
     {},
 };
 
@@ -126,6 +129,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case OPT_LOG_LEVEL_DEBUG:
         setLogLevelDebug();
+        break;
+    case OPT_AUTO_RESTART:
+        arguments->autoRestart = true;
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
@@ -243,7 +249,11 @@ void shutdown() {
 } // namespace Candy
 
 namespace {
-int run(struct arguments &arguments) {
+int serve(const struct arguments &arguments) {
+    exitCode = 0;
+    running = true;
+    Candy::Time::reset();
+
     netStartup();
 
     Candy::Server server;
@@ -294,12 +304,9 @@ int main(int argc, char *argv[]) {
     struct arguments arguments;
     argp_parse(&config, argc, argv, 0, 0, &arguments);
 
-    while (run(arguments)) {
-        exitCode = 0;
-        running = true;
-        Candy::Time::reset();
+    while (serve(arguments) && arguments.autoRestart) {
         std::this_thread::sleep_for(std::chrono::seconds(3));
     }
 
-    return 0;
+    return exitCode;
 }
