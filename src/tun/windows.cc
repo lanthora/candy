@@ -231,7 +231,7 @@ int Tun::setAddress(const std::string &cidr) {
     if (address.cidrUpdate(cidr)) {
         return -1;
     }
-    spdlog::info("client tun address: {}", address.getCidr());
+    spdlog::info("client address: {}", address.getCidr());
     tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
     if (tun->setIP(address.getIp())) {
         return -1;
