@@ -96,7 +96,7 @@ public:
             return -1;
         }
 
-        spdlog::info("created utun interface: {}", ifname);
+        spdlog::debug("created utun interface: {}", ifname);
 
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
@@ -268,7 +268,7 @@ int Tun::setAddress(const std::string &cidr) {
     if (address.cidrUpdate(cidr)) {
         return -1;
     }
-    spdlog::info("client tun address: {}", address.getCidr());
+    spdlog::info("client address: {}", address.getCidr());
     tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
     if (tun->setIP(address.getIp())) {
         return -1;
