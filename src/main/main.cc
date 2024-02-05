@@ -146,19 +146,6 @@ struct argp config = {
     .parser = parseOption,
 };
 
-volatile int exitCode = 0;
-volatile bool running = true;
-std::mutex mutex;
-std::condition_variable condition;
-
-void signalHandler(int signal) {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        running = false;
-    }
-    condition.notify_one();
-}
-
 #if defined(_WIN32) || defined(_WIN64)
 
 bool netStartup() {
@@ -241,18 +228,28 @@ std::string getVirtualMac(const std::string &name) {
 
 } // namespace
 
+volatile bool running = true;
+std::mutex mutex;
+std::condition_variable condition;
+
 namespace Candy {
 void shutdown() {
-    exitCode = 1;
-    signalHandler(SIGTERM);
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        running = false;
+    }
+    condition.notify_one();
 }
 } // namespace Candy
 
+volatile int exitCode = 1;
+void signalHandler(int signal) {
+    exitCode = 0;
+    Candy::shutdown();
+}
+
 namespace {
 int serve(const struct arguments &arguments) {
-    exitCode = 0;
-    running = true;
-    Candy::Time::reset();
 
     netStartup();
 
@@ -278,9 +275,6 @@ int serve(const struct arguments &arguments) {
         client.run();
     }
 
-    signal(SIGINT, signalHandler);
-    signal(SIGTERM, signalHandler);
-
     {
         std::unique_lock<std::mutex> lock(mutex);
         condition.wait(lock, [&] { return !running; });
@@ -304,7 +298,12 @@ int main(int argc, char *argv[]) {
     struct arguments arguments;
     argp_parse(&config, argc, argv, 0, 0, &arguments);
 
-    while (serve(arguments) && arguments.autoRestart) {
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+
+    while (running && serve(arguments) && arguments.autoRestart) {
+        running = true;
+        Candy::Time::reset();
         std::this_thread::sleep_for(std::chrono::seconds(3));
     }
 
