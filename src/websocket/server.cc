@@ -24,18 +24,19 @@ private:
     std::shared_ptr<ix::HttpServer> ixHttpServer;
 
 public:
-    int listen(const std::string &ipStr, uint16_t port) {
+    int listen(const std::string &host, uint16_t port) {
         using namespace std::placeholders;
 
-        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, ipStr);
+        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, host, 5, 128, host.contains(':') ? AF_INET6 : AF_INET);
         this->ixHttpServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleHttpConnection, this, _1, _2));
 
         auto ixWsServer = std::dynamic_pointer_cast<ix::WebSocketServer>(this->ixHttpServer);
         ixWsServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleWsConnection, this, _1, _2));
         ixWsServer->disablePerMessageDeflate();
 
-        if (!this->ixHttpServer->listen().first) {
-            spdlog::critical("ixwebsocket server listen failed");
+        auto result = this->ixHttpServer->listen();
+        if (!result.first) {
+            spdlog::critical("ixwebsocket server listen failed: {}", result.second);
             return -1;
         }
         this->ixHttpServer->start();
@@ -163,10 +164,10 @@ WebSocketServer::~WebSocketServer() {
     return;
 }
 
-int WebSocketServer::listen(const std::string &ipStr, uint16_t port) {
+int WebSocketServer::listen(const std::string &host, uint16_t port) {
     std::shared_ptr<WebSockeServerImpl> server;
     server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->listen(ipStr, port);
+    return server->listen(host, port);
 }
 
 int WebSocketServer::stop() {

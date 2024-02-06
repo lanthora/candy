@@ -32,7 +32,7 @@ private:
 
     bool running = false;
     uint16_t port;
-    std::string ipStr;
+    std::string host;
     std::string password;
     std::thread wsThread;
     WebSocketServer ws;
