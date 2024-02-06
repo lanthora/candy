@@ -20,19 +20,9 @@ int Server::setWebSocketServer(const std::string &uri) {
         spdlog::critical("websocket server only support ws. please use a proxy such as nginx to handle encryption");
         return -1;
     }
-    // 服务端必须指定端口号
-    if (parser.port().empty()) {
-        spdlog::critical("websocket server must specify the listening port");
-        return -1;
-    }
-    // 服务端必须指定 IP 地址和端口号,不能用域名
-    Address address;
-    if (address.ipStrUpdate(parser.host())) {
-        spdlog::critical("invalid websocket server ip: {}", parser.host());
-        return -1;
-    }
-    this->ipStr = address.getIpStr();
-    this->port = std::stoi(parser.port());
+
+    this->host = parser.host();
+    this->port = parser.port().empty() ? 80 : std::stoi(parser.port());
     return 0;
 }
 
@@ -83,7 +73,7 @@ int Server::shutdown() {
 }
 
 int Server::startWsThread() {
-    if (this->ws.listen(this->ipStr, this->port)) {
+    if (this->ws.listen(this->host, this->port)) {
         spdlog::critical("websocket server listen failed");
         return -1;
     }
