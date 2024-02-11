@@ -1,5 +1,5 @@
 [Unit]
-Description=Another virtual private network that supports point-to-point connections
+Description=Another virtual private network that supports peer-to-peer connections
 StartLimitIntervalSec=0
 
 [Service]
