@@ -99,7 +99,7 @@ private:
             }
             return connectionState->getRemoteIp();
         }();
-        spdlog::info("unexpected http request: {} {} {}", ip, request->method, request->uri);
+        spdlog::debug("unexpected http request: {} {} {}", ip, request->method, request->uri);
 
         ix::WebSocketHttpHeaders responseHeaders;
         responseHeaders["Location"] = "https://github.com/lanthora/candy";
