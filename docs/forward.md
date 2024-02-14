@@ -1,6 +1,4 @@
-# 服务端转发原理
-
-[主页](index.md) | [协议规范](specification.md) | 服务端转发原理 | [对等连接](peer-to-peer.md)
+# 流量转发原理
 
 ## 最简单的 TUN 使用方式
 

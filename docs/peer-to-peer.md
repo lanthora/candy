@@ -1,7 +1,5 @@
 # 对等连接
 
-[主页](index.md) | [协议规范](specification.md) | [服务端转发原理](forward.md) | 对等连接
-
 ## 状态机
 
 ### INIT
