@@ -75,7 +75,7 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 ### Windows
 
-在 [Release](https://github.com/lanthora/candy/releases/latest/) 中提供安装包.
+通过 Web 服务提供[安装包下载](https://dl.icandy.one/).
 
 对于无人值守的设备: 1.请确认系统不会休眠; 2.进程启动需要管理员权限设置虚拟网卡,请确认进程不会因为用户账户控制无法正常开机启动.
 
