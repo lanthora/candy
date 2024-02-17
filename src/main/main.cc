@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <libconfig.h++>
 #include <mutex>
 #include <signal.h>
@@ -300,6 +301,19 @@ int main(int argc, char *argv[]) {
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+
+    std::thread([] {
+        std::ios::sync_with_stdio(false);
+        std::cin.tie(nullptr);
+        std::cout.tie(nullptr);
+
+        while (std::cin.ignore()) {
+            if (std::cin.eof()) {
+                signalHandler(SIGTERM);
+                return;
+            }
+        }
+    }).detach();
 
     while (running && serve(arguments) && arguments.autoRestart) {
         running = true;
