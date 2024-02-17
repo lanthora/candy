@@ -32,11 +32,13 @@ struct arguments {
     std::string name;
     std::string stun;
     bool autoRestart = false;
+    bool exitOnEOF = false;
 };
 
 const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
 const int OPT_AUTO_RESTART = 3;
+const int OPT_EXIT_ON_EOF = 4;
 
 struct argp_option options[] = {
     {"mode", 'm', "TEXT", 0, "The process works in client or server mode"},
@@ -50,6 +52,7 @@ struct argp_option options[] = {
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
+    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit process when EOF is received on standard input"},
     {},
 };
 
@@ -133,6 +136,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case OPT_AUTO_RESTART:
         arguments->autoRestart = true;
+        break;
+    case OPT_EXIT_ON_EOF:
+        arguments->exitOnEOF = true;
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
@@ -302,18 +308,20 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    std::thread([] {
-        std::ios::sync_with_stdio(false);
-        std::cin.tie(nullptr);
-        std::cout.tie(nullptr);
+    if (arguments.exitOnEOF) {
+        std::thread([] {
+            std::ios::sync_with_stdio(false);
+            std::cin.tie(nullptr);
+            std::cout.tie(nullptr);
 
-        while (std::cin.ignore()) {
-            if (std::cin.eof()) {
-                signalHandler(SIGTERM);
-                return;
+            while (std::cin.ignore()) {
+                if (std::cin.eof()) {
+                    signalHandler(SIGTERM);
+                    return;
+                }
             }
-        }
-    }).detach();
+        }).detach();
+    }
 
     while (running && serve(arguments) && arguments.autoRestart) {
         running = true;
