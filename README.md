@@ -97,14 +97,14 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 私有部署需要了解可配置的参数,后面有两个完整的配置示例分别说明服务端和客户端的可用参数.
 
-```bash
-% candy --help                                         
+```plain
 Usage: candy [OPTION...]
 
       --auto-restart         Automatic restart
   -c, --config=PATH          Configuration file path
       --debug                Show debug level logs
   -d, --dhcp=CIDR            Automatically assigned address range
+      --eof-exit             Exit the process after receiving EOF
   -m, --mode=TEXT            The process works in client or server mode
       --no-timestamp         Log does not show time
   -n, --name=TEXT            Network interface name
@@ -128,7 +128,7 @@ candy -c /path/to/candy.conf
 监听所有网卡的 80 端口,客户端连接后自动在 10.0.0.0/24 子网分配地址,并设置登录口令为 123456
 
 ```bash
-candy -m server -w ws://0.0.0.0:80 -d 10.0.0.0/24 -p 123456
+candy -m "server" -w "ws://0.0.0.0:80" -d "10.0.0.0/24" -p "123456"
 ```
 
 对应的配置文件内容为
@@ -146,13 +146,13 @@ password = "123456"
 #### 客户端
 
 ```bash
-candy -m client -w ws://127.0.0.1:80 -p 123456
+candy -m "client" -w "ws://127.0.0.1:80" -p "123456"
 # 启用对等连接
-candy -m client -w ws://127.0.0.1:80 -p 123456 -s stun://stun.qq.com
+candy -m "client" -w "ws://127.0.0.1:80" -p "123456" -s "stun://stun.qq.com"
 # 指定静态地址
-candy -m client -w ws://127.0.0.1:80 -p 123456 -t 10.0.0.1/24
+candy -m "client" -w "ws://127.0.0.1:80" -p "123456" -t "10.0.0.1/24"
 # 设置网卡名
-candy -m client -w ws://127.0.0.1:80 -p 123456 -n test
+candy -m "client" -w "ws://127.0.0.1:80" -p "123456" -n "test"
 ```
 
 对应的配置文件内容为

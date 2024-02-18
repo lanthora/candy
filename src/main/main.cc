@@ -52,7 +52,7 @@ struct argp_option options[] = {
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
-    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit process when EOF is received on standard input"},
+    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit the process after receiving EOF"},
     {},
 };
 
