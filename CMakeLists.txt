@@ -20,9 +20,13 @@ pkg_check_modules(
     liburiparser
 )
 
+pkg_check_modules(IXWEBSOCKET ixwebsocket)
+
 find_library(ARGP_LIB argp)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
+if (NOT IXWEBSOCKET_FOUND)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ixwebsocket.cmake)
+endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/wintun.cmake)
@@ -30,7 +34,12 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 endif()
 
 include_directories(${DEPENDENCIES_INCLUDEDIR})
-include_directories(${ixwebsocket_SOURCE_DIR})
+
+if (IXWEBSOCKET_FOUND)
+    include_directories(${IXWEBSOCKET_INCLUDEDIR})
+else()
+    include_directories(${ixwebsocket_SOURCE_DIR})
+endif()
 
 add_subdirectory(${SOURCE}/core)
 add_subdirectory(${SOURCE}/websocket)
@@ -43,7 +52,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websocket)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE tun)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)
+
+if (IXWEBSOCKET_FOUND)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${IXWEBSOCKET_LIBRARIES})
+else()
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ixwebsocket)
+endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE iphlpapi)
