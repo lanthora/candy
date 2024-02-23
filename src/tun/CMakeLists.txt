@@ -1,2 +1,6 @@
 aux_source_directory(. DIR_LIB_SRCS)
-add_library(tun ${DIR_LIB_SRCS})
+add_library(tun STATIC ${DIR_LIB_SRCS})
+
+include(${CMAKE_SOURCE_DIR}/cmake/iphlpapi.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/wintun.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/spdlog.cmake)
