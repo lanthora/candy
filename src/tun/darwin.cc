@@ -4,6 +4,7 @@
 #include "tun/tun.h"
 #include "utility/address.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <memory>
 #include <net/if.h>
 #include <net/if_utun.h>
@@ -14,6 +15,7 @@
 #include <string>
 #include <sys/ioctl.h>
 #include <sys/kern_control.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/sys_domain.h>
 #include <sys/uio.h>

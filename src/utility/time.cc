@@ -38,6 +38,8 @@ struct ntp_packet {
 
 #if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
 #include <netdb.h>
+#include <sys/select.h>
+#include <unistd.h>
 
 static int64_t ntpTime() {
     struct addrinfo hints = {}, *info = NULL;
