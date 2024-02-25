@@ -97,23 +97,8 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 私有部署需要了解可配置的参数,后面有两个完整的配置示例分别说明服务端和客户端的可用参数.
 
-```plain
-Usage: candy [OPTION...]
-
-      --auto-restart         Automatic restart
-  -c, --config=PATH          Configuration file path
-      --debug                Show debug level logs
-  -d, --dhcp=CIDR            Automatically assigned address range
-      --eof-exit             Exit the process after receiving EOF
-  -m, --mode=TEXT            The process works in client or server mode
-      --no-timestamp         Log does not show time
-  -n, --name=TEXT            Network interface name
-  -p, --password=TEXT        Authorization password consistent with the server
-  -s, --stun=URI             STUN service address
-  -t, --tun=CIDR             Static configured IP address
-  -w, --websocket=URI        Server listening address
-  -?, --help                 Give this help list
-      --usage                Give a short usage message
+```bash
+candy --help
 ```
 
 参数可以由命令行指定.也可以通过配置文件指定.使用配置文件时需要指定路径.推荐使用配置文件,可以在不重建容器的情况下修改配置.
@@ -171,37 +156,11 @@ name = "test"
 stun = "stun://stun.qq.com"
 ```
 
-## 用户案例
-
-### 局域网游戏对战
-
-想要玩曾经在学校或者网吧局域网联机的游戏,而找到一群人坐在一起打游戏的困难程度难以想象.部署 Candy 后,多台异地的设备处于同一个网络,得益于内网穿透,游戏的延迟可以做到物理意义上的最低值.
-
-在两台异地的设备上安装红色警戒,并打上 IPX Wrapper 补丁(IPX 是早期的互联网协议,目前已经被 TCP/IP 取代,高版本 Windows 不支持 IPX, 因此需要用 UDP 模拟 IPX 的补丁).一方创建房间,另一方可以成功加入游戏.这里吐槽一下,不知道为什么如果 Windows 设置了非 100% 的缩放,就不会出现创建房间的选项.
-
-### 低配 VPS 和高配个人电脑模拟高配 VPS
-
-正常情况下的 VPS 服务器都会提供 IP 地址,需要更强的计算资源和存储资源是另外的价格,加的这些钱远超个人部署的成本.
-因此用个人电脑的计算和存储资源,配合 VPS 提供的网络资源,是一种性价比很高的部署方案.
-除了省钱,还能把数据牢牢的把控在自己手里,即使有攻击者恶意扫描并转储了 VPS 的磁盘,也不可能得到你保存在本地的数据.
-
-### 任何地点的 Visual Studio Code 远程开发
-
-VSCode 的 Remote-SSH 要求你能通过 SSH 访问到开发服务器.在两端分别部署 Candy 客户端后,就可以在任何有互联网的地方写代码啦.当然也可以写其他东西,比如这个 README.
-
-### 远程桌面控制
-
-与上面的远程开发类似,配合开源的远程桌面控制软件,例如 Windows 的 [TightVNC](https://www.tightvnc.com/download.php), 可以安全的进行远程桌面控制.对于不信任市面上闭源远程桌面软件的用户来说多了一个选择.
-
-### 游戏加速器
-
-有些游戏在没有加速器的情况下就是地狱级别的体验.游戏一般使用 UDP 协议, Candy 启用对等连接后使用的也是 UDP, 因此也是加速器的一个新选择,当配合透明代理,并使用 Candy 的 UDP 通道和代理服务器通信后,可以畅玩 Splatoon 3, 几乎不再发生长时间排队和掉线的情况. 
-
 ## 未来的发展方向
 
 除了正常的安全更新和问题修复,短期内不计划新增功能,希望这个软件可以像空气一样,让用户意识不到它的存在.
 
-## 相关产品
+## 相似产品
 
 - [WireGuard](https://www.wireguard.com/): fast, modern, secure VPN tunnel
 - [n2n](https://github.com/ntop/n2n): Peer-to-peer VPN
