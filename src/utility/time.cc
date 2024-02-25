@@ -245,6 +245,12 @@ int64_t Time::unixTime() {
     return sysTime;
 }
 
+int64_t Time::bootTime() {
+    using namespace std::chrono;
+    auto now = steady_clock::now();
+    return duration_cast<milliseconds>(now.time_since_epoch()).count();
+}
+
 int64_t Time::hostToNet(int64_t host) {
     if (std::endian::native == std::endian::little) {
         return std::byteswap(host);
@@ -253,6 +259,17 @@ int64_t Time::hostToNet(int64_t host) {
 }
 
 int64_t Time::netToHost(int64_t net) {
+    return Time::hostToNet(net);
+}
+
+int32_t Time::hostToNet(int32_t host) {
+    if (std::endian::native == std::endian::little) {
+        return std::byteswap(host);
+    }
+    return host;
+}
+
+int32_t Time::netToHost(int32_t net) {
     return Time::hostToNet(net);
 }
 

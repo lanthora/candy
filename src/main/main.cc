@@ -32,6 +32,7 @@ struct arguments {
     std::string name;
     std::string stun;
     int discoveryInterval = 0;
+    int routeCost = 0;
     bool autoRestart = false;
     bool exitOnEOF = false;
 };
@@ -40,6 +41,7 @@ const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
 const int OPT_AUTO_RESTART = 3;
 const int OPT_EXIT_ON_EOF = 4;
+const int OPT_DISCOVERY_INTERVAL = 5;
 
 struct argp_option options[] = {
     {"mode", 'm', "TEXT", 0, "The process works in client or server mode"},
@@ -50,7 +52,8 @@ struct argp_option options[] = {
     {"name", 'n', "TEXT", 0, "Network interface name"},
     {"stun", 's', "URI", 0, "STUN service address"},
     {"config", 'c', "PATH", 0, "Configuration file path"},
-    {"discovery", 'i', "SECOND", 0, "Active discovery interval"},
+    {"discovery", OPT_DISCOVERY_INTERVAL, "SECOND", 0, "Active discovery broadcast interval"},
+    {"route", 'r', "COST", 0, "Cost of routing"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
@@ -94,6 +97,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("password", arguments->password);
         cfg.lookupValue("name", arguments->name);
         cfg.lookupValue("discovery", arguments->discoveryInterval);
+        cfg.lookupValue("route", arguments->routeCost);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -128,8 +132,11 @@ int parseOption(int key, char *arg, struct argp_state *state) {
     case 's':
         arguments->stun = arg;
         break;
-    case 'i':
+    case OPT_DISCOVERY_INTERVAL:
         arguments->discoveryInterval = atoi(arg);
+        break;
+    case 'r':
+        arguments->routeCost = atoi(arg);
         break;
     case 'c':
         parseConfigFile(arguments, arg);
@@ -279,6 +286,7 @@ int serve(const struct arguments &arguments) {
     if (arguments.mode == "client") {
         client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
         client.setDiscoveryInterval(arguments.discoveryInterval);
+        client.setRouteCost(arguments.routeCost);
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setStun(arguments.stun);

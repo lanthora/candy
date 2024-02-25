@@ -103,7 +103,9 @@ struct StunResponse {
 namespace PeerMessageType {
 
 constexpr uint8_t HEARTBEAT = 0;
-constexpr uint8_t IPv4 = 1;
+constexpr uint8_t Forward = 1;
+constexpr uint8_t DELAY = 2;
+constexpr uint8_t ROUTE = 4;
 
 } // namespace PeerMessageType
 
@@ -115,10 +117,26 @@ struct PeerHeartbeatMessage {
     uint8_t ack;
 } __attribute__((packed));
 
-struct PeerRawIPv4Message {
+struct PeerForwardMessage {
     uint8_t type;
     IPv4Header iph;
 } __attribute__((packed));
+
+struct PeerDelayMessage {
+    uint8_t type;
+    uint32_t src;
+    uint32_t dst;
+    int64_t timestamp;
+} __attribute__((packed));
+
+struct PeerRouteMessage {
+    uint8_t type;
+    uint32_t dst;
+    uint32_t next;
+    int32_t delay;
+} __attribute__((packed));
+
+constexpr uint32_t BROADCAST_IP = UINT32_MAX;
 
 } // namespace Candy
 

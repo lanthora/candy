@@ -8,6 +8,7 @@ namespace Candy {
 
 PeerInfo::PeerInfo() {
     this->state = PeerState::INIT;
+    this->tickCount = 0;
     reset();
 }
 
@@ -18,6 +19,7 @@ void PeerInfo::reset() {
     this->port = 0;
     this->ack = 0;
     this->retry = 30;
+    this->delay = DELAY_MAX;
     this->key.clear();
 }
 
