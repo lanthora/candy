@@ -31,6 +31,7 @@ struct arguments {
     std::string password;
     std::string name;
     std::string stun;
+    int discoveryInterval = 0;
     bool autoRestart = false;
     bool exitOnEOF = false;
 };
@@ -49,6 +50,7 @@ struct argp_option options[] = {
     {"name", 'n', "TEXT", 0, "Network interface name"},
     {"stun", 's', "URI", 0, "STUN service address"},
     {"config", 'c', "PATH", 0, "Configuration file path"},
+    {"discovery", 'i', "SECOND", 0, "Active discovery interval"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
@@ -91,6 +93,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("stun", arguments->stun);
         cfg.lookupValue("password", arguments->password);
         cfg.lookupValue("name", arguments->name);
+        cfg.lookupValue("discovery", arguments->discoveryInterval);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -124,6 +127,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 's':
         arguments->stun = arg;
+        break;
+    case 'i':
+        arguments->discoveryInterval = atoi(arg);
         break;
     case 'c':
         parseConfigFile(arguments, arg);
@@ -272,6 +278,7 @@ int serve(const struct arguments &arguments) {
 
     if (arguments.mode == "client") {
         client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
+        client.setDiscoveryInterval(arguments.discoveryInterval);
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setStun(arguments.stun);

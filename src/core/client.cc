@@ -3,6 +3,7 @@
 #include "core/common.h"
 #include "core/message.h"
 #include "utility/address.h"
+#include "utility/icmp.h"
 #include "utility/time.h"
 #include "utility/uri.h"
 #include <algorithm>
@@ -65,6 +66,11 @@ int Client::setVirtualMac(const std::string &vmac) {
 
 int Client::setStun(const std::string &stun) {
     this->stun.uri = stun;
+    return 0;
+}
+
+int Client::setDiscoveryInterval(int interval) {
+    this->discoveryInterval = interval;
     return 0;
 }
 
@@ -354,6 +360,16 @@ void Client::handleUdpMessage() {
 }
 
 void Client::tick() {
+    if (discoveryInterval && !this->localAddress.empty()) {
+        if (tickCount % discoveryInterval == 0) {
+            Address address;
+            if (address.cidrUpdate(this->localAddress)) {
+                spdlog::warn("invalid local address: {}", this->localAddress);
+            }
+            sendICMP(address.getNet() | ~address.getMask());
+        }
+    }
+
     std::unique_lock lock(this->ipPeerMutex);
     bool needSendStunRequest = false;
     for (auto &[ip, peer] : this->ipPeerMap) {
@@ -418,6 +434,8 @@ void Client::tick() {
     if (needSendStunRequest) {
         sendStunRequest();
     }
+
+    ++tickCount;
 }
 
 void Client::sendVirtualMacMessage() {
