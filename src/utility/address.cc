@@ -77,7 +77,7 @@ int Address::ipStrUpdate(const std::string &ipStr) {
 }
 
 int Address::ipUpdate(uint32_t ip) {
-    return ipMaskUpdate(ip, 0xFFFFFFFFU);
+    return ipMaskUpdate(ip, UINT32_MAX);
 }
 
 bool Address::inSameNetwork(const Address &address) {

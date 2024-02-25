@@ -18,6 +18,8 @@ enum class PeerState {
     FAILED,
 };
 
+constexpr int32_t DELAY_MAX = INT32_MAX;
+
 class PeerInfo {
 public:
     uint32_t tun;
@@ -25,7 +27,9 @@ public:
     uint16_t port;
     uint8_t ack;
     uint32_t count;
+    uint32_t tickCount;
     uint32_t retry;
+    int32_t delay;
 
 public:
     PeerInfo();

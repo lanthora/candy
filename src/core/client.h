@@ -2,6 +2,7 @@
 #ifndef CANDY_CORE_CLIENT_H
 #define CANDY_CORE_CLIENT_H
 
+#include "core/message.h"
 #include "peer/peer.h"
 #include "tun/tun.h"
 #include "websocket/client.h"
@@ -17,6 +18,14 @@ struct StunCache {
     uint32_t ip;
     uint16_t port;
     std::string uri;
+};
+
+struct RouteEntry {
+    uint32_t dst;
+    uint32_t next;
+    int32_t delay;
+
+    RouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_MAX) : dst(dst), next(next), delay(delay) {}
 };
 
 class Client {
@@ -45,6 +54,9 @@ public:
     // 设置主动发现时间间隔
     int setDiscoveryInterval(int interval);
 
+    // 设置通过本节点路由的代价
+    int setRouteCost(int cost);
+
     // 设置本地地址更新时执行的回调函数
     int setupAddressUpdateCallback(std::function<void(const std::string &)> callback);
 
@@ -61,6 +73,7 @@ private:
     // WebSocket
     int startWsThread();
     void handleWebSocketMessage();
+    void sendForwardMessage(const std::string &buffer);
     void sendVirtualMacMessage();
     void sendDynamicAddressMessage();
     void sendAuthMessage();
@@ -95,13 +108,15 @@ private:
     std::string encrypt(const std::string &key, const std::string &plaintext);
     std::string decrypt(const std::string &key, const std::string &ciphertext);
     int sendStunRequest();
+    int sendHeartbeatMessage(const PeerInfo &peer);
+    int sendPeerForwardMessage(const std::string &buffer);
+    int sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop);
     bool isStunResponse(const UdpMessage &message);
-    int handleStunResponse(const std::string &buffer);
     bool isHeartbeatMessage(const UdpMessage &message);
+    bool isPeerForwardMessage(const UdpMessage &message);
+    int handleStunResponse(const std::string &buffer);
     int handleHeartbeatMessage(const UdpMessage &message);
-    int sendHeartbeat(const PeerInfo &peer);
-    bool isIPv4Message(const UdpMessage &message);
-    int handleIPv4Message(const UdpMessage &message);
+    int handlePeerForwardMessage(const UdpMessage &message);
 
     UdpHolder udpHolder;
     StunCache stun;
@@ -112,6 +127,23 @@ private:
     std::thread tickThread;
     uint64_t tickCount;
     uint32_t discoveryInterval;
+
+    // Route
+    void showRouteChange(const std::string &op, const RouteEntry &entry);
+    int updateRouteTable(const RouteEntry &entry);
+    int sendDelayMessage(const PeerInfo &peer);
+    int sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay);
+    int sendRouteMessage(uint32_t dst, int32_t delay);
+    bool isDelayMessage(const UdpMessage &message);
+    bool isRouteMessage(const UdpMessage &message);
+    int handleDelayMessage(const UdpMessage &message);
+    int handleRouteMessage(const UdpMessage &message);
+    void onPeerConnected(PeerInfo &peer);
+    void onPeerDisconnected(PeerInfo &peer);
+
+    std::shared_mutex rtTableMutex;
+    std::map<uint32_t, RouteEntry> rtTable;
+    int32_t routeCost;
 };
 
 } // namespace Candy

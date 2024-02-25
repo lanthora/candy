@@ -366,7 +366,7 @@ void Server::handleDiscoveryMessage(WebSocketMessage &message) {
         return;
     }
 
-    if (daddr == 0xFFFFFFFF) {
+    if (daddr == BROADCAST_IP) {
         for (auto conn : this->ipWsMap) {
             if (conn.first != saddr) {
                 message.conn = conn.second;
