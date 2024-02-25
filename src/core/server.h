@@ -28,6 +28,7 @@ private:
     void handleDynamicAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleVirtualMacMessage(WebSocketMessage &message);
+    void handleDiscoveryMessage(WebSocketMessage &message);
     void handleCloseMessage(WebSocketMessage &message);
 
     bool running = false;

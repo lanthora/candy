@@ -68,6 +68,11 @@ int Client::setStun(const std::string &stun) {
     return 0;
 }
 
+int Client::setDiscoveryInterval(int interval) {
+    this->discoveryInterval = interval;
+    return 0;
+}
+
 int Client::setupAddressUpdateCallback(std::function<void(const std::string &)> callback) {
     this->addressUpdateCallback = callback;
     return 0;
@@ -213,6 +218,12 @@ void Client::handleWebSocketMessage() {
                 handlePeerConnMessage(message);
                 continue;
             }
+            // 收到主动发现报文
+            if (message.buffer.front() == MessageType::DISCOVERY) {
+                handleDiscoveryMessage(message);
+                continue;
+            }
+
             spdlog::warn("unknown message: {:n}", spdlog::to_hex(message.buffer));
             continue;
         }
@@ -354,6 +365,12 @@ void Client::handleUdpMessage() {
 }
 
 void Client::tick() {
+    if (discoveryInterval) {
+        if (tickCount % discoveryInterval == 0) {
+            sendDiscoveryMessage(0xFFFFFFFF);
+        }
+    }
+
     std::unique_lock lock(this->ipPeerMutex);
     bool needSendStunRequest = false;
     for (auto &[ip, peer] : this->ipPeerMap) {
@@ -418,6 +435,7 @@ void Client::tick() {
     if (needSendStunRequest) {
         sendStunRequest();
     }
+    ++tickCount;
 }
 
 void Client::sendVirtualMacMessage() {
@@ -477,6 +495,18 @@ void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16
     return;
 }
 
+void Client::sendDiscoveryMessage(uint32_t dst) {
+    DiscoveryMessage header;
+
+    header.src = Address::hostToNet(this->tun.getIP());
+    header.dst = Address::hostToNet(dst);
+
+    WebSocketMessage message;
+    message.buffer.assign((char *)(&header), sizeof(DiscoveryMessage));
+    this->ws.write(message);
+    return;
+}
+
 void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(DynamicAddressMessage)) {
         spdlog::warn("invalid dynamic address message: len {}", message.buffer.length());
@@ -516,17 +546,7 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
 
     const IPv4Header *header = (const IPv4Header *)src;
 
-    // 收到转发包,判断源地址的状态是否为 INIT,是则进入 PREPARING 状态,其他状态忽略
-    std::unique_lock lock(this->ipPeerMutex);
-    PeerInfo &peer = this->ipPeerMap[Address::netToHost(header->saddr)];
-    if (peer.getState() == PeerState::INIT) {
-        peer.tun = Address::netToHost(header->saddr);
-        if (this->stun.uri.empty()) {
-            peer.updateState(PeerState::FAILED);
-            return;
-        }
-        peer.updateState(PeerState::PREPARING);
-    }
+    tryDirectConnection(Address::netToHost(header->saddr));
 }
 
 void Client::handlePeerConnMessage(WebSocketMessage &message) {
@@ -559,6 +579,36 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
         peer.updateState(PeerState::PREPARING);
     }
     return;
+}
+
+void Client::handleDiscoveryMessage(WebSocketMessage &message) {
+    if (message.buffer.size() < sizeof(DiscoveryMessage)) {
+        spdlog::warn("invalid discovery message: {:n}", spdlog::to_hex(message.buffer));
+    }
+
+    DiscoveryMessage *header = (DiscoveryMessage *)message.buffer.c_str();
+
+    uint32_t src = Address::netToHost(header->src);
+    uint32_t dst = Address::netToHost(header->dst);
+
+    if (dst == 0xFFFFFFFF) {
+        sendDiscoveryMessage(src);
+    }
+
+    tryDirectConnection(src);
+}
+
+void Client::tryDirectConnection(uint32_t ip) {
+    std::unique_lock lock(this->ipPeerMutex);
+    PeerInfo &peer = this->ipPeerMap[ip];
+    if (peer.getState() == PeerState::INIT) {
+        peer.tun = ip;
+        if (this->stun.uri.empty()) {
+            peer.updateState(PeerState::FAILED);
+            return;
+        }
+        peer.updateState(PeerState::PREPARING);
+    }
 }
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {

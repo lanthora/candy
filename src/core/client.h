@@ -42,6 +42,9 @@ public:
     // 设置 STUN 服务端,用于开启对等连接
     int setStun(const std::string &stun);
 
+    // 设置主动发现时间间隔
+    int setDiscoveryInterval(int interval);
+
     // 设置本地地址更新时执行的回调函数
     int setupAddressUpdateCallback(std::function<void(const std::string &)> callback);
 
@@ -62,9 +65,12 @@ private:
     void sendDynamicAddressMessage();
     void sendAuthMessage();
     void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port);
+    void sendDiscoveryMessage(uint32_t dst);
     void handleForwardMessage(WebSocketMessage &message);
     void handleDynamicAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
+    void handleDiscoveryMessage(WebSocketMessage &message);
+    void tryDirectConnection(uint32_t ip);
 
     WebSocketClient ws;
     std::string wsUri;
@@ -104,6 +110,8 @@ private:
     std::map<uint32_t, PeerInfo> ipPeerMap;
     std::thread udpThread;
     std::thread tickThread;
+    uint64_t tickCount;
+    uint32_t discoveryInterval;
 };
 
 } // namespace Candy

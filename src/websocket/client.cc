@@ -35,7 +35,9 @@ public:
     }
 
     int disconnect() {
-        this->ixWs->stop();
+        if (this->ixWs) {
+            this->ixWs->stop();
+        }
         {
             std::lock_guard<std::mutex> lock(this->mutex);
             this->queue = std::queue<WebSocketMessage>();
@@ -62,7 +64,9 @@ public:
 
     int write(const WebSocketMessage &message) {
         ix::IXWebSocketSendData data = ix::IXWebSocketSendData(message.buffer.c_str(), message.buffer.length());
-        this->ixWs->sendBinary(data);
+        if (this->ixWs) {
+            this->ixWs->sendBinary(data);
+        }
         return 0;
     }
 

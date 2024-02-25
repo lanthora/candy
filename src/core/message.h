@@ -18,6 +18,7 @@ constexpr uint8_t FORWARD = 1;
 constexpr uint8_t DHCP = 2;
 constexpr uint8_t PEER = 3;
 constexpr uint8_t VMAC = 4;
+constexpr uint8_t DISCOVERY = 5;
 
 } // namespace MessageType
 
@@ -69,6 +70,14 @@ struct VMacMessage {
     VMacMessage(const std::string &vmac);
     void updateHash(const std::string &password);
     bool check(const std::string &password);
+} __attribute__((packed));
+
+struct DiscoveryMessage {
+    uint8_t type;
+    uint32_t src;
+    uint32_t dst;
+
+    DiscoveryMessage();
 } __attribute__((packed));
 
 struct StunRequest {

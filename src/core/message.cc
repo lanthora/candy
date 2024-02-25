@@ -86,6 +86,10 @@ VMacMessage::VMacMessage(const std::string &vmac) {
     memcpy(this->vmac, vmac.c_str(), sizeof(this->vmac));
 }
 
+DiscoveryMessage::DiscoveryMessage() {
+    this->type = MessageType::DISCOVERY;
+}
+
 void VMacMessage::updateHash(const std::string &password) {
     std::string data;
     data.append(password);

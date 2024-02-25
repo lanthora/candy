@@ -123,6 +123,10 @@ void Server::handleWebSocketMessage() {
                 handlePeerConnMessage(message);
                 continue;
             }
+            if (message.buffer.front() == MessageType::DISCOVERY) {
+                handleDiscoveryMessage(message);
+                continue;
+            }
             spdlog::warn("unknown message type: {}", (int)message.buffer.front());
             continue;
         }
@@ -185,12 +189,12 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     ForwardHeader *header = (ForwardHeader *)message.buffer.data();
     uint32_t saddr = Address::netToHost(header->iph.saddr);
     uint32_t daddr = Address::netToHost(header->iph.daddr);
-    Address auth, source, destination;
-    auth.ipUpdate(this->wsIpMap[message.conn]);
+    Address source;
     source.ipUpdate(saddr);
-    destination.ipUpdate(daddr);
 
     if (this->wsIpMap[message.conn] != saddr) {
+        Address auth;
+        auth.ipUpdate(this->wsIpMap[message.conn]);
         spdlog::debug("forward source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
         return;
     }
@@ -212,6 +216,8 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
         return;
     }
 
+    Address destination;
+    destination.ipUpdate(daddr);
     spdlog::debug("forward dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
     return;
 }
@@ -335,6 +341,46 @@ void Server::handleVirtualMacMessage(WebSocketMessage &message) {
 
     this->wsMacMap[message.conn] = vmac;
     return;
+}
+
+void Server::handleDiscoveryMessage(WebSocketMessage &message) {
+    if (!this->wsIpMap.contains(message.conn)) {
+        spdlog::debug("unauthorized discovery websocket client");
+        return;
+    }
+
+    if (message.buffer.length() < sizeof(DiscoveryMessage)) {
+        spdlog::debug("invalid discovery message: len {}", message.buffer.length());
+        return;
+    }
+
+    DiscoveryMessage *header = (DiscoveryMessage *)message.buffer.data();
+    uint32_t saddr = Address::netToHost(header->src);
+    uint32_t daddr = Address::netToHost(header->dst);
+
+    if (this->wsIpMap[message.conn] != saddr) {
+        Address auth, source;
+        auth.ipUpdate(this->wsIpMap[message.conn]);
+        source.ipUpdate(saddr);
+        spdlog::debug("discovery source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
+        return;
+    }
+
+    if (daddr == 0xFFFFFFFF) {
+        for (auto conn : this->ipWsMap) {
+            if (conn.first != saddr) {
+                message.conn = conn.second;
+                this->ws.write(message);
+            }
+        }
+        return;
+    }
+
+    if (this->ipWsMap.contains(daddr)) {
+        message.conn = this->ipWsMap[daddr];
+        this->ws.write(message);
+        return;
+    }
 }
 
 void Server::handleCloseMessage(WebSocketMessage &message) {
