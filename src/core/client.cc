@@ -978,6 +978,9 @@ int Client::handlePeerForwardMessage(const UdpMessage &message) {
         const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
         const size_t len = message.buffer.length() - sizeof(ForwardHeader::type);
         this->tun.write(std::string(src, len));
+
+        // 可能是转发来的,尝试跟源地址建立直连
+        tryDirectConnection(Address::netToHost(ipv4Message->iph.saddr));
         return 0;
     }
 
