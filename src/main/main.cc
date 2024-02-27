@@ -52,7 +52,7 @@ struct argp_option options[] = {
     {"name", 'n', "TEXT", 0, "Network interface name"},
     {"stun", 's', "URI", 0, "STUN service address"},
     {"config", 'c', "PATH", 0, "Configuration file path"},
-    {"discovery", OPT_DISCOVERY_INTERVAL, "SECOND", 0, "Active discovery broadcast interval"},
+    {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval"},
     {"route", 'r', "COST", 0, "Cost of routing"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},

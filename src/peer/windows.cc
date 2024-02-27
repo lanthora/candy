@@ -95,7 +95,7 @@ size_t UdpHolder::write(const UdpMessage &message) {
     if (error == WSAEWOULDBLOCK) {
         return 0;
     }
-    spdlog::warn("udp socket write failed: {}", error);
+    spdlog::debug("udp socket write failed: {}", error);
     return -1;
 }
 

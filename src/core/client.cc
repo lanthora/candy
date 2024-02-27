@@ -183,7 +183,7 @@ void Client::handleWebSocketMessage() {
                 continue;
             }
 
-            spdlog::warn("unknown message: {:n}", spdlog::to_hex(message.buffer));
+            spdlog::warn("unknown websocket message: type {}", int(message.buffer.front()));
             continue;
         }
 
@@ -249,7 +249,7 @@ void Client::handleUdpMessage() {
         }
         message.buffer = decrypt(selfInfo.getKey(), message.buffer);
         if (message.buffer.empty()) {
-            spdlog::warn("invalid peer message: ip {}", Address::ipToStr(message.ip));
+            spdlog::debug("invalid peer message: ip {}", Address::ipToStr(message.ip));
             continue;
         }
 
@@ -273,7 +273,7 @@ void Client::handleUdpMessage() {
             }
             continue;
         }
-        spdlog::warn("unknown peer message type: {}", int(message.buffer.front()));
+        spdlog::warn("unknown peer message: type {}", int(message.buffer.front()));
     }
 }
 
@@ -638,53 +638,53 @@ void Client::tick() {
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
     if (key.size() != AES_256_GCM_KEY_LEN) {
-        spdlog::error("invalid key size: {}", key.size());
+        spdlog::debug("invalid key size: {}", key.size());
         return "";
     }
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        spdlog::error("failed to create cipher context");
+        spdlog::debug("failed to create cipher context");
         return "";
     }
     if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to initialize cipher context");
+        spdlog::debug("failed to initialize cipher context");
         return "";
     }
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to set IV length");
+        spdlog::debug("failed to set IV length");
         return "";
     }
     unsigned char iv[AES_256_GCM_IV_LEN];
     if (!RAND_bytes(iv, AES_256_GCM_IV_LEN)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to generate random IV");
+        spdlog::debug("failed to generate random IV");
         return "";
     }
     if (!EVP_EncryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to set key and IV");
+        spdlog::debug("failed to set key and IV");
         return "";
     }
     int len;
     unsigned char ciphertext[plaintext.size()];
     if (!EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)plaintext.data(), plaintext.size())) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to encrypt plaintext");
+        spdlog::debug("failed to encrypt plaintext");
         return "";
     }
     int ciphertextLen = len;
     if (!EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to finalize encryption");
+        spdlog::debug("failed to finalize encryption");
         return "";
     }
     ciphertextLen += len;
     unsigned char tag[AES_256_GCM_TAG_LEN];
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AES_256_GCM_TAG_LEN, tag)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to get tag");
+        spdlog::debug("failed to get tag");
         return "";
     }
     EVP_CIPHER_CTX_free(ctx);
@@ -698,26 +698,26 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
 
 std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
     if (key.size() != AES_256_GCM_KEY_LEN) {
-        spdlog::error("invalid key length: {}", key.size());
+        spdlog::debug("invalid key length: {}", key.size());
         return "";
     }
     if (ciphertext.size() < AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN) {
-        spdlog::error("invalid ciphertext length");
+        spdlog::debug("invalid ciphertext length");
         return "";
     }
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        spdlog::error("failed to create cipher context");
+        spdlog::debug("failed to create cipher context");
         return "";
     }
     if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to initialize cipher context");
+        spdlog::debug("failed to initialize cipher context");
         return "";
     }
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to set IV length");
+        spdlog::debug("failed to set IV length");
         return "";
     }
 
@@ -731,7 +731,7 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
 
     if (!EVP_DecryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to set key and IV");
+        spdlog::debug("failed to set key and IV");
         return "";
     }
 
@@ -739,7 +739,7 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
     unsigned char plaintext[ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN];
     if (!EVP_DecryptUpdate(ctx, plaintext, &len, enc, ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to decrypt ciphertext");
+        spdlog::debug("failed to decrypt ciphertext");
         return "";
     }
 
@@ -747,13 +747,13 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
 
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AES_256_GCM_TAG_LEN, tag)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to set tag");
+        spdlog::debug("failed to set tag");
         return "";
     }
 
     if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
-        spdlog::error("failed to finalize decryption");
+        spdlog::debug("failed to finalize decryption");
         return "";
     }
 
@@ -1175,11 +1175,13 @@ int Client::handleRouteMessage(const UdpMessage &message) {
     }
 
     PeerRouteMessage *routeMessage = (PeerRouteMessage *)message.buffer.c_str();
-    uint32_t src = Address::netToHost(routeMessage->dst);
+    uint32_t dst = Address::netToHost(routeMessage->dst);
     uint32_t next = Address::netToHost(routeMessage->next);
     int32_t timestamp = Time::netToHost(routeMessage->delay);
 
-    updateRouteTable(RouteEntry(src, next, timestamp));
+    tryDirectConnection(dst);
+
+    updateRouteTable(RouteEntry(dst, next, timestamp));
     return 0;
 }
 
