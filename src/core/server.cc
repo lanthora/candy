@@ -127,7 +127,7 @@ void Server::handleWebSocketMessage() {
                 handleDiscoveryMessage(message);
                 continue;
             }
-            spdlog::warn("unknown message type: {}", (int)message.buffer.front());
+            spdlog::warn("unknown message: type {}", (int)message.buffer.front());
             continue;
         }
 

@@ -90,7 +90,7 @@ size_t UdpHolder::write(const UdpMessage &message) {
     to.sin_port = Address::hostToNet(message.port);
     size_t len = sendto(fd, message.buffer.c_str(), message.buffer.length(), 0, (struct sockaddr *)&to, sizeof(to));
     if (len != message.buffer.length()) {
-        spdlog::warn("udp socket write failed: {}", strerror(errno));
+        spdlog::debug("udp socket write failed: {}", strerror(errno));
         return -1;
     }
     return len;
