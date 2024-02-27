@@ -18,7 +18,7 @@ void PeerInfo::reset() {
     this->ip = 0;
     this->port = 0;
     this->ack = 0;
-    this->retry = 30;
+    this->retry = RETRY_MIX;
     this->delay = DELAY_MAX;
     this->key.clear();
 }

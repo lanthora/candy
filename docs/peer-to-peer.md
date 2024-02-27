@@ -8,7 +8,7 @@
 
 ### PREPARING
 
-固定周期检查是否有处于 PREPARING 状态的对端.如果有,则在遍历所有对端后发送 STUN 请求.当收到 STUN 响应时,将其公共网络信息发送给所有处于 PREPARING 状态的对端.如果没有对端的公网信息,则状态切换为S YNCHRONIZING, 否则切换为 CONNECTING. STUN 是 UDP,可能会丢包，因此只要有处于 PREPARING 状态的对端,它就会不断发送 STUN 请求.
+固定周期检查是否有处于 PREPARING 状态的对端.如果有,则在遍历所有对端后发送 STUN 请求.当收到 STUN 响应时,将其公共网络信息发送给所有处于 PREPARING 状态的对端.如果没有对端的公网信息,则状态切换为 SYNCHRONIZING, 否则切换为 CONNECTING. STUN 是 UDP,可能会丢包，因此只要有处于 PREPARING 状态的对端,它就会不断发送 STUN 请求.
 
 ### SYNCHRONIZING
 

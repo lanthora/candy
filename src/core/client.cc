@@ -419,12 +419,26 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     peer.updateKey(this->password);
     if (this->stun.uri.empty()) {
         peer.updateState(PeerState::FAILED);
-    } else if (peer.getState() == PeerState::SYNCHRONIZING) {
-        peer.updateState(PeerState::CONNECTING);
-    } else if (peer.getState() != PeerState::CONNECTING) {
-        peer.updateState(PeerState::PREPARING);
+        return;
     }
-    return;
+
+    if (peer.getState() == PeerState::SYNCHRONIZING) {
+        peer.updateState(PeerState::CONNECTING);
+        return;
+    }
+
+    if (peer.getState() == PeerState::WAITTING) {
+        // 第一次进入 WAITTING 状态,不允许被直接设置为 PREPARING,
+        // 否则会出现两个客户端依次循环进入上述状态,在这里避免状态机死循环
+        if (peer.retry == RETRY_MIX) {
+            return;
+        }
+    }
+
+    if (peer.getState() != PeerState::CONNECTING) {
+        peer.updateState(PeerState::PREPARING);
+        return;
+    }
 }
 
 void Client::handleDiscoveryMessage(WebSocketMessage &message) {
