@@ -25,7 +25,7 @@ struct RouteEntry {
     uint32_t next;
     int32_t delay;
 
-    RouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_MAX) : dst(dst), next(next), delay(delay) {}
+    RouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_LIMIT) : dst(dst), next(next), delay(delay) {}
 };
 
 class Client {
@@ -129,17 +129,15 @@ private:
     uint32_t discoveryInterval;
 
     // Route
-    void showRouteChange(const std::string &op, const RouteEntry &entry);
-    int updateRouteTable(const RouteEntry &entry);
+    void showRouteChange(const RouteEntry &entry);
+    int updateRouteTable(RouteEntry entry);
     int sendDelayMessage(const PeerInfo &peer);
-    int sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay);
+    int sendDelayMessageHelper(const PeerInfo &peer, const PeerDelayMessage &delay);
     int sendRouteMessage(uint32_t dst, int32_t delay);
     bool isDelayMessage(const UdpMessage &message);
     bool isRouteMessage(const UdpMessage &message);
     int handleDelayMessage(const UdpMessage &message);
     int handleRouteMessage(const UdpMessage &message);
-    void onPeerConnected(PeerInfo &peer);
-    void onPeerDisconnected(PeerInfo &peer);
 
     std::shared_mutex rtTableMutex;
     std::map<uint32_t, RouteEntry> rtTable;

@@ -1,33 +1,14 @@
 // SPDX-License-Identifier: MIT
 #include "peer/peer.h"
 #include "utility/address.h"
+#include <cstdlib>
 #include <openssl/sha.h>
 #include <spdlog/spdlog.h>
 
 namespace Candy {
 
-PeerInfo::PeerInfo() {
-    this->state = PeerState::INIT;
-    this->tickCount = 0;
-    reset();
-}
-
-void PeerInfo::reset() {
-    updateState(PeerState::INIT);
-    this->tun = 0;
-    this->ip = 0;
-    this->port = 0;
-    this->ack = 0;
-    this->retry = RETRY_MIX;
-    this->delay = DELAY_MAX;
-    this->key.clear();
-}
-
-int PeerInfo::updateKey(const std::string &password) {
-    if (!this->tun) {
-        spdlog::error("tun ip is emtpy, cannot update key");
-        return -1;
-    }
+int PeerInfo::setTun(uint32_t tun, const std::string &password) {
+    this->tun = tun;
     std::string data;
     data.append(password);
     data.append((char *)&this->tun, sizeof(this->tun));
@@ -40,12 +21,25 @@ std::string PeerInfo::getKey() const {
     return this->key;
 }
 
+uint32_t PeerInfo::getTun() const {
+    return this->tun;
+}
+
 void PeerInfo::updateState(PeerState state) {
     this->count = 0;
-    if (this->state != state) {
-        spdlog::debug("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
-        this->state = state;
+    if (this->state == state) {
+        return;
     }
+
+    spdlog::debug("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
+    if (state == PeerState::INIT || state == PeerState::WAITTING || state == PeerState::FAILED) {
+        this->ip = 0;
+        this->port = 0;
+        this->ack = 0;
+        this->retry = RETRY_MIN;
+        this->delay = DELAY_LIMIT;
+    }
+    this->state = state;
 }
 
 PeerState PeerInfo::getState() const {

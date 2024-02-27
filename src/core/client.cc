@@ -77,8 +77,8 @@ int Client::setDiscoveryInterval(int interval) {
 int Client::setRouteCost(int cost) {
     if (cost < 0) {
         this->routeCost = 0;
-    } else if (cost > 3000) {
-        this->routeCost = 3000;
+    } else if (cost > 1000) {
+        this->routeCost = 1000;
     } else {
         this->routeCost = cost;
     }
@@ -247,9 +247,10 @@ void Client::handleUdpMessage() {
             handleStunResponse(message.buffer);
             continue;
         }
+
         message.buffer = decrypt(selfInfo.getKey(), message.buffer);
         if (message.buffer.empty()) {
-            spdlog::debug("invalid peer message: ip {}", Address::ipToStr(message.ip));
+            spdlog::debug("invalid peer message: ip {} port {}", Address::ipToStr(message.ip), message.port);
             continue;
         }
 
@@ -408,31 +409,30 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
 
     if (dst != this->tun.getIP()) {
         spdlog::warn("peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
+
+    if (src == this->tun.getIP()) {
+        spdlog::warn("peer conn message connect to self");
+        return;
     }
 
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[src];
-    peer.tun = src;
-    peer.ip = ip;
-    peer.port = port;
-    peer.count = 0;
-    peer.updateKey(this->password);
+
     if (this->stun.uri.empty()) {
         peer.updateState(PeerState::FAILED);
         return;
     }
 
+    peer.ip = ip;
+    peer.port = port;
+    peer.count = 0;
+    peer.setTun(src, this->password);
+
     if (peer.getState() == PeerState::SYNCHRONIZING) {
         peer.updateState(PeerState::CONNECTING);
         return;
-    }
-
-    if (peer.getState() == PeerState::WAITTING) {
-        // 第一次进入 WAITTING 状态,不允许被直接设置为 PREPARING,
-        // 否则会出现两个客户端依次循环进入上述状态,在这里避免状态机死循环
-        if (peer.retry == RETRY_MIX) {
-            return;
-        }
     }
 
     if (peer.getState() != PeerState::CONNECTING) {
@@ -451,23 +451,24 @@ void Client::handleDiscoveryMessage(WebSocketMessage &message) {
     uint32_t src = Address::netToHost(header->src);
     uint32_t dst = Address::netToHost(header->dst);
 
+    // 收到广播后向发送方回包
     if (dst == BROADCAST_IP) {
         sendDiscoveryMessage(src);
     }
 
+    // 接收方收到广播或发送方收到回包,同时尝试开始直连
     tryDirectConnection(src);
 }
 
+// 调用这个函数是需要确保双方同时调用.
+// 1. 收到对方报文时,一般会回包,此时调用
+// 2. 收到主动发现报文时,这时一定会回包
 void Client::tryDirectConnection(uint32_t ip) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[ip];
     if (peer.getState() == PeerState::INIT) {
-        peer.tun = ip;
-        if (this->stun.uri.empty()) {
-            peer.updateState(PeerState::FAILED);
-            return;
-        }
-        peer.updateState(PeerState::PREPARING);
+        peer.setTun(ip, this->password);
+        peer.updateState(this->stun.uri.empty() ? PeerState::FAILED : PeerState::PREPARING);
     }
 }
 
@@ -550,8 +551,7 @@ int Client::startUdpThread() {
     if (this->stun.uri.empty()) {
         return 0;
     }
-    this->selfInfo.tun = this->tun.getIP();
-    if (this->selfInfo.updateKey(this->password)) {
+    if (this->selfInfo.setTun(this->tun.getIP(), this->password)) {
         return -1;
     }
     sendStunRequest();
@@ -584,7 +584,7 @@ void Client::tick() {
     for (auto &[ip, peer] : this->ipPeerMap) {
         switch (peer.getState()) {
         case PeerState::INIT:
-            // 收到对方通过服务器转发的数据的时候,会切换为 PERPARING,这里不做处理
+            // 收到对方通过服务器转发的数据的时候,会切换为 PREPARING,这里不做处理
             break;
 
         case PeerState::PREPARING:
@@ -605,7 +605,7 @@ void Client::tick() {
                 peer.updateState(PeerState::WAITTING);
             } else {
                 if (peer.count == 0) {
-                    std::string ip = Address::ipToStr(peer.tun);
+                    std::string ip = Address::ipToStr(peer.getTun());
                     std::string saddr = Address::ipToStr(this->selfInfo.ip);
                     std::string daddr = Address::ipToStr(peer.ip);
                     uint16_t sport = this->selfInfo.port;
@@ -619,10 +619,13 @@ void Client::tick() {
         case PeerState::CONNECTED:
             // 进行超时检测,超时后清空对端信息,否则发送心跳
             if (peer.count > 3) {
-                onPeerDisconnected(peer);
+                peer.updateState(PeerState::INIT);
+                if (routeCost) {
+                    updateRouteTable(RouteEntry(peer.getTun(), peer.getTun(), DELAY_LIMIT));
+                }
             } else {
                 sendHeartbeatMessage(peer);
-                if (routeCost && tickCount % 60 == 0) {
+                if (routeCost && peer.tick % 60 == 0) {
                     sendDelayMessage(peer);
                 }
             }
@@ -632,7 +635,7 @@ void Client::tick() {
             // 指数退避算法
             if (peer.count > peer.retry) {
                 uint32_t next = std::min(peer.retry * 2, 3600U);
-                peer.reset();
+                peer.updateState(PeerState::INIT);
                 peer.retry = next;
             }
             break;
@@ -642,7 +645,7 @@ void Client::tick() {
             break;
         }
         ++peer.count;
-        ++peer.tickCount;
+        ++peer.tick;
     }
     if (needSendStunRequest) {
         sendStunRequest();
@@ -835,18 +838,24 @@ int Client::sendPeerForwardMessage(const std::string &buffer) {
     IPv4Header *header = (IPv4Header *)buffer.data();
     uint32_t dst = Address::netToHost(header->daddr);
 
-    // 尝试通过路由表转发
-    if (routeCost) {
-        auto route = this->rtTable.find(dst);
-        if (route != this->rtTable.end()) {
-            if (!sendPeerForwardMessage(buffer, route->second.next)) {
-                return 0;
-            }
-        }
+    // 优先尝试直连
+    if (!sendPeerForwardMessage(buffer, dst)) {
+        return 0;
     }
 
-    // 尝试通过直连发送
-    return sendPeerForwardMessage(buffer, dst);
+    // 没有开路由功能
+    if (!routeCost) {
+        return 1;
+    }
+
+    auto route = this->rtTable.find(dst);
+    // 没有找到路由
+    if (route == this->rtTable.end()) {
+        return 1;
+    }
+
+    // 尝试通过路由转发
+    return sendPeerForwardMessage(buffer, route->second.next);
 }
 
 int Client::sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop) {
@@ -932,7 +941,7 @@ int Client::handleStunResponse(const std::string &buffer) {
     std::unique_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
         if (peer.getState() == PeerState::PREPARING) {
-            sendPeerConnMessage(this->tun.getIP(), peer.tun, ip, port);
+            sendPeerConnMessage(this->tun.getIP(), peer.getTun(), ip, port);
             if (peer.ip && peer.port) {
                 peer.updateState(PeerState::CONNECTING);
             } else {
@@ -974,8 +983,11 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     if (heartbeat->ack) {
         if (peer.getState() == PeerState::CONNECTED) {
             peer.count = 0;
-        } else {
-            onPeerConnected(peer);
+            return 0;
+        }
+        peer.updateState(PeerState::CONNECTED);
+        if (routeCost) {
+            sendDelayMessage(peer);
         }
     }
     return 0;
@@ -1015,98 +1027,112 @@ int Client::handlePeerForwardMessage(const UdpMessage &message) {
     forward.port = peer->second.port;
     forward.buffer = encrypt(peer->second.getKey(), message.buffer);
     this->udpHolder.write(forward);
-
     return 0;
 }
 
 // Route
-void Client::showRouteChange(const std::string &op, const RouteEntry &entry) {
-    spdlog::debug("route {}: {} {} {}", op, Address::ipToStr(entry.dst), Address::ipToStr(entry.next), entry.delay);
+void Client::showRouteChange(const RouteEntry &entry) {
+    std::string dstStr = Address::ipToStr(entry.dst);
+    std::string nextStr = Address::ipToStr(entry.next);
+    std::string delayStr = (entry.delay == DELAY_LIMIT) ? "[deleted]" : std::to_string(entry.delay);
+    spdlog::debug("route: dst={} next={} delay={}", dstStr, nextStr, delayStr);
 }
 
-int Client::updateRouteTable(const RouteEntry &entry) {
-    // 目的地址或下一跳是自己,这是一条由本机发出去,由其他客户端处理后再次广播的数据,不需要处理
-    if (entry.dst == this->tun.getIP() || entry.next == this->tun.getIP()) {
-        return 0;
-    }
+int Client::updateRouteTable(RouteEntry entry) {
+    bool isDirect = (entry.dst == entry.next);
+    bool isDelete = (entry.delay < 1 || entry.delay > 1000);
 
     std::unique_lock lock(this->rtTableMutex);
 
-    // 删除操作
-    if (entry.delay == DELAY_MAX) {
-        auto current = this->rtTable.begin();
-        while (current != this->rtTable.end()) {
-            // 目的地址与下一跳地址相同表示直连
-            if (entry.dst == entry.next) {
-                // 与直连的设备断开连接,需要删除所有下一跳为该设备的记录
-                if (current->second.next == entry.next) {
-                    showRouteChange("delete", current->second);
-                    sendRouteMessage(current->second.dst, DELAY_MAX);
-                    current = this->rtTable.erase(current);
-                    // 这样的记录可能有很多条,需要继续遍历
+    // 拿到的到达此目的地址的历史路由
+    auto oldEntry = this->rtTable.find(entry.dst);
+
+    // 直连的操作,修改完需要广播
+    if (isDirect) {
+        // 与直连设备断开了连接,删除所有以该设备作为下一跳的路由
+        if (isDelete) {
+            // 路由表里曾经没有以它作为直连的记录,就不可能以它作为下一跳的记录
+            if (oldEntry == this->rtTable.end() || oldEntry->second.dst != oldEntry->second.next) {
+                return 0;
+            }
+            // 删除所有以该设备作为下一跳的路由
+            for (auto it = this->rtTable.begin(); it != this->rtTable.end();) {
+                if (it->second.next == entry.next) {
+                    sendRouteMessage(it->second.dst, DELAY_LIMIT);
+                    it->second.delay = DELAY_LIMIT;
+                    showRouteChange(it->second);
+                    it = this->rtTable.erase(it);
                     continue;
                 }
-            } else {
-                // 处理其他设备广播的路由删除消息,删除广播对应的记录即可
-                if (current->second.dst == entry.dst && current->second.next == entry.next) {
-                    showRouteChange("delete", current->second);
-                    sendRouteMessage(current->second.dst, DELAY_MAX);
-                    current = this->rtTable.erase(current);
-                    // 只可能有一条记录,删掉后返回
-                    return 0;
-                }
+                ++it;
             }
-            // 继续处理下一个记录
-            ++current;
-        }
-        return 0;
-    }
 
-    // 检查是否有与下一跳直连的路由
-    auto directEntry = this->rtTable.find(entry.next);
-    // 没有找到直连路由,尝试新增路由
-    if (directEntry == this->rtTable.end()) {
-        // 目的地址和下一跳地址相同,这是一条新的对等连接,新增路由
-        if (entry.dst == entry.next) {
+            return 0;
+        }
+
+        // 此前没有这条路由,新增后返回
+        if (oldEntry == this->rtTable.end()) {
             this->rtTable[entry.dst] = entry;
-            showRouteChange("update", this->rtTable[entry.dst]);
             sendRouteMessage(entry.dst, entry.delay);
+            showRouteChange(entry);
+            return 0;
+        }
+        // 获取时延变化量,并更新以该设备作为下一跳的路由
+        int32_t diff = entry.delay - oldEntry->second.delay;
+        for (auto it = this->rtTable.begin(); it != this->rtTable.end(); ++it) {
+            if (it->second.next == entry.next) {
+                it->second.delay += diff;
+                sendRouteMessage(it->second.dst, it->second.delay);
+                showRouteChange(it->second);
+                continue;
+            }
         }
         return 0;
     }
 
-    // 发生时延变化的不是直连设备,用直连的时延加上来包的时延与历史时延对比,时延降低时更新
-    if (entry.dst != entry.next) {
-        int32_t delay = directEntry->second.delay + entry.delay;
-        auto current = this->rtTable.find(entry.dst);
-        if (current == this->rtTable.end() || current->second.next == entry.next || current->second.delay > delay) {
-            this->rtTable[entry.dst] = RouteEntry(entry.dst, entry.next, delay);
-            showRouteChange("update", this->rtTable[entry.dst]);
-            sendRouteMessage(entry.dst, delay);
+    // 非直连的操作,更新完路由表后不需要广播
+    if (isDelete) {
+        // 不存在到该目的地址的路由,无需删除
+        if (oldEntry == this->rtTable.end()) {
+            return 0;
+        }
+        // 存在到该目的地址的路由,但是下一跳不同,无需删除
+        if (oldEntry->second.next != entry.next) {
+            return 0;
         }
 
+        sendRouteMessage(oldEntry->second.dst, DELAY_LIMIT);
+        oldEntry->second.delay = DELAY_LIMIT;
+        showRouteChange(oldEntry->second);
+        this->rtTable.erase(oldEntry);
         return 0;
     }
 
-    // 发生时延变化的是直连设备,可以直连但路由表明曾经使用转发更快,重新判断转发和直连哪个更快
-    if (directEntry->second.next != entry.next) {
-        if (directEntry->second.delay > entry.delay) {
-            directEntry->second.next = entry.next;
-            directEntry->second.delay = entry.delay;
-        }
+    // 只要存在直连,无论延迟多高都不跳转
+    if (oldEntry != this->rtTable.end() && oldEntry->second.dst == oldEntry->second.next) {
         return 0;
     }
 
-    // 通过时延变化的差值,更新所有下一跳为直连设备的路由
-    int32_t diff = entry.delay - directEntry->second.delay;
-    for (auto &[_, current] : this->rtTable) {
-        if (current.next == entry.next) {
-            current.delay += diff;
-            showRouteChange("update", current);
-            sendRouteMessage(current.dst, current.delay);
-        }
+    // 拿到与下一跳直连的时延,加上传来的时延计算总时延
+    auto directEntry = this->rtTable.find(entry.next);
+    // 没有与下一跳建立直连,异常情况,直接返回
+    if (directEntry == this->rtTable.end()) {
+        spdlog::warn("route broadcast received from non-directly connected device");
+        return 1;
     }
+    int32_t nowDelay = directEntry->second.delay + entry.delay;
+    // 以下情况跟新路由:
+    // 1. 以前不存在到该目的地址的路由
+    // 2. 存在路由且下一跳相同
+    // 3. 存在路由且下一跳不同,但延迟更低
+    if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
+        oldEntry->second.next = entry.next;
+        oldEntry->second.delay = nowDelay;
 
+        sendRouteMessage(oldEntry->second.dst, oldEntry->second.delay);
+        showRouteChange(oldEntry->second);
+        return 0;
+    }
     return 0;
 }
 
@@ -1114,12 +1140,12 @@ int Client::sendDelayMessage(const PeerInfo &peer) {
     PeerDelayMessage delayMessage;
     delayMessage.type = PeerMessageType::DELAY;
     delayMessage.src = Address::hostToNet(this->tun.getIP());
-    delayMessage.dst = Address::hostToNet(peer.tun);
+    delayMessage.dst = Address::hostToNet(peer.getTun());
     delayMessage.timestamp = Time::hostToNet(Time::bootTime());
-    return sendDelayMessage(peer, delayMessage);
+    return sendDelayMessageHelper(peer, delayMessage);
 }
 
-int Client::sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay) {
+int Client::sendDelayMessageHelper(const PeerInfo &peer, const PeerDelayMessage &delay) {
     UdpMessage message;
     message.ip = peer.ip;
     message.port = peer.port;
@@ -1133,7 +1159,7 @@ int Client::sendRouteMessage(uint32_t dst, int32_t delay) {
     routeMessage.type = PeerMessageType::ROUTE;
     routeMessage.dst = Address::hostToNet(dst);
     routeMessage.next = Address::hostToNet(this->tun.getIP());
-    routeMessage.delay = Time::hostToNet(delay == DELAY_MAX ? DELAY_MAX : delay + routeCost);
+    routeMessage.delay = Time::hostToNet(delay == DELAY_LIMIT ? DELAY_LIMIT : delay + routeCost);
 
     for (auto &[_, peer] : this->ipPeerMap) {
         if (peer.getState() == PeerState::CONNECTED) {
@@ -1166,17 +1192,25 @@ int Client::handleDelayMessage(const UdpMessage &message) {
     uint32_t src = Address::netToHost(delayMessage->src);
     uint32_t dst = Address::netToHost(delayMessage->dst);
     int64_t timestamp = Time::netToHost(delayMessage->timestamp);
+
+    std::shared_lock lock(this->ipPeerMutex);
+
     if (src == this->tun.getIP()) {
-        PeerInfo &peer = ipPeerMap[dst];
-        int32_t delay = Time::bootTime() - timestamp;
-        peer.delay = delay;
-        updateRouteTable(RouteEntry(dst, dst, delay));
+        auto it = this->ipPeerMap.find(dst);
+        if (it != this->ipPeerMap.end()) {
+            int32_t delay = Time::bootTime() - timestamp;
+            it->second.delay = delay;
+            updateRouteTable(RouteEntry(dst, dst, delay));
+        }
         return 0;
     }
 
     if (dst == this->tun.getIP()) {
-        PeerInfo &peer = ipPeerMap[src];
-        sendDelayMessage(peer, *delayMessage);
+        auto it = this->ipPeerMap.find(src);
+        if (it != this->ipPeerMap.end()) {
+            sendDelayMessageHelper(it->second, *delayMessage);
+        }
+        return 0;
     }
 
     return 0;
@@ -1191,27 +1225,13 @@ int Client::handleRouteMessage(const UdpMessage &message) {
     PeerRouteMessage *routeMessage = (PeerRouteMessage *)message.buffer.c_str();
     uint32_t dst = Address::netToHost(routeMessage->dst);
     uint32_t next = Address::netToHost(routeMessage->next);
-    int32_t timestamp = Time::netToHost(routeMessage->delay);
+    int32_t delay = Time::netToHost(routeMessage->delay);
 
-    tryDirectConnection(dst);
+    if (dst != this->tun.getIP()) {
+        updateRouteTable(RouteEntry(dst, next, delay));
+    }
 
-    updateRouteTable(RouteEntry(dst, next, timestamp));
     return 0;
-}
-
-void Client::onPeerConnected(PeerInfo &peer) {
-    peer.updateState(PeerState::CONNECTED);
-    if (routeCost) {
-        sendDelayMessage(peer);
-    }
-}
-
-void Client::onPeerDisconnected(PeerInfo &peer) {
-    uint32_t next = peer.tun;
-    peer.reset();
-    if (routeCost) {
-        updateRouteTable(RouteEntry(next, next, INT32_MAX));
-    }
 }
 
 } // namespace Candy
