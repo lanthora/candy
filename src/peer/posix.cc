@@ -78,6 +78,11 @@ size_t UdpHolder::read(UdpMessage &message) {
 }
 
 size_t UdpHolder::write(const UdpMessage &message) {
+    if (message.buffer.empty()) {
+        spdlog::debug("udp send empty message");
+        return -1;
+    }
+
     int fd = std::any_cast<int>(this->socket);
     if (!fd) {
         spdlog::error("socket not initialized successfully");

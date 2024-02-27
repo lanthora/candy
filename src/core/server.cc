@@ -304,7 +304,7 @@ void Server::handlePeerConnMessage(WebSocketMessage &message) {
     }
 
     if (message.buffer.length() < sizeof(PeerConnMessage)) {
-        spdlog::warn("invalid peer message: len {}", message.buffer.length());
+        spdlog::warn("invalid peer conn message: len {}", message.buffer.length());
         return;
     }
 

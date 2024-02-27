@@ -18,32 +18,31 @@ enum class PeerState {
     FAILED,
 };
 
-constexpr int32_t DELAY_MAX = INT32_MAX;
-constexpr uint32_t RETRY_MIX = 30;
+constexpr int32_t DELAY_LIMIT = INT32_MAX;
+constexpr uint32_t RETRY_MIN = 30;
 
 class PeerInfo {
 public:
-    uint32_t tun;
-    uint32_t ip;
-    uint16_t port;
-    uint8_t ack;
-    uint32_t count;
-    uint32_t tickCount;
-    uint32_t retry;
-    int32_t delay;
+    uint32_t ip = 0;
+    uint16_t port = 0;
+    uint8_t ack = 0;
+    uint32_t count = 0;
+    uint32_t tick = std::rand();
+    uint32_t retry = RETRY_MIN;
+    int32_t delay = DELAY_LIMIT;
 
 public:
-    PeerInfo();
-    void reset();
-    int updateKey(const std::string &password);
+    int setTun(uint32_t tun, const std::string &password);
     std::string getKey() const;
+    uint32_t getTun() const;
     void updateState(PeerState state);
     PeerState getState() const;
     std::string getStateStr() const;
 
 private:
     static std::string getStateStr(PeerState state);
-    PeerState state;
+    PeerState state = PeerState::INIT;
+    uint32_t tun = 0;
     std::string key;
 };
 
