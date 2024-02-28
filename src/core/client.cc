@@ -1070,13 +1070,16 @@ int Client::updateRouteTable(RouteEntry entry) {
             return 0;
         }
 
-        // 此前没有这条路由,新增后返回
-        if (oldEntry == this->rtTable.end()) {
+        // 1. 此前不存在这条路由
+        // 2. 存在这条路由,但是并非直连且直连更快
+        if ((oldEntry == this->rtTable.end()) ||
+            ((oldEntry->second.dst != oldEntry->second.next) && (oldEntry->second.delay > entry.delay))) {
             this->rtTable[entry.dst] = entry;
             sendRouteMessage(entry.dst, entry.delay);
             showRouteChange(entry);
             return 0;
         }
+
         // 获取时延变化量,并更新以该设备作为下一跳的路由
         int32_t diff = entry.delay - oldEntry->second.delay;
         for (auto it = this->rtTable.begin(); it != this->rtTable.end(); ++it) {
@@ -1120,11 +1123,11 @@ int Client::updateRouteTable(RouteEntry entry) {
         spdlog::warn("route broadcast received from non-directly connected device");
         return 1;
     }
-    int32_t nowDelay = directEntry->second.delay + entry.delay;
-    // 以下情况跟新路由:
+
     // 1. 以前不存在到该目的地址的路由
     // 2. 存在路由且下一跳相同
     // 3. 存在路由且下一跳不同,但延迟更低
+    int32_t nowDelay = directEntry->second.delay + entry.delay;
     if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
         entry.delay = nowDelay;
         this->rtTable[entry.dst] = entry;
