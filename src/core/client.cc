@@ -1118,10 +1118,9 @@ int Client::updateRouteTable(RouteEntry entry) {
 
     // 拿到与下一跳直连的时延,加上传来的时延计算总时延
     auto directEntry = this->rtTable.find(entry.next);
-    // 没有与下一跳建立直连,异常情况,直接返回
+    // 没有与下一跳建立直连,可能是对方先完成了直连,自己这边马上也会完成,可以忽略这个路由
     if (directEntry == this->rtTable.end()) {
-        spdlog::warn("route broadcast received from non-directly connected device");
-        return 1;
+        return 0;
     }
 
     // 1. 以前不存在到该目的地址的路由
