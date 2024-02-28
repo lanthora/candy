@@ -574,7 +574,7 @@ int Client::startTickThread() {
 
 void Client::tick() {
     if (discoveryInterval) {
-        if (tickCount % discoveryInterval == 0) {
+        if (tickTick % discoveryInterval == 0) {
             sendDiscoveryMessage(BROADCAST_IP);
         }
     }
@@ -650,7 +650,7 @@ void Client::tick() {
     if (needSendStunRequest) {
         sendStunRequest();
     }
-    ++tickCount;
+    ++tickTick;
 }
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {

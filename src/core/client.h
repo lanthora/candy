@@ -125,7 +125,7 @@ private:
     std::map<uint32_t, PeerInfo> ipPeerMap;
     std::thread udpThread;
     std::thread tickThread;
-    uint64_t tickCount;
+    uint64_t tickTick = std::rand();
     uint32_t discoveryInterval;
 
     // Route
