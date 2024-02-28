@@ -1126,11 +1126,10 @@ int Client::updateRouteTable(RouteEntry entry) {
     // 2. 存在路由且下一跳相同
     // 3. 存在路由且下一跳不同,但延迟更低
     if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
-        oldEntry->second.next = entry.next;
-        oldEntry->second.delay = nowDelay;
-
-        sendRouteMessage(oldEntry->second.dst, oldEntry->second.delay);
-        showRouteChange(oldEntry->second);
+        entry.delay = nowDelay;
+        this->rtTable[entry.dst] = entry;
+        sendRouteMessage(entry.dst, entry.delay);
+        showRouteChange(entry);
         return 0;
     }
     return 0;
