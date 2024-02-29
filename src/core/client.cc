@@ -1143,10 +1143,10 @@ int Client::sendDelayMessage(const PeerInfo &peer) {
     delayMessage.src = Address::hostToNet(this->tun.getIP());
     delayMessage.dst = Address::hostToNet(peer.getTun());
     delayMessage.timestamp = Time::hostToNet(Time::bootTime());
-    return sendDelayMessageHelper(peer, delayMessage);
+    return sendDelayMessage(peer, delayMessage);
 }
 
-int Client::sendDelayMessageHelper(const PeerInfo &peer, const PeerDelayMessage &delay) {
+int Client::sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay) {
     UdpMessage message;
     message.ip = peer.ip;
     message.port = peer.port;
@@ -1209,7 +1209,7 @@ int Client::handleDelayMessage(const UdpMessage &message) {
     if (dst == this->tun.getIP()) {
         auto it = this->ipPeerMap.find(src);
         if (it != this->ipPeerMap.end()) {
-            sendDelayMessageHelper(it->second, *delayMessage);
+            sendDelayMessage(it->second, *delayMessage);
         }
         return 0;
     }
