@@ -31,11 +31,10 @@ jobs:
     - name: checkout
       uses: actions/checkout@v4
     - name: build
-      working-directory: build
       run: |
         export CPATH=/usr/local/include
         export LIBRARY_PATH=/usr/local/lib
-        cmake .. && cmake --build .
+        cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 
   windows:
     runs-on: windows-latest
@@ -56,5 +55,4 @@ jobs:
       uses: actions/checkout@v4
     - name: build
       shell: msys2 {0}
-      working-directory: build
-      run: cmake .. && cmake --build .
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
