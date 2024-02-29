@@ -132,7 +132,7 @@ private:
     void showRouteChange(const RouteEntry &entry);
     int updateRouteTable(RouteEntry entry);
     int sendDelayMessage(const PeerInfo &peer);
-    int sendDelayMessageHelper(const PeerInfo &peer, const PeerDelayMessage &delay);
+    int sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay);
     int sendRouteMessage(uint32_t dst, int32_t delay);
     bool isDelayMessage(const UdpMessage &message);
     bool isRouteMessage(const UdpMessage &message);
