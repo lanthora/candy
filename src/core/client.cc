@@ -588,12 +588,17 @@ void Client::tick() {
             break;
 
         case PeerState::PREPARING:
-            // 有 PREPARING 状态的元素,在遍历结束后发送一次 STUN 请求
+            // 长时间处于 PREPARING 状态,无法获取本机的公网信息,进入失败状态
+            if (peer.count > 3) {
+                peer.updateState(PeerState::FAILED);
+                break;
+            }
+            // 处于 PREPARING 状态,在遍历结束后发送一次 STUN 请求,尝试获取公网信息
             needSendStunRequest = true;
             break;
 
         case PeerState::SYNCHRONIZING:
-            // 对方版本不支持或者没有启用对等连接,超时后进入 FAILED
+            // 1.对方版本不支持 2.没有启用对等连接 3.对方无法获取到自己在公网中的信息
             if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
             }
