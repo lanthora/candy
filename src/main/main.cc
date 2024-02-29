@@ -21,6 +21,10 @@
 
 #include <argp.h>
 
+#ifndef VERSION
+#define VERSION "unknown"
+#endif
+
 namespace {
 
 struct arguments {
@@ -54,6 +58,7 @@ struct argp_option options[] = {
     {"config", 'c', "PATH", 0, "Configuration file path"},
     {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval"},
     {"route", 'r', "COST", 0, "Cost of routing"},
+    {"version", 'v', 0, 0, "Show version"},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
@@ -70,6 +75,11 @@ int setLogLevelDebug() {
     spdlog::set_level(spdlog::level::debug);
     spdlog::debug("set log level: debug");
     return 0;
+}
+
+void showVersion() {
+    std::cout << VERSION << std::endl;
+    exit(0);
 }
 
 bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
@@ -140,6 +150,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 'c':
         parseConfigFile(arguments, arg);
+        break;
+    case 'v':
+        showVersion();
         break;
     case OPT_NO_TIMESTAMP:
         disableLogTimestamp();
