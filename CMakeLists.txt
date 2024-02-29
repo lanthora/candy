@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.18.4)
 
-project(candy CXX)
+project(candy LANGUAGES CXX VERSION 4.0)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++2b -Wall -Werror -Wfatal-errors -Wno-unknown-pragmas")
-set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -fsanitize=address")
-set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2b -Wall -Werror -Wfatal-errors -Wno-unknown-pragmas")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+
+add_compile_definitions(VERSION="${CMAKE_PROJECT_VERSION}")
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
