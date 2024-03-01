@@ -91,6 +91,8 @@ void Server::handleWebSocketMessage() {
     int error;
     WebSocketMessage message;
 
+    spdlog::info("listen: {}:{}", this->host, this->port);
+
     while (this->running) {
         error = this->ws.read(message);
         if (error == 0) {
@@ -166,9 +168,9 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
     }
     if (this->ipWsMap.contains(address.getIp())) {
         this->ws.close(this->ipWsMap[address.getIp()]);
-        spdlog::debug("client reconnected: {}", address.getIpStr());
+        spdlog::info("reconnect: {}", address.getIpStr());
     } else {
-        spdlog::debug("client connected: {}", address.getIpStr());
+        spdlog::info("connect: {}", address.getIpStr());
     }
 
     this->ipWsMap[address.getIp()] = message.conn;
@@ -389,7 +391,7 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
         if (this->ipWsMap[it->second] == message.conn) {
             Address address;
             if (!address.ipUpdate(it->second)) {
-                spdlog::debug("client disconnected: {}", address.getIpStr());
+                spdlog::info("disconnect: {}", address.getIpStr());
             }
             this->ipWsMap.erase(it->second);
         }
