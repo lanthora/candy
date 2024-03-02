@@ -843,24 +843,18 @@ int Client::sendPeerForwardMessage(const std::string &buffer) {
     IPv4Header *header = (IPv4Header *)buffer.data();
     uint32_t dst = Address::netToHost(header->daddr);
 
-    // 优先尝试直连
-    if (!sendPeerForwardMessage(buffer, dst)) {
-        return 0;
+    // 优先尝试最快的路由转发
+    if (routeCost) {
+        auto route = this->rtTable.find(dst);
+        if (route != this->rtTable.end()) {
+            if (!sendPeerForwardMessage(buffer, route->second.next)) {
+                return 0;
+            }
+        }
     }
 
-    // 没有开路由功能
-    if (!routeCost) {
-        return 1;
-    }
-
-    auto route = this->rtTable.find(dst);
-    // 没有找到路由
-    if (route == this->rtTable.end()) {
-        return 1;
-    }
-
-    // 尝试通过路由转发
-    return sendPeerForwardMessage(buffer, route->second.next);
+    // 尝试直连
+    return sendPeerForwardMessage(buffer, dst);
 }
 
 int Client::sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop) {
@@ -1052,91 +1046,69 @@ int Client::updateRouteTable(RouteEntry entry) {
     // 拿到的到达此目的地址的历史路由
     auto oldEntry = this->rtTable.find(entry.dst);
 
-    // 直连的操作,修改完需要广播
-    if (isDirect) {
-        // 与直连设备断开了连接,删除所有以该设备作为下一跳的路由
-        if (isDelete) {
-            // 路由表里曾经没有以它作为直连的记录,就不可能以它作为下一跳的记录
-            if (oldEntry == this->rtTable.end() || oldEntry->second.dst != oldEntry->second.next) {
-                return 0;
+    // 删除满足以下条件的路由并广播
+    // 1.下一跳与断联设备相同
+    if (isDirect && isDelete) {
+        for (auto it = this->rtTable.begin(); it != this->rtTable.end();) {
+            if (it->second.next == entry.next) {
+                sendRouteMessage(it->second.dst, DELAY_LIMIT);
+                it->second.delay = DELAY_LIMIT;
+                showRouteChange(it->second);
+                it = this->rtTable.erase(it);
+                continue;
             }
-            // 删除所有以该设备作为下一跳的路由
-            for (auto it = this->rtTable.begin(); it != this->rtTable.end();) {
-                if (it->second.next == entry.next) {
-                    sendRouteMessage(it->second.dst, DELAY_LIMIT);
-                    it->second.delay = DELAY_LIMIT;
-                    showRouteChange(it->second);
-                    it = this->rtTable.erase(it);
-                    continue;
-                }
-                ++it;
-            }
-
-            return 0;
+            ++it;
         }
+        return 0;
+    }
 
-        // 1. 此前不存在这条路由
-        // 2. 存在这条路由,但是并非直连且直连更快
-        if ((oldEntry == this->rtTable.end()) ||
-            ((oldEntry->second.dst != oldEntry->second.next) && (oldEntry->second.delay > entry.delay))) {
+    // 满足以下条件任意时,更新路由并广播
+    // 1. 不存在到该目的地址的路由
+    // 2. 存在到该目的地址的路由,旧路由与新路由下一跳相同
+    // 3. 存在到该目的地址的路由,时延更低
+    if (isDirect && !isDelete) {
+        if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > entry.delay) {
             this->rtTable[entry.dst] = entry;
             sendRouteMessage(entry.dst, entry.delay);
             showRouteChange(entry);
-            return 0;
-        }
-
-        // 获取时延变化量,并更新以该设备作为下一跳的路由
-        int32_t diff = entry.delay - oldEntry->second.delay;
-        for (auto it = this->rtTable.begin(); it != this->rtTable.end(); ++it) {
-            if (it->second.next == entry.next) {
-                it->second.delay += diff;
-                sendRouteMessage(it->second.dst, it->second.delay);
-                showRouteChange(it->second);
-                continue;
-            }
         }
         return 0;
     }
 
-    // 非直连的操作,更新完路由表后不需要广播
-    if (isDelete) {
+    // 满足以下所有条件时,删除路由并广播
+    // 1. 存在到该目的地址的路由
+    // 2. 路由与新路由下一跳相同
+    if (!isDirect && isDelete) {
         // 不存在到该目的地址的路由,无需删除
-        if (oldEntry == this->rtTable.end()) {
+        if (oldEntry != this->rtTable.end() && oldEntry->second.next == entry.next) {
+            sendRouteMessage(oldEntry->second.dst, DELAY_LIMIT);
+            oldEntry->second.delay = DELAY_LIMIT;
+            showRouteChange(oldEntry->second);
+            this->rtTable.erase(oldEntry);
+        }
+        return 0;
+    }
+
+    // 满足以下任意条件时,更新路由并广播
+    // 1. 不存在到该目的地址的路由
+    // 2. 存在到该目的地址的路由,旧路由与新路由下一跳相同
+    // 3. 存在到该目的地址的路由,时延更低
+    if (!isDirect && !isDelete) {
+        // 没有与下一跳建立直连,但是却收到以对方为下一跳的路由,
+        // 可能是对方先完成直连发来了到其他设备的路由,也可能是通过转发而非直连的速度更快
+        auto directEntry = this->rtTable.find(entry.next);
+        if (directEntry != this->rtTable.end()) {
             return 0;
         }
-        // 存在到该目的地址的路由,但是下一跳不同,无需删除
-        if (oldEntry->second.next != entry.next) {
+
+        int32_t nowDelay = directEntry->second.delay + entry.delay;
+        if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
+            entry.delay = nowDelay;
+            this->rtTable[entry.dst] = entry;
+            sendRouteMessage(entry.dst, entry.delay + routeCost);
+            showRouteChange(entry);
             return 0;
         }
-
-        sendRouteMessage(oldEntry->second.dst, DELAY_LIMIT);
-        oldEntry->second.delay = DELAY_LIMIT;
-        showRouteChange(oldEntry->second);
-        this->rtTable.erase(oldEntry);
-        return 0;
-    }
-
-    // 只要存在直连,无论延迟多高都不跳转
-    if (oldEntry != this->rtTable.end() && oldEntry->second.dst == oldEntry->second.next) {
-        return 0;
-    }
-
-    // 拿到与下一跳直连的时延,加上传来的时延计算总时延
-    auto directEntry = this->rtTable.find(entry.next);
-    // 没有与下一跳建立直连,可能是对方先完成了直连,自己这边马上也会完成,可以忽略这个路由
-    if (directEntry == this->rtTable.end()) {
-        return 0;
-    }
-
-    // 1. 以前不存在到该目的地址的路由
-    // 2. 存在路由且下一跳相同
-    // 3. 存在路由且下一跳不同,但延迟更低
-    int32_t nowDelay = directEntry->second.delay + entry.delay;
-    if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
-        entry.delay = nowDelay;
-        this->rtTable[entry.dst] = entry;
-        sendRouteMessage(entry.dst, entry.delay);
-        showRouteChange(entry);
         return 0;
     }
     return 0;
@@ -1165,7 +1137,7 @@ int Client::sendRouteMessage(uint32_t dst, int32_t delay) {
     routeMessage.type = PeerMessageType::ROUTE;
     routeMessage.dst = Address::hostToNet(dst);
     routeMessage.next = Address::hostToNet(this->tun.getIP());
-    routeMessage.delay = Time::hostToNet(delay == DELAY_LIMIT ? DELAY_LIMIT : delay + routeCost);
+    routeMessage.delay = Time::hostToNet(delay);
 
     for (auto &[_, peer] : this->ipPeerMap) {
         if (peer.getState() == PeerState::CONNECTED) {
