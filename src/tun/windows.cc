@@ -46,15 +46,13 @@ HMODULE InitializeWintun(void) {
         spdlog::critical("load wintun.dll failed");
         return NULL;
     }
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+
 #define X(Name) ((*(FARPROC *)&Name = GetProcAddress(Wintun, #Name)) == NULL)
     if (X(WintunCreateAdapter) || X(WintunCloseAdapter) || X(WintunOpenAdapter) || X(WintunGetAdapterLUID) ||
         X(WintunGetRunningDriverVersion) || X(WintunDeleteDriver) || X(WintunSetLogger) || X(WintunStartSession) ||
         X(WintunEndSession) || X(WintunGetReadWaitEvent) || X(WintunReceivePacket) || X(WintunReleaseReceivePacket) ||
         X(WintunAllocateSendPacket) || X(WintunSendPacket))
 #undef X
-#pragma GCC diagnostic pop
     {
         spdlog::critical("get function from wintun.dll failed");
         FreeLibrary(Wintun);
