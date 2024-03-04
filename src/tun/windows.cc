@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
+#include <guiddef.h>
 #include <mstcpip.h>
 #include <winternl.h>
 #include <netioapi.h>

@@ -5,7 +5,12 @@
 #include "utility/address.h"
 #include <spdlog/spdlog.h>
 #include <string.h>
+// clang-format off
 #include <winsock2.h>
+#include <mstcpip.h>
+// clang-format on
+
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
 
 namespace Candy {
 
@@ -16,6 +21,10 @@ UdpHolder::UdpHolder() {
         spdlog::error("create udp socket failed: {}", WSAGetLastError());
         return;
     }
+    // https://stackoverflow.com/a/42409198
+    BOOL bNewBehavior = FALSE;
+    DWORD dwBytesReturned = 0;
+    WSAIoctl(winsock, SIO_UDP_CONNRESET, &bNewBehavior, sizeof bNewBehavior, NULL, 0, &dwBytesReturned, NULL, NULL);
     // set non-blocking
     u_long mode = 1;
     if (ioctlsocket(winsock, FIONBIO, &mode) != NO_ERROR) {
