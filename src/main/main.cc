@@ -16,7 +16,7 @@
 #include <string>
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <winsock.h>
+#include <winsock2.h>
 #endif
 
 #include <argp.h>
