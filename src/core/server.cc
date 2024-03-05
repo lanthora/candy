@@ -129,6 +129,10 @@ void Server::handleWebSocketMessage() {
                 handleDiscoveryMessage(message);
                 continue;
             }
+            if (message.buffer.front() == MessageType::GENERAL) {
+                handleGeneralMessage(message);
+                continue;
+            }
             spdlog::warn("unknown message: type {}", (int)message.buffer.front());
             continue;
         }
@@ -365,6 +369,46 @@ void Server::handleDiscoveryMessage(WebSocketMessage &message) {
         auth.ipUpdate(this->wsIpMap[message.conn]);
         source.ipUpdate(saddr);
         spdlog::debug("discovery source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
+        return;
+    }
+
+    if (daddr == BROADCAST_IP) {
+        for (auto conn : this->ipWsMap) {
+            if (conn.first != saddr) {
+                message.conn = conn.second;
+                this->ws.write(message);
+            }
+        }
+        return;
+    }
+
+    if (this->ipWsMap.contains(daddr)) {
+        message.conn = this->ipWsMap[daddr];
+        this->ws.write(message);
+        return;
+    }
+}
+
+void Server::handleGeneralMessage(WebSocketMessage &message) {
+    if (!this->wsIpMap.contains(message.conn)) {
+        spdlog::debug("unauthorized general websocket client");
+        return;
+    }
+
+    if (message.buffer.length() < sizeof(GeneralHeader)) {
+        spdlog::debug("invalid general message: len {}", message.buffer.length());
+        return;
+    }
+
+    GeneralHeader *header = (GeneralHeader *)message.buffer.data();
+    uint32_t saddr = Address::netToHost(header->src);
+    uint32_t daddr = Address::netToHost(header->dst);
+
+    if (this->wsIpMap[message.conn] != saddr) {
+        Address auth, source;
+        auth.ipUpdate(this->wsIpMap[message.conn]);
+        source.ipUpdate(saddr);
+        spdlog::debug("general source address does not match: auth {} source {}", auth.getIpStr(), source.getIpStr());
         return;
     }
 
