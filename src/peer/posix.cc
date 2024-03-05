@@ -78,6 +78,33 @@ uint16_t UdpHolder::getBindPort() {
     return 0;
 }
 
+uint32_t UdpHolder::getDefaultIP() {
+    if (this->ip) {
+        return this->ip;
+    }
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        return 0;
+    }
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_addr.s_addr = 0x12345678;
+    addr.sin_family = AF_INET;
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+        close(fd);
+        return 0;
+    }
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (struct sockaddr *)&addr, &len)) {
+        close(fd);
+        return 0;
+    }
+    this->ip = ntohl(addr.sin_addr.s_addr);
+    close(fd);
+    return this->ip;
+}
+
 size_t UdpHolder::read(UdpMessage &message) {
     int fd = std::any_cast<int>(this->socket);
     if (!fd) {
