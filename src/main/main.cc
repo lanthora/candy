@@ -60,15 +60,15 @@ const int GROUP_CLIENT_ONLY = 3;
 const int GROUP_OTHERS = 4;
 
 struct argp_option options[] = {
-    {0, 0, 0, 0, "Parameters supported by both client and server:", GROUP_CLIENT_AND_SERVER},
+    {0, 0, 0, 0, "Client and Server:", GROUP_CLIENT_AND_SERVER},
     {"mode", 'm', "TEXT", 0, "Working mode", GROUP_CLIENT_AND_SERVER},
     {"websocket", 'w', "URI", 0, "Websocket address", GROUP_CLIENT_AND_SERVER},
     {"password", 'p', "TEXT", 0, "Authorization password", GROUP_CLIENT_AND_SERVER},
 
-    {0, 0, 0, 0, "Parameters only supported by the server:", GROUP_SERVER_ONLY},
+    {0, 0, 0, 0, "Server:", GROUP_SERVER_ONLY},
     {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range", GROUP_SERVER_ONLY},
 
-    {0, 0, 0, 0, "Parameters only supported by the client:", GROUP_CLIENT_ONLY},
+    {0, 0, 0, 0, "Client:", GROUP_CLIENT_ONLY},
     {"name", 'n', "TEXT", 0, "Network interface name", GROUP_CLIENT_ONLY},
     {"tun", 't', "CIDR", 0, "Static configured IP address", GROUP_CLIENT_ONLY},
     {"stun", 's', "URI", 0, "STUN service address", GROUP_CLIENT_ONLY},

@@ -14,6 +14,20 @@
 
 namespace Candy {
 
+UdpHolder::UdpHolder() {
+    this->socket = INVALID_SOCKET;
+    return;
+}
+
+UdpHolder::~UdpHolder() {
+    SOCKET winsock = std::any_cast<SOCKET>(this->socket);
+    if (winsock != INVALID_SOCKET) {
+        closesocket(winsock);
+        this->socket = INVALID_SOCKET;
+    }
+    return;
+}
+
 int UdpHolder::init() {
     this->socket = INVALID_SOCKET;
     SOCKET winsock = ::socket(AF_INET, SOCK_DGRAM, 0);
@@ -43,15 +57,6 @@ int UdpHolder::init() {
     }
     this->socket = winsock;
     return 0;
-}
-
-UdpHolder::~UdpHolder() {
-    SOCKET winsock = std::any_cast<SOCKET>(this->socket);
-    if (winsock != INVALID_SOCKET) {
-        closesocket(winsock);
-        this->socket = INVALID_SOCKET;
-    }
-    return;
 }
 
 size_t UdpHolder::read(UdpMessage &message) {

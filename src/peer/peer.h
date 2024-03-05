@@ -55,8 +55,10 @@ public:
 
 class UdpHolder {
 public:
-    int init();
+    UdpHolder();
     ~UdpHolder();
+
+    int init();
 
     void setBindPort(uint16_t port);
 
