@@ -71,4 +71,8 @@ std::string PeerInfo::getStateStr(PeerState state) {
     }
 }
 
+void UdpHolder::setBindPort(uint16_t port) {
+    this->port = port;
+}
+
 } // namespace Candy

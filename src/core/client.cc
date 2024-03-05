@@ -85,13 +85,25 @@ int Client::setRouteCost(int cost) {
     return 0;
 }
 
-int Client::setupAddressUpdateCallback(std::function<void(const std::string &)> callback) {
+int Client::setAddressUpdateCallback(std::function<void(const std::string &)> callback) {
     this->addressUpdateCallback = callback;
+    return 0;
+}
+
+int Client::setUdpBindPort(int port) {
+    if (port > 0 && port < UINT16_MAX) {
+        this->udpHolder.setBindPort(port);
+    }
     return 0;
 }
 
 int Client::run() {
     this->running = true;
+    if (this->udpHolder.init()) {
+        spdlog::critical("udpHolder init failed");
+        Candy::shutdown();
+        return -1;
+    }
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
         Candy::shutdown();

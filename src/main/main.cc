@@ -28,17 +28,23 @@
 namespace {
 
 struct arguments {
+    // 通用配置
     std::string mode;
     std::string websocket;
-    std::string tun;
-    std::string dhcp;
     std::string password;
-    std::string name;
-    std::string stun;
-    int discoveryInterval = 0;
-    int routeCost = 0;
     bool autoRestart = false;
     bool exitOnEOF = false;
+
+    // 服务端配置
+    std::string dhcp;
+
+    // 客户端配置
+    std::string name;
+    std::string tun;
+    std::string stun;
+    int udpPort = 0;
+    int discoveryInterval = 0;
+    int routeCost = 0;
 };
 
 const int OPT_NO_TIMESTAMP = 1;
@@ -46,23 +52,37 @@ const int OPT_LOG_LEVEL_DEBUG = 2;
 const int OPT_AUTO_RESTART = 3;
 const int OPT_EXIT_ON_EOF = 4;
 const int OPT_DISCOVERY_INTERVAL = 5;
+const int OPT_UDP_BIND_PORT = 6;
+
+const int GROUP_CLIENT_AND_SERVER = 1;
+const int GROUP_SERVER_ONLY = 2;
+const int GROUP_CLIENT_ONLY = 3;
+const int GROUP_OTHERS = 4;
 
 struct argp_option options[] = {
-    {"mode", 'm', "TEXT", 0, "The process works in client or server mode"},
-    {"websocket", 'w', "URI", 0, "Server listening address"},
-    {"tun", 't', "CIDR", 0, "Static configured IP address"},
-    {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range"},
-    {"password", 'p', "TEXT", 0, "Authorization password consistent with the server"},
-    {"name", 'n', "TEXT", 0, "Network interface name"},
-    {"stun", 's', "URI", 0, "STUN service address"},
-    {"config", 'c', "PATH", 0, "Configuration file path"},
-    {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval"},
-    {"route", 'r', "COST", 0, "Cost of routing"},
-    {"version", 'v', 0, 0, "Show version"},
-    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time"},
-    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs"},
-    {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart"},
-    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit the process after receiving EOF"},
+    {0, 0, 0, 0, "Parameters supported by both client and server:", GROUP_CLIENT_AND_SERVER},
+    {"mode", 'm', "TEXT", 0, "Working mode", GROUP_CLIENT_AND_SERVER},
+    {"websocket", 'w', "URI", 0, "Websocket address", GROUP_CLIENT_AND_SERVER},
+    {"password", 'p', "TEXT", 0, "Authorization password", GROUP_CLIENT_AND_SERVER},
+
+    {0, 0, 0, 0, "Parameters only supported by the server:", GROUP_SERVER_ONLY},
+    {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range", GROUP_SERVER_ONLY},
+
+    {0, 0, 0, 0, "Parameters only supported by the client:", GROUP_CLIENT_ONLY},
+    {"name", 'n', "TEXT", 0, "Network interface name", GROUP_CLIENT_ONLY},
+    {"tun", 't', "CIDR", 0, "Static configured IP address", GROUP_CLIENT_ONLY},
+    {"stun", 's', "URI", 0, "STUN service address", GROUP_CLIENT_ONLY},
+    {"port", OPT_UDP_BIND_PORT, "PORT", 0, "Bind udp port", GROUP_CLIENT_ONLY},
+    {"route", 'r', "COST", 0, "Cost of routing", GROUP_CLIENT_ONLY},
+    {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval", GROUP_CLIENT_ONLY},
+
+    {0, 0, 0, 0, "Others:", GROUP_OTHERS},
+    {"config", 'c', "PATH", 0, "Configuration file path", GROUP_OTHERS},
+    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time", GROUP_OTHERS},
+    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs", GROUP_OTHERS},
+    {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart", GROUP_OTHERS},
+    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit the process after receiving EOF", GROUP_OTHERS},
+    {"version", 'v', 0, 0, "Show version", GROUP_OTHERS},
     {},
 };
 
@@ -108,6 +128,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("name", arguments->name);
         cfg.lookupValue("discovery", arguments->discoveryInterval);
         cfg.lookupValue("route", arguments->routeCost);
+        cfg.lookupValue("port", arguments->udpPort);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -141,6 +162,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 's':
         arguments->stun = arg;
+        break;
+    case OPT_UDP_BIND_PORT:
+        arguments->udpPort = atoi(arg);
         break;
     case OPT_DISCOVERY_INTERVAL:
         arguments->discoveryInterval = atoi(arg);
@@ -297,9 +321,10 @@ int serve(const struct arguments &arguments) {
     }
 
     if (arguments.mode == "client") {
-        client.setupAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
+        client.setAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
         client.setDiscoveryInterval(arguments.discoveryInterval);
         client.setRouteCost(arguments.routeCost);
+        client.setUdpBindPort(arguments.udpPort);
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setStun(arguments.stun);

@@ -55,13 +55,17 @@ public:
 
 class UdpHolder {
 public:
-    UdpHolder();
+    int init();
     ~UdpHolder();
+
+    void setBindPort(uint16_t port);
+
     size_t read(UdpMessage &message);
     size_t write(const UdpMessage &message);
 
 private:
     std::any socket;
+    uint16_t port = 0;
 };
 
 } // namespace Candy
