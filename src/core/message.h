@@ -19,6 +19,7 @@ constexpr uint8_t DHCP = 2;
 constexpr uint8_t PEER = 3;
 constexpr uint8_t VMAC = 4;
 constexpr uint8_t DISCOVERY = 5;
+constexpr uint8_t GENERAL = 255;
 
 } // namespace MessageType
 
@@ -78,6 +79,14 @@ struct DiscoveryMessage {
     uint32_t dst;
 
     DiscoveryMessage();
+} __attribute__((packed));
+
+struct GeneralHeader {
+    uint8_t type;
+    uint8_t subtype;
+    uint16_t extra;
+    uint32_t src;
+    uint32_t dst;
 } __attribute__((packed));
 
 struct StunRequest {

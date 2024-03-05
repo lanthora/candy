@@ -29,6 +29,7 @@ private:
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleVirtualMacMessage(WebSocketMessage &message);
     void handleDiscoveryMessage(WebSocketMessage &message);
+    void handleGeneralMessage(WebSocketMessage &message);
     void handleCloseMessage(WebSocketMessage &message);
 
     bool running = false;
