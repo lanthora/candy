@@ -14,24 +14,36 @@
 
 namespace Candy {
 
-UdpHolder::UdpHolder() {
+int UdpHolder::init() {
     int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd == -1) {
         spdlog::error("create udp socket failed: {}", strerror(errno));
-        return;
+        return -1;
     }
+
+    struct sockaddr_in local;
+    memset(&local, 0, sizeof(local));
+    local.sin_family = AF_INET;
+    local.sin_addr.s_addr = INADDR_ANY;
+    local.sin_port = htons(this->port);
+
+    if (bind(fd, (struct sockaddr *)&local, sizeof(local)) < 0) {
+        spdlog::error("udp socket bind failed: {}", strerror(errno));
+        return -1;
+    }
+
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) {
         spdlog::error("get udp socket flags failed: {}", strerror(errno));
-        return;
+        return -1;
     }
     flags |= O_NONBLOCK;
     if (fcntl(fd, F_SETFL, flags) < 0) {
         spdlog::error("set non-blocking udp socket failed: {}", strerror(errno));
-        return;
+        return -1;
     }
     this->socket = fd;
-    return;
+    return 0;
 }
 
 UdpHolder::~UdpHolder() {

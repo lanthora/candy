@@ -58,7 +58,10 @@ public:
     int setRouteCost(int cost);
 
     // 设置本地地址更新时执行的回调函数
-    int setupAddressUpdateCallback(std::function<void(const std::string &)> callback);
+    int setAddressUpdateCallback(std::function<void(const std::string &)> callback);
+
+    // 绑定用于 P2P 连接的 UDP 端口, 0 表示由操作系统分配
+    int setUdpBindPort(int port);
 
     // 启停客户端用于处理任务的线程
     int run();

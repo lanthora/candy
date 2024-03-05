@@ -14,12 +14,12 @@
 
 namespace Candy {
 
-UdpHolder::UdpHolder() {
+int UdpHolder::init() {
     this->socket = INVALID_SOCKET;
     SOCKET winsock = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (winsock == INVALID_SOCKET) {
         spdlog::error("create udp socket failed: {}", WSAGetLastError());
-        return;
+        return -1;
     }
     // https://stackoverflow.com/a/42409198
     BOOL bNewBehavior = FALSE;
@@ -30,18 +30,19 @@ UdpHolder::UdpHolder() {
     if (ioctlsocket(winsock, FIONBIO, &mode) != NO_ERROR) {
         closesocket(winsock);
         spdlog::error("set non-blocking failed: {}", WSAGetLastError());
-        return;
+        return -1;
     }
     struct sockaddr_in local_addr;
     local_addr.sin_family = AF_INET;
     local_addr.sin_addr.s_addr = INADDR_ANY;
-    local_addr.sin_port = 0;
+    local_addr.sin_port = htons(this->port);
     if (bind(winsock, (struct sockaddr *)&local_addr, sizeof(local_addr)) == SOCKET_ERROR) {
         closesocket(winsock);
-        spdlog::error("socket binding failed: %d\n", WSAGetLastError());
-        return;
+        spdlog::error("socket binding failed: {}", WSAGetLastError());
+        return -1;
     }
     this->socket = winsock;
+    return 0;
 }
 
 UdpHolder::~UdpHolder() {
