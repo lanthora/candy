@@ -60,6 +60,24 @@ int UdpHolder::init() {
     return 0;
 }
 
+uint16_t UdpHolder::getBindPort() {
+    if (this->port) {
+        return this->port;
+    }
+
+    int fd = std::any_cast<int>(this->socket);
+    if (fd) {
+        struct sockaddr_in local;
+        socklen_t len = sizeof(local);
+        memset(&local, 0, sizeof(local));
+        if (!getsockname(fd, (struct sockaddr *)&local, &len)) {
+            this->port = ntohs(local.sin_port);
+            return this->port;
+        }
+    }
+    return 0;
+}
+
 size_t UdpHolder::read(UdpMessage &message) {
     int fd = std::any_cast<int>(this->socket);
     if (!fd) {
