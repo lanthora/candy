@@ -59,6 +59,24 @@ int UdpHolder::init() {
     return 0;
 }
 
+uint16_t UdpHolder::getBindPort() {
+    if (this->port) {
+        return this->port;
+    }
+
+    SOCKET winsock = std::any_cast<SOCKET>(this->socket);
+    if (winsock != INVALID_SOCKET) {
+        struct sockaddr_in local;
+        int len = sizeof(local);
+        memset(&local, 0, sizeof(local));
+        if (getsockname(winsock, (struct sockaddr *)&local, &len) != SOCKET_ERROR) {
+            this->port = ntohs(local.sin_port);
+            return this->port;
+        }
+    }
+    return 0;
+}
+
 size_t UdpHolder::read(UdpMessage &message) {
     SOCKET winsock = std::any_cast<SOCKET>(this->socket);
     if (winsock == INVALID_SOCKET) {
