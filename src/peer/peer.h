@@ -62,6 +62,7 @@ public:
 
     void setBindPort(uint16_t port);
     uint16_t getBindPort();
+    uint32_t getDefaultIP();
 
     size_t read(UdpMessage &message);
     size_t write(const UdpMessage &message);
@@ -69,6 +70,7 @@ public:
 private:
     std::any socket;
     uint16_t port = 0;
+    uint32_t ip = 0;
 };
 
 } // namespace Candy

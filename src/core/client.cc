@@ -567,7 +567,8 @@ int Client::startUdpThread() {
         return -1;
     }
     sendStunRequest();
-    spdlog::debug("udp bind port: {}", udpHolder.getBindPort());
+    spdlog::debug("udp ip: {}", Address::ipToStr(udpHolder.getDefaultIP()));
+    spdlog::debug("udp port: {}", udpHolder.getBindPort());
     this->udpThread = std::thread([&] { this->handleUdpMessage(); });
     return 0;
 }
