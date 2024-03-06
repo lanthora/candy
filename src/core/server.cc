@@ -129,7 +129,7 @@ void Server::handleWebSocketMessage() {
                 handleGeneralMessage(message);
                 break;
             default:
-                spdlog::warn("unknown message: type {}", msgType);
+                spdlog::debug("unknown message: type {}", msgType);
                 break;
             }
         }
