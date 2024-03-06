@@ -17,4 +17,8 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/tun)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/peer)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/utility)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads)
+
 install(TARGETS ${CMAKE_PROJECT_NAME})
