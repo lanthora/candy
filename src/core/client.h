@@ -80,12 +80,15 @@ private:
     void sendVirtualMacMessage();
     void sendDynamicAddressMessage();
     void sendAuthMessage();
-    void sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port);
+    void sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port);
     void sendDiscoveryMessage(uint32_t dst);
+    void sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port);
     void handleForwardMessage(WebSocketMessage &message);
     void handleDynamicAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleDiscoveryMessage(WebSocketMessage &message);
+    void handleGeneralMessage(WebSocketMessage &message);
+    void handleLocalPeerConnMessage(WebSocketMessage &message);
     void tryDirectConnection(uint32_t ip);
 
     WebSocketClient ws;
@@ -112,6 +115,7 @@ private:
     std::string decrypt(const std::string &key, const std::string &ciphertext);
     int sendStunRequest();
     int sendHeartbeatMessage(const PeerInfo &peer);
+    int sendHeartbeatMessage(const PeerInfo &peer, const PeerInfo &selfInfo);
     int sendPeerForwardMessage(const std::string &buffer);
     int sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop);
     bool isStunResponse(const UdpMessage &message);

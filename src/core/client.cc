@@ -174,29 +174,37 @@ void Client::handleWebSocketMessage() {
             break;
         }
         if (message.type == WebSocketMessageType::Message) {
+            uint8_t msgType = message.buffer.front();
+            switch (msgType) {
             // FORWARD, 拆包后转发给 TUN 设备
-            if (message.buffer.front() == MessageType::FORWARD) {
+            case MessageType::FORWARD:
                 handleForwardMessage(message);
-                continue;
-            }
-            // 收到动态地址响应包,启动 TUN 设备并发送 Auth 包
-            if (message.buffer.front() == MessageType::DHCP) {
-                handleDynamicAddressMessage(message);
-                continue;
-            }
-            // 收到对端连接请求包
-            if (message.buffer.front() == MessageType::PEER) {
-                handlePeerConnMessage(message);
-                continue;
-            }
-            // 收到主动发现报文
-            if (message.buffer.front() == MessageType::DISCOVERY) {
-                handleDiscoveryMessage(message);
-                continue;
-            }
+                break;
 
-            spdlog::warn("unknown websocket message: type {}", int(message.buffer.front()));
-            continue;
+            // 动态地址响应包,启动 TUN 设备并发送 Auth 包
+            case MessageType::DHCP:
+                handleDynamicAddressMessage(message);
+                break;
+
+            // 对端连接请求包
+            case MessageType::PEER:
+                handlePeerConnMessage(message);
+                break;
+
+            // 主动发现报文
+            case MessageType::DISCOVERY:
+                handleDiscoveryMessage(message);
+                break;
+
+            // 通用报文
+            case MessageType::GENERAL:
+                handleGeneralMessage(message);
+                break;
+
+            default:
+                spdlog::warn("unknown websocket message: type {}", msgType);
+                break;
+            }
         }
 
         if (message.type == WebSocketMessageType::Open) {
@@ -341,10 +349,10 @@ void Client::sendAuthMessage() {
     return;
 }
 
-void Client::sendPeerConnMessage(uint32_t src, uint32_t dst, uint32_t ip, uint16_t port) {
+void Client::sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port) {
     PeerConnMessage header;
-    header.src = Address::hostToNet(src);
-    header.dst = Address::hostToNet(dst);
+    header.src = Address::hostToNet(this->tun.getIP());
+    header.dst = Address::hostToNet(peer.getTun());
     header.ip = Address::hostToNet(ip);
     header.port = Address::hostToNet(port);
 
@@ -366,9 +374,25 @@ void Client::sendDiscoveryMessage(uint32_t dst) {
     return;
 }
 
+void Client::sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port) {
+    LocalPeerConnMessage header;
+    header.ge.subtype = GeSubType::LOCAL_PEER_CONN;
+    header.ge.extra = 0;
+    header.ge.src = Address::hostToNet(this->tun.getIP());
+    header.ge.dst = Address::hostToNet(peer.getTun());
+    header.ip = Address::hostToNet(ip);
+    header.port = Address::hostToNet(port);
+
+    WebSocketMessage message;
+    message.buffer.assign((char *)(&header), sizeof(LocalPeerConnMessage));
+    this->ws.write(message);
+    return;
+}
+
 void Client::handleForwardMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(ForwardHeader)) {
         spdlog::warn("invalid forward message: {:n}", spdlog::to_hex(message.buffer));
+        return;
     }
 
     const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
@@ -411,6 +435,7 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
 void Client::handlePeerConnMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(PeerConnMessage)) {
         spdlog::warn("invalid peer conn message: {:n}", spdlog::to_hex(message.buffer));
+        return;
     }
     PeerConnMessage *header = (PeerConnMessage *)message.buffer.c_str();
 
@@ -432,15 +457,15 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[src];
 
-    if (this->stun.uri.empty()) {
-        peer.updateState(PeerState::FAILED);
-        return;
-    }
-
     peer.ip = ip;
     peer.port = port;
     peer.count = 0;
     peer.setTun(src, this->password);
+
+    if (this->stun.uri.empty()) {
+        peer.updateState(PeerState::FAILED);
+        return;
+    }
 
     if (peer.getState() == PeerState::SYNCHRONIZING) {
         peer.updateState(PeerState::CONNECTING);
@@ -456,6 +481,7 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
 void Client::handleDiscoveryMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(DiscoveryMessage)) {
         spdlog::warn("invalid discovery message: {:n}", spdlog::to_hex(message.buffer));
+        return;
     }
 
     DiscoveryMessage *header = (DiscoveryMessage *)message.buffer.c_str();
@@ -472,15 +498,79 @@ void Client::handleDiscoveryMessage(WebSocketMessage &message) {
     tryDirectConnection(src);
 }
 
+void Client::handleGeneralMessage(WebSocketMessage &message) {
+    if (message.buffer.size() < sizeof(GeneralHeader)) {
+        spdlog::warn("invalid general message: {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
+    GeneralHeader *header = (GeneralHeader *)message.buffer.c_str();
+    switch (header->subtype) {
+    case GeSubType::LOCAL_PEER_CONN:
+        handleLocalPeerConnMessage(message);
+        break;
+    }
+}
+
+void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
+    if (message.buffer.size() < sizeof(LocalPeerConnMessage)) {
+        spdlog::warn("invalid local peer conn message: {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
+    LocalPeerConnMessage *header = (LocalPeerConnMessage *)message.buffer.c_str();
+
+    uint32_t src = Address::netToHost(header->ge.src);
+    uint32_t dst = Address::netToHost(header->ge.dst);
+    uint32_t ip = Address::netToHost(header->ip);
+    uint16_t port = Address::netToHost(header->port);
+
+    if (dst != this->tun.getIP()) {
+        spdlog::warn("local peer conn message dest not match: {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
+
+    if (src == this->tun.getIP()) {
+        spdlog::warn("local peer conn message connect to self");
+        return;
+    }
+
+    std::unique_lock lock(this->ipPeerMutex);
+    PeerInfo &peer = this->ipPeerMap[src];
+
+    peer.ip = ip;
+    peer.port = port;
+    peer.setTun(src, this->password);
+
+    if (this->stun.uri.empty()) {
+        peer.updateState(PeerState::FAILED);
+        return;
+    }
+
+    if (peer.getState() == PeerState::INIT) {
+        peer.updateState(PeerState::PREPARING);
+
+        PeerInfo selfInfo;
+        selfInfo.ip = udpHolder.getDefaultIP();
+        selfInfo.port = udpHolder.getBindPort();
+        sendHeartbeatMessage(peer, selfInfo);
+        sendLocalPeerConnMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
+        return;
+    }
+}
+
 // 调用这个函数是需要确保双方同时调用.
 // 1. 收到对方报文时,一般会回包,此时调用
 // 2. 收到主动发现报文时,这时一定会回包
 void Client::tryDirectConnection(uint32_t ip) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[ip];
+    peer.setTun(ip, this->password);
+    if (this->stun.uri.empty()) {
+        peer.updateState(PeerState::FAILED);
+        return;
+    }
     if (peer.getState() == PeerState::INIT) {
-        peer.setTun(ip, this->password);
-        peer.updateState(this->stun.uri.empty() ? PeerState::FAILED : PeerState::PREPARING);
+        peer.updateState(PeerState::PREPARING);
+        sendLocalPeerConnMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
     }
 }
 
@@ -603,12 +693,15 @@ void Client::tick() {
 
         case PeerState::PREPARING:
             // 长时间处于 PREPARING 状态,无法获取本机的公网信息,进入失败状态
-            if (peer.count > 3) {
+            if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
                 break;
             }
-            // 处于 PREPARING 状态,在遍历结束后发送一次 STUN 请求,尝试获取公网信息
-            needSendStunRequest = true;
+            // 处于 PREPARING 状态,在遍历结束后发送一次 STUN 请求,尝试获取公网信息,
+            // 预留一个 tick 尝试建立局域网连接.
+            if (peer.count > 0) {
+                needSendStunRequest = true;
+            }
             break;
 
         case PeerState::SYNCHRONIZING:
@@ -835,11 +928,15 @@ int Client::sendStunRequest() {
 }
 
 int Client::sendHeartbeatMessage(const PeerInfo &peer) {
+    return sendHeartbeatMessage(peer, this->selfInfo);
+}
+
+int Client::sendHeartbeatMessage(const PeerInfo &peer, const PeerInfo &selfInfo) {
     PeerHeartbeatMessage heartbeat;
     heartbeat.type = PeerMessageType::HEARTBEAT;
     heartbeat.tun = Address::hostToNet(this->tun.getIP());
-    heartbeat.ip = Address::hostToNet(this->selfInfo.ip);
-    heartbeat.port = Address::hostToNet(this->selfInfo.port);
+    heartbeat.ip = Address::hostToNet(selfInfo.ip);
+    heartbeat.port = Address::hostToNet(selfInfo.port);
     heartbeat.ack = peer.ack;
 
     UdpMessage message;
@@ -953,13 +1050,13 @@ int Client::handleStunResponse(const std::string &buffer) {
     // 否则调整为 SYNCHRONIZING
     std::unique_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
-        if (peer.getState() == PeerState::PREPARING) {
-            sendPeerConnMessage(this->tun.getIP(), peer.getTun(), ip, port);
+        if (peer.getState() == PeerState::PREPARING && peer.count > 1) {
             if (peer.ip && peer.port) {
                 peer.updateState(PeerState::CONNECTING);
             } else {
                 peer.updateState(PeerState::SYNCHRONIZING);
             }
+            sendPeerConnMessage(peer, ip, port);
         }
     }
 
@@ -977,17 +1074,18 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     uint32_t tun = Address::netToHost(heartbeat->tun);
     PeerInfo &peer = this->ipPeerMap[tun];
-    if (peer.getState() != PeerState::CONNECTING && peer.getState() != PeerState::CONNECTED) {
+    if (peer.getState() != PeerState::CONNECTING && peer.getState() != PeerState::CONNECTED &&
+        peer.getState() != PeerState::PREPARING) {
         spdlog::debug("heartbeat peer state invalid: {} {}", Address::ipToStr(tun), peer.getStateStr());
         return -1;
     }
     if (peer.ip != message.ip) {
-        spdlog::warn("heartbeat ip mismatch: {} auth {} real {}", Address::ipToStr(tun), Address::ipToStr(peer.ip),
-                     Address::ipToStr(message.ip));
+        spdlog::debug("heartbeat ip mismatch: {} auth {} real {}", Address::ipToStr(tun), Address::ipToStr(peer.ip),
+                      Address::ipToStr(message.ip));
         peer.ip = message.ip;
     }
     if (peer.port != message.port) {
-        spdlog::warn("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
+        spdlog::debug("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
         peer.port = message.port;
     }
     if (!peer.ack) {

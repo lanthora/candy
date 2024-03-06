@@ -87,6 +87,20 @@ struct GeneralHeader {
     uint16_t extra;
     uint32_t src;
     uint32_t dst;
+
+    GeneralHeader();
+} __attribute__((packed));
+
+namespace GeSubType {
+
+constexpr uint8_t LOCAL_PEER_CONN = 0;
+
+} // namespace GeSubType
+
+struct LocalPeerConnMessage {
+    GeneralHeader ge;
+    uint32_t ip;
+    uint16_t port;
 } __attribute__((packed));
 
 struct StunRequest {

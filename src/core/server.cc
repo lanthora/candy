@@ -105,36 +105,33 @@ void Server::handleWebSocketMessage() {
         }
 
         if (message.type == WebSocketMessageType::Message) {
-            if (message.buffer.front() == MessageType::FORWARD) {
-                handleForwardMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::VMAC) {
-                handleVirtualMacMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::AUTH) {
-                handleAuthMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::DHCP) {
+            uint8_t msgType = message.buffer.front();
+            switch (msgType) {
+            case MessageType::DHCP:
                 handleDynamicAddressMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::PEER) {
+                break;
+            case MessageType::VMAC:
+                handleVirtualMacMessage(message);
+                break;
+            case MessageType::AUTH:
+                handleAuthMessage(message);
+                break;
+            case MessageType::FORWARD:
+                handleForwardMessage(message);
+                break;
+            case MessageType::PEER:
                 handlePeerConnMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::DISCOVERY) {
+                break;
+            case MessageType::DISCOVERY:
                 handleDiscoveryMessage(message);
-                continue;
-            }
-            if (message.buffer.front() == MessageType::GENERAL) {
+                break;
+            case MessageType::GENERAL:
                 handleGeneralMessage(message);
-                continue;
+                break;
+            default:
+                spdlog::warn("unknown message: type {}", msgType);
+                break;
             }
-            spdlog::warn("unknown message: type {}", (int)message.buffer.front());
-            continue;
         }
 
         if (message.type == WebSocketMessageType::Close) {
