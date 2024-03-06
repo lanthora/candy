@@ -26,8 +26,8 @@ private:
 public:
     int listen(const std::string &host, uint16_t port) {
         using namespace std::placeholders;
-
-        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, host, 5, 128, host.contains(':') ? AF_INET6 : AF_INET);
+        int family = host.find(':') != std::string::npos ? AF_INET6 : AF_INET;
+        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, host, 5, 128, family);
         this->ixHttpServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleHttpConnection, this, _1, _2));
 
         auto ixWsServer = std::dynamic_pointer_cast<ix::WebSocketServer>(this->ixHttpServer);
@@ -83,7 +83,7 @@ public:
 
 private:
     ix::HttpResponsePtr handleHttpConnection(ix::HttpRequestPtr request, std::shared_ptr<ix::ConnectionState> connectionState) {
-        std::string ip = [&] -> std::string {
+        std::string ip = [&]() {
             ix::WebSocketHttpHeaders::iterator it;
             it = request->headers.find("X-Real-IP");
             if (it != request->headers.end() && !it->second.empty()) {

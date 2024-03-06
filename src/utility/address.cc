@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "utility/address.h"
+#include "utility/byteswap.h"
 #include <spdlog/spdlog.h>
 
 #if defined(__linux__) || defined(__linux)
@@ -155,7 +156,7 @@ std::string Address::getCidr() const {
 
 uint32_t Address::netToHost(uint32_t address) {
     if (std::endian::native == std::endian::little) {
-        return std::byteswap(address);
+        return byteswap(address);
     }
     return address;
 }
@@ -166,7 +167,7 @@ uint32_t Address::hostToNet(uint32_t address) {
 
 uint16_t Address::netToHost(uint16_t port) {
     if (std::endian::native == std::endian::little) {
-        return std::byteswap(port);
+        return byteswap(port);
     }
     return port;
 }

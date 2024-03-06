@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "utility/time.h"
 #include "utility/address.h"
+#include "utility/byteswap.h"
 #include <bit>
 #include <chrono>
 #include <limits>
@@ -253,7 +254,7 @@ int64_t Time::bootTime() {
 
 int64_t Time::hostToNet(int64_t host) {
     if (std::endian::native == std::endian::little) {
-        return std::byteswap(host);
+        return byteswap(host);
     }
     return host;
 }
@@ -264,7 +265,7 @@ int64_t Time::netToHost(int64_t net) {
 
 int32_t Time::hostToNet(int32_t host) {
     if (std::endian::native == std::endian::little) {
-        return std::byteswap(host);
+        return byteswap(host);
     }
     return host;
 }
