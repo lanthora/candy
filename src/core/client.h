@@ -115,7 +115,7 @@ private:
     std::string decrypt(const std::string &key, const std::string &ciphertext);
     int sendStunRequest();
     int sendHeartbeatMessage(const PeerInfo &peer);
-    int sendHeartbeatMessage(const PeerInfo &peer, const PeerInfo &selfInfo);
+    int sendHeartbeatMessage(const PeerInfo &peer, uint32_t ip, uint32_t port);
     int sendPeerForwardMessage(const std::string &buffer);
     int sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop);
     bool isStunResponse(const UdpMessage &message);

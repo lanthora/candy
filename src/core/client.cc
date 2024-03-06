@@ -547,11 +547,7 @@ void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
 
     if (peer.getState() == PeerState::INIT) {
         peer.updateState(PeerState::PREPARING);
-
-        PeerInfo selfInfo;
-        selfInfo.ip = udpHolder.getDefaultIP();
-        selfInfo.port = udpHolder.getBindPort();
-        sendHeartbeatMessage(peer, selfInfo);
+        sendHeartbeatMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
         sendLocalPeerConnMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
         return;
     }
@@ -695,11 +691,7 @@ void Client::tick() {
             // 长时间处于 PREPARING 状态,无法获取本机的公网信息,进入失败状态
             if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
-                break;
-            }
-            // 处于 PREPARING 状态,在遍历结束后发送一次 STUN 请求,尝试获取公网信息,
-            // 预留时间尝试建立局域网连接.
-            if (peer.count > 1) {
+            } else if (peer.count > 1) {
                 needSendStunRequest = true;
             }
             break;
@@ -928,15 +920,15 @@ int Client::sendStunRequest() {
 }
 
 int Client::sendHeartbeatMessage(const PeerInfo &peer) {
-    return sendHeartbeatMessage(peer, this->selfInfo);
+    return sendHeartbeatMessage(peer, this->selfInfo.ip, this->selfInfo.port);
 }
 
-int Client::sendHeartbeatMessage(const PeerInfo &peer, const PeerInfo &selfInfo) {
+int Client::sendHeartbeatMessage(const PeerInfo &peer, uint32_t ip, uint32_t port) {
     PeerHeartbeatMessage heartbeat;
     heartbeat.type = PeerMessageType::HEARTBEAT;
     heartbeat.tun = Address::hostToNet(this->tun.getIP());
-    heartbeat.ip = Address::hostToNet(selfInfo.ip);
-    heartbeat.port = Address::hostToNet(selfInfo.port);
+    heartbeat.ip = Address::hostToNet(ip);
+    heartbeat.port = Address::hostToNet(port);
     heartbeat.ack = peer.ack;
 
     UdpMessage message;
@@ -1090,6 +1082,9 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     }
     if (!peer.ack) {
         peer.ack = 1;
+    }
+    if (peer.getState() == PeerState::PREPARING) {
+        sendHeartbeatMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
     }
     if (heartbeat->ack) {
         if (peer.getState() == PeerState::CONNECTED) {
