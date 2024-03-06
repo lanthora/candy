@@ -202,7 +202,7 @@ void Client::handleWebSocketMessage() {
                 break;
 
             default:
-                spdlog::warn("unknown websocket message: type {}", msgType);
+                spdlog::debug("unknown websocket message: type {}", msgType);
                 break;
             }
         }
@@ -294,7 +294,7 @@ void Client::handleUdpMessage() {
             }
             continue;
         }
-        spdlog::warn("unknown peer message: type {}", int(message.buffer.front()));
+        spdlog::debug("unknown peer message: type {}", int(message.buffer.front()));
     }
 }
 
