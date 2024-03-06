@@ -1146,7 +1146,7 @@ void Client::showRouteChange(const RouteEntry &entry) {
 
 int Client::updateRouteTable(RouteEntry entry) {
     bool isDirect = (entry.dst == entry.next);
-    bool isDelete = (entry.delay < 1 || entry.delay > 1000);
+    bool isDelete = (entry.delay < 0 || entry.delay > 1000);
 
     std::unique_lock lock(this->rtTableMutex);
 
