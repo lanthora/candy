@@ -90,6 +90,10 @@ DiscoveryMessage::DiscoveryMessage() {
     this->type = MessageType::DISCOVERY;
 }
 
+GeneralHeader::GeneralHeader() {
+    this->type = MessageType::GENERAL;
+}
+
 void VMacMessage::updateHash(const std::string &password) {
     std::string data;
     data.append(password);
