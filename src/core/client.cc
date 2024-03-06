@@ -698,8 +698,8 @@ void Client::tick() {
                 break;
             }
             // 处于 PREPARING 状态,在遍历结束后发送一次 STUN 请求,尝试获取公网信息,
-            // 预留一个 tick 尝试建立局域网连接.
-            if (peer.count > 0) {
+            // 预留时间尝试建立局域网连接.
+            if (peer.count > 1) {
                 needSendStunRequest = true;
             }
             break;
@@ -1050,7 +1050,7 @@ int Client::handleStunResponse(const std::string &buffer) {
     // 否则调整为 SYNCHRONIZING
     std::unique_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
-        if (peer.getState() == PeerState::PREPARING && peer.count > 1) {
+        if (peer.getState() == PeerState::PREPARING && peer.count > 2) {
             if (peer.ip && peer.port) {
                 peer.updateState(PeerState::CONNECTING);
             } else {
