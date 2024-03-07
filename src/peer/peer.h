@@ -62,6 +62,7 @@ public:
 
     void setBindPort(uint16_t port);
     uint16_t getBindPort();
+    void setDefaultIP(uint32_t ip);
     uint32_t getDefaultIP();
 
     size_t read(UdpMessage &message);

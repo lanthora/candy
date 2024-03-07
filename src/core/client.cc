@@ -49,13 +49,13 @@ int Client::setWebSocketServer(const std::string &uri) {
     return 0;
 }
 
-int Client::setLocalAddress(const std::string &cidr) {
-    this->localAddress = cidr;
+int Client::setTunAddress(const std::string &cidr) {
+    this->tunAddress = cidr;
     return 0;
 }
 
-int Client::setDynamicAddress(const std::string &cidr) {
-    this->dynamicAddress = cidr;
+int Client::setExpectedAddress(const std::string &cidr) {
+    this->expectedAddress = cidr;
     return 0;
 }
 
@@ -94,6 +94,18 @@ int Client::setUdpBindPort(int port) {
     if (port > 0 && port < UINT16_MAX) {
         this->udpHolder.setBindPort(port);
     }
+    return 0;
+}
+
+int Client::setLocalhost(std::string ip) {
+    if (ip.empty()) {
+        return 0;
+    }
+    Address addr;
+    if (addr.ipStrUpdate(ip)) {
+        return 0;
+    }
+    this->udpHolder.setDefaultIP(addr.getIp());
     return 0;
 }
 
@@ -211,7 +223,7 @@ void Client::handleWebSocketMessage() {
 
             sendVirtualMacMessage();
 
-            if (!this->localAddress.empty()) {
+            if (!this->tunAddress.empty()) {
                 if (startTunThread()) {
                     spdlog::critical("start tun thread with static address failed");
                     Candy::shutdown();
@@ -226,9 +238,9 @@ void Client::handleWebSocketMessage() {
             }
 
             Address address;
-            if (this->dynamicAddress.empty() || address.cidrUpdate(this->dynamicAddress)) {
-                this->dynamicAddress = "0.0.0.0/0";
-                spdlog::warn("invalid dynamic address, set dynamic address to {}", this->dynamicAddress);
+            if (this->expectedAddress.empty() || address.cidrUpdate(this->expectedAddress)) {
+                this->expectedAddress = "0.0.0.0/0";
+                spdlog::warn("invalid expected address, set expected address to {}", this->expectedAddress);
             }
             sendDynamicAddressMessage();
             continue;
@@ -317,8 +329,8 @@ void Client::sendVirtualMacMessage() {
 
 void Client::sendDynamicAddressMessage() {
     Address address;
-    if (address.cidrUpdate(this->dynamicAddress)) {
-        spdlog::critical("cannot send invalid dynamic address");
+    if (address.cidrUpdate(this->expectedAddress)) {
+        spdlog::critical("cannot send invalid expected address");
         Candy::shutdown();
         return;
     }
@@ -334,7 +346,7 @@ void Client::sendDynamicAddressMessage() {
 
 void Client::sendAuthMessage() {
     Address address;
-    if (address.cidrUpdate(this->localAddress)) {
+    if (address.cidrUpdate(this->tunAddress)) {
         spdlog::critical("cannot send invalid auth address");
         Candy::shutdown();
         return;
@@ -406,8 +418,8 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
 
 void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
     if (message.buffer.size() < sizeof(DynamicAddressMessage)) {
-        spdlog::warn("invalid dynamic address message: len {}", message.buffer.length());
-        spdlog::debug("dynamic address buffer: {:n}", spdlog::to_hex(message.buffer));
+        spdlog::warn("invalid expected address message: len {}", message.buffer.length());
+        spdlog::debug("expected address buffer: {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 
@@ -415,13 +427,13 @@ void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
 
     Address address;
     if (address.cidrUpdate(header->cidr)) {
-        spdlog::warn("invalid dynamic address ip: cidr {}", header->cidr);
+        spdlog::warn("invalid expected address ip: cidr {}", header->cidr);
         return;
     }
 
-    setLocalAddress(address.getCidr());
+    setTunAddress(address.getCidr());
     if (startTunThread()) {
-        spdlog::critical("start tun thread with dynamic address failed");
+        spdlog::critical("start tun thread with expected address failed");
         Candy::shutdown();
         return;
     }
@@ -575,7 +587,7 @@ int Client::startTunThread() {
     if (this->tun.setName(this->tunName)) {
         return -1;
     }
-    if (this->tun.setAddress(this->localAddress)) {
+    if (this->tun.setAddress(this->tunAddress)) {
         return -1;
     }
     if (this->tun.setMTU(1400)) {
@@ -593,7 +605,7 @@ int Client::startTunThread() {
     sendAuthMessage();
 
     if (addressUpdateCallback) {
-        addressUpdateCallback(this->localAddress);
+        addressUpdateCallback(this->tunAddress);
     }
 
     return 0;

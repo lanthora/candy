@@ -39,29 +39,32 @@ public:
     // 用于数据转发的服务端地址
     int setWebSocketServer(const std::string &server);
 
-    // 设置静态 IP 地址,向服务端要求强制使用这个地址,使用相同地址的前一个设备会被踢出网络
-    int setLocalAddress(const std::string &cidr);
+    // TUN 地址,向服务端要求强制使用这个地址,使用相同地址的前一个设备会被踢出网络
+    int setTunAddress(const std::string &cidr);
 
-    // 设置默认动态 IP 地址,向服务端建议使用这个地址,这个地址不可用时服务端将返回一个可用的新地址
-    int setDynamicAddress(const std::string &cidr);
+    // 向服务端请求时期望获得的地址,地址不可用时服务端返回新地址
+    int setExpectedAddress(const std::string &cidr);
 
-    // 设置虚拟 Mac 地址
+    // 虚拟 Mac 地址
     int setVirtualMac(const std::string &vmac);
 
-    // 设置 STUN 服务端,用于开启对等连接
+    // STUN 服务端,用于开启对等连接
     int setStun(const std::string &stun);
 
-    // 设置主动发现时间间隔
+    // 主动发现时间间隔
     int setDiscoveryInterval(int interval);
 
-    // 设置通过本节点路由的代价
+    // 通过本节点路由的代价
     int setRouteCost(int cost);
 
-    // 设置本地地址更新时执行的回调函数
+    // 本地地址更新时执行的回调函数
     int setAddressUpdateCallback(std::function<void(const std::string &)> callback);
 
     // 绑定用于 P2P 连接的 UDP 端口, 0 表示由操作系统分配
     int setUdpBindPort(int port);
+
+    // 用于局域网连接的地址
+    int setLocalhost(std::string ip);
 
     // 启停客户端用于处理任务的线程
     int run();
@@ -101,8 +104,8 @@ private:
 
     Tun tun;
     std::string tunName;
-    std::string localAddress;
-    std::string dynamicAddress;
+    std::string tunAddress;
+    std::string expectedAddress;
     std::string virtualMac;
     std::thread tunThread;
 

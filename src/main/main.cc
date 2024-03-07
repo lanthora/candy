@@ -42,6 +42,7 @@ struct arguments {
     std::string name;
     std::string tun;
     std::string stun;
+    std::string localhost;
     int udpPort = 0;
     int discoveryInterval = 0;
     int routeCost = 0;
@@ -53,6 +54,7 @@ const int OPT_AUTO_RESTART = 3;
 const int OPT_EXIT_ON_EOF = 4;
 const int OPT_DISCOVERY_INTERVAL = 5;
 const int OPT_UDP_BIND_PORT = 6;
+const int OPT_UDP_P2P_IP = 7;
 
 const int GROUP_CLIENT_AND_SERVER = 1;
 const int GROUP_SERVER_ONLY = 2;
@@ -75,6 +77,7 @@ struct argp_option options[] = {
     {"port", OPT_UDP_BIND_PORT, "PORT", 0, "Bind udp port", GROUP_CLIENT_ONLY},
     {"route", 'r', "COST", 0, "Cost of routing", GROUP_CLIENT_ONLY},
     {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval", GROUP_CLIENT_ONLY},
+    {"localhost", OPT_UDP_P2P_IP, "IP", 0, "Local P2P IP", GROUP_CLIENT_ONLY},
 
     {0, 0, 0, 0, "Others:", GROUP_OTHERS},
     {"config", 'c', "PATH", 0, "Configuration file path", GROUP_OTHERS},
@@ -129,6 +132,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("discovery", arguments->discoveryInterval);
         cfg.lookupValue("route", arguments->routeCost);
         cfg.lookupValue("port", arguments->udpPort);
+        cfg.lookupValue("localhost", arguments->localhost);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -171,6 +175,9 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case 'r':
         arguments->routeCost = atoi(arg);
+        break;
+    case OPT_UDP_P2P_IP:
+        arguments->localhost = arg;
         break;
     case 'c':
         parseConfigFile(arguments, arg);
@@ -325,11 +332,12 @@ int serve(const struct arguments &arguments) {
         client.setDiscoveryInterval(arguments.discoveryInterval);
         client.setRouteCost(arguments.routeCost);
         client.setUdpBindPort(arguments.udpPort);
+        client.setLocalhost(arguments.localhost);
         client.setPassword(arguments.password);
         client.setWebSocketServer(arguments.websocket);
         client.setStun(arguments.stun);
-        client.setLocalAddress(arguments.tun);
-        client.setDynamicAddress(getLastestAddress(arguments.name));
+        client.setTunAddress(arguments.tun);
+        client.setExpectedAddress(getLastestAddress(arguments.name));
         client.setVirtualMac(getVirtualMac(arguments.name));
         client.setName(arguments.name);
         client.run();
