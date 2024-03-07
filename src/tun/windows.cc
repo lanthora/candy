@@ -108,7 +108,7 @@ public:
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
-            spdlog::critical("create wintun adapter failed");
+            spdlog::critical("create wintun adapter failed: {}", GetLastError());
             return -1;
         }
         int Error;
@@ -143,7 +143,7 @@ public:
 
         this->session = WintunStartSession(this->adapter, WINTUN_MIN_RING_CAPACITY);
         if (!this->session) {
-            spdlog::critical("start wintun session failed");
+            spdlog::critical("start wintun session failed: {}", GetLastError());
             return -1;
         }
         return 0;
