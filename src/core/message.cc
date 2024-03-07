@@ -64,7 +64,7 @@ bool DynamicAddressMessage::check(const std::string &password) {
     int64_t localTime = Time::unixTime();
     int64_t remoteTime = Time::netToHost(this->timestamp);
     if (std::abs(localTime - remoteTime) > 30) {
-        spdlog::warn("dynamic address header timestamp check failed: server {} client {}", localTime, remoteTime);
+        spdlog::warn("expected address header timestamp check failed: server {} client {}", localTime, remoteTime);
         return false;
     }
 
@@ -74,7 +74,7 @@ bool DynamicAddressMessage::check(const std::string &password) {
     updateHash(password);
 
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("dynamic address header hash check failed");
+        spdlog::warn("expected address header hash check failed");
         return false;
     }
     return true;

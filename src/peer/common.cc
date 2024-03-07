@@ -75,4 +75,8 @@ void UdpHolder::setBindPort(uint16_t port) {
     this->port = port;
 }
 
+void UdpHolder::setDefaultIP(uint32_t ip) {
+    this->ip = ip;
+}
+
 } // namespace Candy
