@@ -10,7 +10,7 @@ else()
     FetchContent_Declare(
         ixwebsocket
         GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-        GIT_TAG        ef57e3a2b14c17b1a05aed0079f55fac2ece4996
+        GIT_TAG        c5a02f1066fb0fde48f80f51178429a27f689a39
     )
 
     set(USE_TLS 1 CACHE BOOL "" FORCE)
