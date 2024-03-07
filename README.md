@@ -26,31 +26,36 @@ docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/ca
 
 #### Arch Linux
 
-使用 [AUR](https://aur.archlinux.org/packages/candy) 或者 [Arch Linux CN Community Repository](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy).
+使用 [AUR](https://aur.archlinux.org/packages/candy) 或者 [archlinuxcn](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy) 仓库
+
+```bash
+# 安装 AUR 版本,由于依赖可能会升级,需要先完整更新系统
+paru -Syu candy
+# 安装 archlinuxcn 版本
+pacman -S candy
+```
 
 #### Gentoo
 
-使用 [guru overlay](https://github.com/gentoo/guru/tree/master/net-vpn/candy)：
+使用 [GURU](https://github.com/gentoo/guru/tree/master/net-vpn/candy) 仓库
 
 ```bash
-# 需要安装 eselect-repository
-sudo eselect repository enable guru
-sudo emerge --sync guru && sudo emerge -av candy
+eselect repository enable guru
+emerge --sync guru && emerge -av candy
 ```
 
 #### openSUSE 
 
-使用 [OBS](https://software.opensuse.org/package/candy)：
+使用 [OBS](https://software.opensuse.org/download/package?package=candy&project=home:lanthora:candy) 仓库
 
 ```bash
-pushd /etc/zypp/repos.d/
-# 根据系统版本修改下载地址,以 Leap15.5 为例
-sudo wget https://download.opensuse.org/repositories/home:/lanthora:/candy/15.5/home:lanthora:candy.repo
-# 更新仓库缓存时选择信任签名
-sudo zypper refresh && sudo zypper in candy
+# 以 Tumbleweed 为例,更新仓库缓存时选择信任签名
+zypper addrepo https://download.opensuse.org/repositories/home:lanthora:candy/openSUSE_Tumbleweed/home:lanthora:candy.repo
+zypper refresh
+zypper install candy
 ```
 
-### MacOS
+### macOS
 
 请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 仓库中提供的方法安装.
 
@@ -70,11 +75,9 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 ### 接入测试网络
 
-上述客户端的[默认配置](candy.conf)会连到测试网络 172.16.0.0/16, 并被随机分配一个地址.
+客户端的[默认配置](candy.conf)会连到测试网络 172.16.0.0/16, 并被随机分配一个地址.
 
-网络中部署了两个用于测试的客户端. 172.16.0.1 的 80 端口部署了 Web 服务. 172.16.0.2 的 1080 端口部署了的 socks5 服务.
-
-接入网络后,除非你主动访问其他客户端,否则什么都不会发生.
+当成功部署两个及以上客户端后,客户端之间可以相互访问.得益于路由功能,网络中的客户端数量越多,访问时延越低.
 
 ### 部署私有网络
 
@@ -162,11 +165,7 @@ route = 5
 localhost = "127.0.0.1"
 ```
 
-## 未来的发展方向
-
-除了正常的安全更新和问题修复,短期内不计划新增功能,希望这个软件可以像空气一样,让用户意识不到它的存在.
-
-## 相似产品
+## 类似产品
 
 - [WireGuard](https://www.wireguard.com/): fast, modern, secure VPN tunnel
 - [n2n](https://github.com/ntop/n2n): Peer-to-peer VPN
@@ -176,4 +175,5 @@ localhost = "127.0.0.1"
 
 ## 联系我们
 
-[Telegram Group](https://t.me/CandyUserGroup)
+- Telegram: [@CandyUserGroup](https://t.me/CandyUserGroup)
+- QQ群: 768305206
