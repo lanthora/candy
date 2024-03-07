@@ -57,13 +57,13 @@ install -D -m 644 candy@.service %{buildroot}%{_unitdir}/candy@.service
 %service_add_pre candy.service candy@.service
 
 %post
-%service_add_post candy.service candy@service
+%service_add_post candy.service candy@.service
 
 %preun
-%service_del_preun candy.service candy@service
+%service_del_preun candy.service candy@.service
 
 %postun
-%service_del_postun candy.service candy@service
+%service_del_postun candy.service candy@.service
 
 %files
 %doc README.md
