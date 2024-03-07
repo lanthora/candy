@@ -8,6 +8,8 @@
 
 ### Linux
 
+#### Docker
+
 建议使用 Docker 镜像,已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy).
 
 Candy 会缓存上次从服务端分配到的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.创建与容器内相同的目录以方便理解.
@@ -22,7 +24,31 @@ mkdir -p /var/lib/candy
 docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy docker.io/lanthora/candy:latest
 ```
 
-Arch Linux 用户可以使用 [AUR](https://aur.archlinux.org/packages/candy).
+#### Arch Linux
+
+使用 [AUR](https://aur.archlinux.org/packages/candy) 或者 [Arch Linux CN Community Repository](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy).
+
+#### Gentoo
+
+使用 [guru overlay](https://github.com/gentoo/guru/tree/master/net-vpn/candy)：
+
+```bash
+# 需要安装 eselect-repository
+sudo eselect repository enable guru
+sudo emerge --sync guru && sudo emerge -av candy
+```
+
+#### openSUSE 
+
+使用 [OBS](https://software.opensuse.org/package/candy)：
+
+```bash
+pushd /etc/zypp/repos.d/
+# 根据系统版本修改下载地址,以 Leap15.5 为例
+sudo wget https://download.opensuse.org/repositories/home:/lanthora:/candy/15.5/home:lanthora:candy.repo
+# 更新仓库缓存时选择信任签名
+sudo zypper refresh && sudo zypper in candy
+```
 
 ### MacOS
 
