@@ -24,6 +24,21 @@ docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/ca
 
 Arch Linux 用户可以使用 [AUR](https://aur.archlinux.org/packages/candy).
 
+Gentoo 用户可以使用 guru overlay：
+```bash
+sudo eselect repository enable guru # 需要安装 eselect-repository
+sudo emerge --sync guru && sudo emerge -av candy
+```
+
+openSUSE 用户可以从 [OBS](https://software.opensuse.org/package/candy) 安装或者运行如下命令：
+```bash
+pushd /etc/zypp/repos.d/
+# 根据系统版本修改下载地址 下面的地址是 Leap15.5 版本
+sudo wget https://download.opensuse.org/repositories/home:/lanthora:/candy/15.5/home:lanthora:candy.repo
+# 更新仓库缓存时选择信任签名
+sudo zypper refresh && sudo zypper in candy
+```
+
 ### MacOS
 
 请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 仓库中提供的方法安装.
