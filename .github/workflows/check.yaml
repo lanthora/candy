@@ -27,7 +27,7 @@ jobs:
     runs-on: macos-13
     steps:
     - name: depends
-      run: brew install libconfig spdlog uriparser argp-standalone
+      run: brew install libconfig spdlog uriparser libwebsockets argp-standalone
     - name: checkout
       uses: actions/checkout@v4
     - name: build
@@ -51,6 +51,7 @@ jobs:
           mingw-w64-x86_64-libconfig
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-uriparser
+          mingw-w64-x86_64-libwebsockets
     - name: checkout
       uses: actions/checkout@v4
     - name: build

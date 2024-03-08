@@ -1,9 +1,9 @@
 FROM alpine as base
 RUN apk update
-RUN apk add spdlog openssl libconfig++ uriparser zlib
+RUN apk add spdlog openssl libconfig++ uriparser libwebsockets-evlib_uv zlib
 
 FROM base AS build
-RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev libconfig-dev uriparser-dev zlib-dev argp-standalone linux-headers
+RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev libconfig-dev uriparser-dev zlib-dev libwebsockets-dev argp-standalone linux-headers
 COPY . candy
 RUN cd candy/build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release .. && cmake --build . && cmake --install .
 
