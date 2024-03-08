@@ -1,0 +1,15 @@
+name: Webhook
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  obs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke deployment hook
+        uses: distributhor/workflow-webhook@v3
+        with:
+          webhook_url: ${{ secrets.WEBHOOK_URL }}
+          webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
