@@ -156,17 +156,38 @@ int Client::shutdown() {
 
 // WebSocket
 int Client::startWsThread() {
-    if (this->ws.connect(this->wsUri)) {
-        spdlog::critical("websocket client connect failed");
-        return -1;
-    }
     if (this->ws.setTimeout(1)) {
         spdlog::critical("websocket clinet set read write timeout failed");
         return -1;
     }
 
+    if (this->ws.connect(this->wsUri)) {
+        spdlog::critical("websocket client connect failed");
+        return -1;
+    }
+
     // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
     this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
+
+    sendVirtualMacMessage();
+
+    if (!this->tunAddress.empty()) {
+        if (startTunThread()) {
+            spdlog::critical("start tun thread with static address failed");
+            return -1;
+        }
+        if (startUdpThread()) {
+            spdlog::critical("start udp thread failed");
+            return -1;
+        }
+    } else {
+        Address address;
+        if (this->expectedAddress.empty() || address.cidrUpdate(this->expectedAddress)) {
+            this->expectedAddress = "0.0.0.0/0";
+            spdlog::debug("invalid expected address, set expected address to {}", this->expectedAddress);
+        }
+        sendDynamicAddressMessage();
+    }
     return 0;
 }
 
@@ -217,33 +238,6 @@ void Client::handleWebSocketMessage() {
                 spdlog::debug("unknown websocket message: type {}", msgType);
                 break;
             }
-        }
-
-        if (message.type == WebSocketMessageType::Open) {
-
-            sendVirtualMacMessage();
-
-            if (!this->tunAddress.empty()) {
-                if (startTunThread()) {
-                    spdlog::critical("start tun thread with static address failed");
-                    Candy::shutdown();
-                    break;
-                }
-                if (startUdpThread()) {
-                    spdlog::critical("start udp thread failed");
-                    Candy::shutdown();
-                    break;
-                }
-                continue;
-            }
-
-            Address address;
-            if (this->expectedAddress.empty() || address.cidrUpdate(this->expectedAddress)) {
-                this->expectedAddress = "0.0.0.0/0";
-                spdlog::warn("invalid expected address, set expected address to {}", this->expectedAddress);
-            }
-            sendDynamicAddressMessage();
-            continue;
         }
         // 连接断开,可能是地址冲突,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Close) {

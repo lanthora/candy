@@ -28,8 +28,7 @@ BuildRequires:  gcc13-c++
 BuildRequires:  libopenssl-devel
 BuildRequires:  uriparser-devel
 BuildRequires:  libconfig++-devel
-BuildRequires:  libixwebsocket-devel
-BuildRequires:  zlib-devel
+BuildRequires:  poco-devel
 BuildRequires:  fmt-devel
 BuildRequires:  spdlog-devel
 BuildRequires:  systemd-rpm-macros
