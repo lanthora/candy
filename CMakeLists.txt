@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.18.4)
 
-project(candy LANGUAGES CXX VERSION 5.0)
+project(candy LANGUAGES C CXX VERSION 5.0)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wfatal-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wfatal-errors")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
@@ -16,10 +16,5 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/websocket)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/tun)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/peer)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/utility)
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-find_package(ZLIB REQUIRED)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads ZLIB::ZLIB)
 
 install(TARGETS ${CMAKE_PROJECT_NAME})

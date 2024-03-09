@@ -1,153 +1,115 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/client.h"
-#include <condition_variable>
-#include <functional>
-#include <ixwebsocket/IXWebSocket.h>
-#include <memory>
-#include <mutex>
-#include <queue>
-
-namespace {
-
-using namespace Candy;
-
-class WebSocketClientImpl {
-private:
-    int timeout;
-    std::mutex mutex;
-    std::condition_variable condition;
-    std::queue<WebSocketMessage> queue;
-
-    std::shared_ptr<ix::WebSocket> ixWs;
-
-public:
-    int connect(const std::string &address) {
-        this->ixWs = std::make_shared<ix::WebSocket>();
-        this->ixWs->setUrl(address);
-        this->ixWs->setPingInterval(30);
-        this->ixWs->disablePerMessageDeflate();
-        this->ixWs->setOnMessageCallback(std::bind(&WebSocketClientImpl::handleMessage, this, std::placeholders::_1));
-        this->ixWs->disableAutomaticReconnection();
-        this->ixWs->setAutoThreadName(false);
-        this->ixWs->start();
-
-        return 0;
-    }
-
-    int disconnect() {
-        if (this->ixWs) {
-            this->ixWs->stop();
-        }
-        {
-            std::lock_guard<std::mutex> lock(this->mutex);
-            this->queue = std::queue<WebSocketMessage>();
-        }
-        this->condition.notify_all();
-
-        return 0;
-    }
-
-    int setTimeout(int timeout) {
-        this->timeout = timeout;
-        return 0;
-    }
-
-    int read(WebSocketMessage &message) {
-        std::unique_lock<std::mutex> lock(this->mutex);
-        if (this->condition.wait_for(lock, std::chrono::seconds(this->timeout), [&] { return !this->queue.empty(); })) {
-            message = this->queue.front();
-            this->queue.pop();
-            return 1;
-        }
-        return 0;
-    }
-
-    int write(const WebSocketMessage &message) {
-        ix::IXWebSocketSendData data = ix::IXWebSocketSendData(message.buffer.c_str(), message.buffer.length());
-        if (this->ixWs) {
-            this->ixWs->sendBinary(data);
-        }
-        return 0;
-    }
-
-private:
-    void handleMessage(const ix::WebSocketMessagePtr &ixWsMsg) {
-        WebSocketMessage msg;
-
-        // 把 ixwebsocket 定义的类型转换成外部公开的类型,对外不暴露
-        // ixwebsocket,这里的实现是再次赋值,值是一样的,这样做是为了与 ixwebsocket 解耦
-        switch (ixWsMsg->type) {
-        case ix::WebSocketMessageType::Message:
-            msg.type = WebSocketMessageType::Message;
-            msg.buffer = ixWsMsg->str;
-            break;
-        case ix::WebSocketMessageType::Open:
-            msg.type = WebSocketMessageType::Open;
-            msg.buffer = ixWsMsg->openInfo.uri;
-            break;
-        case ix::WebSocketMessageType::Close:
-            msg.type = WebSocketMessageType::Close;
-            msg.buffer = ixWsMsg->closeInfo.reason;
-            break;
-        case ix::WebSocketMessageType::Error:
-            msg.type = WebSocketMessageType::Error;
-            msg.buffer = ixWsMsg->errorInfo.reason;
-            break;
-        default:
-            // 退出函数不做其他处理,只有预期的类型产生的事件放入队列,其他事件只需要内部处理,无需对外暴露.
-            return;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(this->mutex);
-            this->queue.push(msg);
-        }
-        this->condition.notify_all();
-    }
-};
-
-} // namespace
+#include "utility/time.h"
+#include "utility/uri.h"
+#include <Poco/Net/HTTPMessage.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/Net/HTTPSClientSession.h>
+#include <spdlog/spdlog.h>
 
 namespace Candy {
 
-WebSocketClient::WebSocketClient() {
-    this->impl = std::make_shared<WebSocketClientImpl>();
-    return;
-}
-
-WebSocketClient::~WebSocketClient() {
-    this->impl.reset();
-    return;
-}
-
 int WebSocketClient::connect(const std::string &address) {
-    std::shared_ptr<WebSocketClientImpl> client;
-    client = std::any_cast<std::shared_ptr<WebSocketClientImpl>>(this->impl);
-    return client->connect(address);
+    Uri uri(address);
+
+    try {
+        Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, uri.path(), Poco::Net::HTTPMessage::HTTP_1_1);
+        Poco::Net::HTTPResponse response;
+        if (uri.scheme() == "wss") {
+            Poco::Net::HTTPSClientSession cs(uri.host(), uri.port().empty() ? 443 : std::stoi(uri.port()));
+            this->ws = std::make_shared<Poco::Net::WebSocket>(cs, request, response);
+        } else if (uri.scheme() == "ws") {
+            Poco::Net::HTTPClientSession cs(uri.host(), uri.port().empty() ? 80 : std::stoi(uri.port()));
+            this->ws = std::make_shared<Poco::Net::WebSocket>(cs, request, response);
+        } else {
+            spdlog::critical("invalid websocket scheme: {}", address);
+            return -1;
+        }
+        this->ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->timeout)));
+        this->timestamp = Time::bootTime();
+    } catch (std::exception &e) {
+        spdlog::critical("websocket connect failed: {}", e.what());
+        return -1;
+    }
+    return 0;
 }
 
 int WebSocketClient::disconnect() {
-    std::shared_ptr<WebSocketClientImpl> client;
-    client = std::any_cast<std::shared_ptr<WebSocketClientImpl>>(this->impl);
-    return client->disconnect();
+    if (this->ws) {
+        this->ws->close();
+    }
+    return 0;
 }
 
 int WebSocketClient::setTimeout(int timeout) {
-    std::shared_ptr<WebSocketClientImpl> client;
-    client = std::any_cast<std::shared_ptr<WebSocketClientImpl>>(this->impl);
-    return client->setTimeout(timeout);
+    this->timeout = timeout;
+    return 0;
 }
 
 int WebSocketClient::read(WebSocketMessage &message) {
-    std::shared_ptr<WebSocketClientImpl> client;
-    client = std::any_cast<std::shared_ptr<WebSocketClientImpl>>(this->impl);
-    return client->read(message);
+    if (!this->ws) {
+        spdlog::critical("websocket read before connected");
+        return -1;
+    }
+    char buffer[1500];
+    int flags = 0;
+
+    try {
+        int length = this->ws->receiveFrame(buffer, sizeof(buffer), flags);
+        if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PING) {
+            flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
+            this->ws->sendFrame(buffer, length, flags);
+            this->timestamp = Time::bootTime();
+            return 0;
+        }
+        if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PONG) {
+            this->timestamp = Time::bootTime();
+            return 0;
+        }
+        if (length == 0 && flags == 0) {
+            message.type = WebSocketMessageType::Close;
+            message.buffer = "peer has shut down or closed the connection";
+            return 1;
+        }
+        if (length > 0) {
+            message.type = WebSocketMessageType::Message;
+            message.buffer.assign(buffer, length);
+            this->timestamp = Time::bootTime();
+            return 1;
+        }
+        return 0;
+    } catch (Poco::TimeoutException const &e) {
+        if (Time::bootTime() - this->timestamp > 5000) {
+            message.type = WebSocketMessageType::Error;
+            message.buffer = "websocket pong timeout";
+            return 1;
+        }
+        if (Time::bootTime() - this->timestamp > 3000) {
+            flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
+            this->ws->sendFrame(NULL, 0, flags);
+        }
+        return 0;
+    } catch (std::exception &e) {
+        message.type = WebSocketMessageType::Error;
+        message.buffer = e.what();
+        return 1;
+    }
 }
 
 int WebSocketClient::write(const WebSocketMessage &message) {
-    std::shared_ptr<WebSocketClientImpl> client;
-    client = std::any_cast<std::shared_ptr<WebSocketClientImpl>>(this->impl);
-    return client->write(message);
+    if (!this->ws) {
+        spdlog::critical("websocket write before connected");
+        return -1;
+    }
+
+    try {
+        this->ws->sendFrame(message.buffer.c_str(), message.buffer.length(), Poco::Net::WebSocket::FRAME_BINARY);
+        return 0;
+    } catch (std::exception &e) {
+        spdlog::critical("websocket write failed: {}", e.what());
+        return -1;
+    }
 }
 
 } // namespace Candy

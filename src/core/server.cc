@@ -138,6 +138,7 @@ void Server::handleWebSocketMessage() {
             handleCloseMessage(message);
             continue;
         }
+
         if (message.type == WebSocketMessageType::Error) {
             spdlog::critical("server websocket error: {}", message.buffer);
             Candy::shutdown();

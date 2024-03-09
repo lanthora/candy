@@ -3,16 +3,17 @@
 #define CANDY_WEBSOCKET_SERVER_H
 
 #include "websocket/common.h"
+#include <Poco/Net/HTTPServer.h>
+#include <condition_variable>
 #include <cstdint>
+#include <memory>
+#include <queue>
 #include <string>
 
 namespace Candy {
 
 class WebSocketServer {
 public:
-    WebSocketServer();
-    ~WebSocketServer();
-
     // 开始监听和停止监听
     int listen(const std::string &ipStr, uint16_t port);
     int stop();
@@ -27,8 +28,16 @@ public:
     // 关闭单个客户端连接
     int close(WebSocketConn conn);
 
+    void push(const WebSocketMessage &msg);
+
+    bool running;
+    int timeout;
+
 private:
-    std::any impl;
+    std::mutex mutex;
+    std::condition_variable condition;
+    std::queue<WebSocketMessage> queue;
+    std::shared_ptr<Poco::Net::HTTPServer> server;
 };
 
 } // namespace Candy

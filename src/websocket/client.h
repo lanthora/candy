@@ -3,15 +3,13 @@
 #define CANDY_WEBSOCKET_CLIENT_H
 
 #include "websocket/common.h"
+#include <Poco/Net/WebSocket.h>
 #include <string>
 
 namespace Candy {
 
 class WebSocketClient {
 public:
-    WebSocketClient();
-    ~WebSocketClient();
-
     // 连接或断开与服务端的连接
     int connect(const std::string &address);
     int disconnect();
@@ -25,7 +23,9 @@ public:
     int write(const WebSocketMessage &message);
 
 private:
-    std::any impl;
+    int timeout;
+    std::shared_ptr<Poco::Net::WebSocket> ws;
+    int64_t timestamp;
 };
 
 } // namespace Candy

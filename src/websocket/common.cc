@@ -1,25 +1,16 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/common.h"
-#include <any>
-#include <ixwebsocket/IXWebSocket.h>
+#include <Poco/Net/WebSocket.h>
 #include <memory>
 
 namespace Candy {
 
 bool WebSocketConn::operator<(const WebSocketConn &other) const {
-    using IXWebSocketPtr = std::weak_ptr<ix::WebSocket>;
-
-    IXWebSocketPtr thisConn = std::any_cast<IXWebSocketPtr>(this->conn);
-    IXWebSocketPtr otherConn = std::any_cast<IXWebSocketPtr>(other.conn);
-
-    return std::owner_less<IXWebSocketPtr>()(thisConn, otherConn);
+    return std::owner_less<std::weak_ptr<Poco::Net::WebSocket>>()(this->conn, other.conn);
 }
 
 bool WebSocketConn::operator==(const WebSocketConn &other) const {
-    using IXWebSocketPtr = std::weak_ptr<ix::WebSocket>;
-    IXWebSocketPtr thisConn = std::any_cast<IXWebSocketPtr>(this->conn);
-    IXWebSocketPtr otherConn = std::any_cast<IXWebSocketPtr>(other.conn);
-    return thisConn.lock() == otherConn.lock();
+    return this->conn.lock() == other.conn.lock();
 }
 
 } // namespace Candy

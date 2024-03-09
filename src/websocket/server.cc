@@ -1,203 +1,169 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/server.h"
 #include "websocket/common.h"
-#include <functional>
-#include <ixwebsocket/IXHttp.h>
-#include <ixwebsocket/IXHttpServer.h>
-#include <ixwebsocket/IXWebSocketMessage.h>
-#include <ixwebsocket/IXWebSocketServer.h>
-#include <memory>
-#include <queue>
+#include <Poco/Net/HTTPRequestHandler.h>
+#include <Poco/Net/HTTPRequestHandlerFactory.h>
+#include <Poco/Net/HTTPServerRequest.h>
+#include <Poco/Net/HTTPServerResponse.h>
+#include <Poco/Net/ServerSocket.h>
+#include <Poco/Net/WebSocket.h>
 #include <spdlog/spdlog.h>
 
 namespace {
 
 using namespace Candy;
 
-class WebSockeServerImpl {
-private:
-    int timeout;
-    std::mutex mutex;
-    std::condition_variable condition;
-    std::queue<WebSocketMessage> queue;
-
-    std::shared_ptr<ix::HttpServer> ixHttpServer;
-
+class WebSocketHandler : public Poco::Net::HTTPRequestHandler {
 public:
-    int listen(const std::string &host, uint16_t port) {
-        using namespace std::placeholders;
-        int family = host.find(':') != std::string::npos ? AF_INET6 : AF_INET;
-        this->ixHttpServer = std::make_shared<ix::HttpServer>(port, host, 5, 128, family);
-        this->ixHttpServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleHttpConnection, this, _1, _2));
+    WebSocketHandler(WebSocketServer *server) {
+        this->server = server;
+    }
+    void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
+        std::shared_ptr<Poco::Net::WebSocket> ws = std::make_shared<Poco::Net::WebSocket>(request, response);
+        ws->setReceiveTimeout(this->server->timeout);
 
-        auto ixWsServer = std::dynamic_pointer_cast<ix::WebSocketServer>(this->ixHttpServer);
-        ixWsServer->setOnConnectionCallback(std::bind(&WebSockeServerImpl::handleWsConnection, this, _1, _2));
-        ixWsServer->disablePerMessageDeflate();
+        char buffer[1500] = {0};
+        int length = 0;
+        int flags = 0;
 
-        auto result = this->ixHttpServer->listen();
-        if (!result.first) {
-            spdlog::critical("ixwebsocket server listen failed: {}", result.second);
-            return -1;
+        while (true) {
+            try {
+                length = ws->receiveFrame(buffer, sizeof(buffer), flags);
+                int frameOp = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
+
+                if (frameOp == Poco::Net::WebSocket::FRAME_OP_PING) {
+                    flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
+                    ws->sendFrame(buffer, length, flags);
+                    continue;
+                }
+
+                if (frameOp == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
+                    WebSocketMessage msg;
+                    msg.type = WebSocketMessageType::Close;
+                    msg.buffer.assign(buffer, length);
+                    msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                    this->server->push(msg);
+                    break;
+                }
+
+                if (frameOp == Poco::Net::WebSocket::FRAME_OP_BINARY && length > 0) {
+                    WebSocketMessage msg;
+                    msg.type = WebSocketMessageType::Message;
+                    msg.buffer.assign(buffer, length);
+                    msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                    this->server->push(msg);
+                    continue;
+                }
+
+            } catch (Poco::TimeoutException const &e) {
+                if (!this->server->running) {
+                    ws->close();
+                    break;
+                }
+                continue;
+            } catch (std::exception &e) {
+                WebSocketMessage msg;
+                msg.type = WebSocketMessageType::Close;
+                msg.buffer = e.what();
+                msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                this->server->push(msg);
+                break;
+            }
+            spdlog::debug("unknown websocket request: flags {}", flags);
         }
-        this->ixHttpServer->start();
-        return 0;
-    }
-
-    int stop() {
-        this->ixHttpServer->stop();
-        return 0;
-    }
-
-    int setTimeout(int timeout) {
-        this->timeout = timeout;
-        return 0;
-    }
-
-    int read(WebSocketMessage &message) {
-        std::unique_lock<std::mutex> lock(this->mutex);
-        if (this->condition.wait_for(lock, std::chrono::seconds(this->timeout), [&] { return !this->queue.empty(); })) {
-            message = this->queue.front();
-            this->queue.pop();
-            return 1;
-        }
-        return 0;
-    }
-
-    int write(const WebSocketMessage &message) {
-        std::weak_ptr<ix::WebSocket> weakConn = std::any_cast<std::weak_ptr<ix::WebSocket>>(message.conn.conn);
-        auto ws = weakConn.lock();
-        if (ws) {
-            ws->sendBinary(message.buffer);
-        }
-        return 0;
-    }
-
-    int close(WebSocketConn conn) {
-        std::weak_ptr<ix::WebSocket> weakConn = std::any_cast<std::weak_ptr<ix::WebSocket>>(conn.conn);
-        auto ws = weakConn.lock();
-        if (ws) {
-            ws->close();
-        }
-        return 0;
     }
 
 private:
-    ix::HttpResponsePtr handleHttpConnection(ix::HttpRequestPtr request, std::shared_ptr<ix::ConnectionState> connectionState) {
-        std::string ip = [&]() {
-            ix::WebSocketHttpHeaders::iterator it;
-            it = request->headers.find("X-Real-IP");
-            if (it != request->headers.end() && !it->second.empty()) {
-                return it->second;
-            }
-            it = request->headers.find("True-Client-IP");
-            if (it != request->headers.end() && !it->second.empty()) {
-                return it->second;
-            }
-            it = request->headers.find("X-Forwarded-For");
-            if (it != request->headers.end() && !it->second.empty()) {
-                return it->second;
-            }
-            return connectionState->getRemoteIp();
-        }();
-        spdlog::debug("unexpected http request: {} {} {}", ip, request->method, request->uri);
+    WebSocketServer *server = nullptr;
+};
 
-        ix::WebSocketHttpHeaders responseHeaders;
-        responseHeaders["Location"] = "https://github.com/lanthora/candy";
-        return std::make_shared<ix::HttpResponse>(302, "Found", ix::HttpErrorCode::Ok, responseHeaders);
+class ForbiddenHandler : public Poco::Net::HTTPRequestHandler {
+public:
+    void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
+        response.setStatus(Poco::Net::HTTPResponse::HTTP_FORBIDDEN);
+        response.setReason("Forbidden");
+        response.setContentType("text/plain");
+        response.setContentLength(0);
+        response.send().flush();
     }
+};
 
-    void handleWsConnection(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
-        using namespace std::placeholders;
-        auto ws = webSocket.lock();
-        if (ws) {
-            ws->setOnMessageCallback(std::bind(&WebSockeServerImpl::handleWsMessage, this, webSocket, connectionState, _1));
+class WebSocketHandlerFactory : public Poco::Net::HTTPRequestHandlerFactory {
+public:
+    WebSocketHandlerFactory(WebSocketServer *server) {
+        this->server = server;
+    }
+    Poco::Net::HTTPRequestHandler *createRequestHandler(const Poco::Net::HTTPServerRequest &request) {
+        if (request.get("Upgrade") == "websocket") {
+            return new WebSocketHandler(this->server);
+        } else {
+            return new ForbiddenHandler();
         }
     }
 
-    void handleWsMessage(std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState,
-                         const ix::WebSocketMessagePtr &ixWsMsg) {
-        WebSocketMessage msg;
-        switch (ixWsMsg->type) {
-        case ix::WebSocketMessageType::Message:
-            msg.type = WebSocketMessageType::Message;
-            msg.buffer = ixWsMsg->str;
-            msg.conn.conn = webSocket;
-            break;
-        case ix::WebSocketMessageType::Open:
-            msg.type = WebSocketMessageType::Open;
-            msg.buffer = ixWsMsg->openInfo.uri;
-            msg.conn.conn = webSocket;
-            break;
-        case ix::WebSocketMessageType::Close:
-            msg.type = WebSocketMessageType::Close;
-            msg.buffer = ixWsMsg->closeInfo.reason;
-            msg.conn.conn = webSocket;
-            break;
-        case ix::WebSocketMessageType::Error:
-            msg.type = WebSocketMessageType::Error;
-            msg.buffer = ixWsMsg->errorInfo.reason;
-            msg.conn.conn = webSocket;
-            break;
-        default:
-            return;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(this->mutex);
-            this->queue.push(msg);
-        }
-        this->condition.notify_all();
-    }
+private:
+    WebSocketServer *server = nullptr;
 };
 
 } // namespace
 
 namespace Candy {
 
-WebSocketServer::WebSocketServer() {
-    this->impl = std::make_shared<WebSockeServerImpl>();
-    return;
-}
-
-WebSocketServer::~WebSocketServer() {
-    this->impl.reset();
-    return;
-}
-
 int WebSocketServer::listen(const std::string &host, uint16_t port) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->listen(host, port);
+    Poco::Net::HTTPServerParams *pParams = new Poco::Net::HTTPServerParams();
+    pParams->setMaxQueued(100);
+    pParams->setMaxThreads(4);
+    this->server = std::make_shared<Poco::Net::HTTPServer>(new WebSocketHandlerFactory(this), port, pParams);
+    Poco::Net::ServerSocket svs(port);
+    this->running = true;
+    this->server->start();
+    return 0;
 }
 
 int WebSocketServer::stop() {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->stop();
+    this->running = false;
+    this->server->stop();
+    this->server->stopAll();
+    return 0;
 }
 
 int WebSocketServer::setTimeout(int timeout) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->setTimeout(timeout);
+    this->timeout = timeout;
+    return 0;
 }
 
 int WebSocketServer::read(WebSocketMessage &message) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->read(message);
+    std::unique_lock<std::mutex> lock(this->mutex);
+    if (this->condition.wait_for(lock, std::chrono::seconds(this->timeout), [&] { return !this->queue.empty(); })) {
+        message = this->queue.front();
+        this->queue.pop();
+        return 1;
+    }
+    return 0;
 }
 
 int WebSocketServer::write(const WebSocketMessage &message) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->write(message);
+    auto ws = message.conn.conn.lock();
+    if (ws) {
+        ws->sendFrame(message.buffer.c_str(), message.buffer.size(), Poco::Net::WebSocket::FRAME_BINARY);
+    }
+    return 0;
 }
 
 int WebSocketServer::close(WebSocketConn conn) {
-    std::shared_ptr<WebSockeServerImpl> server;
-    server = std::any_cast<std::shared_ptr<WebSockeServerImpl>>(this->impl);
-    return server->close(conn);
+    auto ws = conn.conn.lock();
+    if (ws) {
+        ws->close();
+    }
+    return 0;
+}
+
+void WebSocketServer::push(const WebSocketMessage &msg) {
+    {
+        std::lock_guard<std::mutex> lock(this->mutex);
+        this->queue.push(msg);
+    }
+    this->condition.notify_all();
 }
 
 } // namespace Candy

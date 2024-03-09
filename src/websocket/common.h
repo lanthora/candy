@@ -2,17 +2,12 @@
 #ifndef CANDY_WEBSOCKET_COMMON_H
 #define CANDY_WEBSOCKET_COMMON_H
 
-#include <any>
+#include <Poco/Net/WebSocket.h>
 #include <string>
 
 namespace Candy {
 
-enum class WebSocketMessageType {
-    Message = 0,
-    Open = 1,
-    Close = 2,
-    Error = 3,
-};
+enum class WebSocketMessageType { Message, Open, Close, Error };
 
 class WebSocketConn {
 public:
@@ -22,8 +17,7 @@ public:
     // 重载等于号,用于判断是否是相同的连接
     bool operator==(const WebSocketConn &other) const;
 
-    // 用 std::any 隐藏具体实现,避免上层感知到表示连接的具体类型
-    std::any conn;
+    std::weak_ptr<Poco::Net::WebSocket> conn;
 };
 
 // 消息会被放到消息队列里,从消息队列里取出来的时候至少要包含消息的类型和来源,

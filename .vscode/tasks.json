@@ -5,42 +5,46 @@
             "label": "build:cmake:debug",
             "command": "cmake",
             "args": [
-                "-DCMAKE_BUILD_TYPE=Debug",
-                "../"
+                "-B build",
+                "-G Ninja",
+                "-DCMAKE_BUILD_TYPE=Debug"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/build/"
+                "cwd": "${workspaceFolder}"
             }
         },
         {
             "label": "build:cmake:release",
             "command": "cmake",
             "args": [
+                "-B build",
+                "-G Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
-                "../"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/build/"
+                "cwd": "${workspaceFolder}"
             }
         },
         {
-            "label": "build:make:debug",
-            "command": "make",
+            "label": "build:ninja:debug",
+            "command": "cmake",
             "args": [
-                "-Wfatal-errors"
+                "--build",
+                "build"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/build/"
+                "cwd": "${workspaceFolder}"
             }
         },
         {
-            "label": "build:make:release",
-            "command": "make",
+            "label": "build:ninja:release",
+            "command": "cmake",
             "args": [
-                "-j"
+                "--build",
+                "build"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/build/"
+                "cwd": "${workspaceFolder}"
             }
         },
         {
@@ -48,7 +52,7 @@
             "dependsOrder": "sequence",
             "dependsOn": [
                 "build:cmake:debug",
-                "build:make:debug"
+                "build:ninja:debug"
             ],
             "problemMatcher": [],
             "group": {
@@ -61,7 +65,7 @@
             "dependsOrder": "sequence",
             "dependsOn": [
                 "build:cmake:release",
-                "build:make:release"
+                "build:ninja:release"
             ]
         }
     ]
