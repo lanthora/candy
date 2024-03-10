@@ -80,12 +80,12 @@ int WebSocketClient::read(WebSocketMessage &message) {
         }
         return 0;
     } catch (Poco::TimeoutException const &e) {
-        if (Time::bootTime() - this->timestamp > 5000) {
+        if (Time::bootTime() - this->timestamp > 30000) {
             message.type = WebSocketMessageType::Error;
             message.buffer = "websocket pong timeout";
             return 1;
         }
-        if (Time::bootTime() - this->timestamp > 3000) {
+        if (Time::bootTime() - this->timestamp > 15000) {
             flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
             this->ws->sendFrame(NULL, 0, flags);
         }
