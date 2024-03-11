@@ -1,0 +1,41 @@
+name: upload
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-libconfig
+          mingw-w64-x86_64-spdlog
+          mingw-w64-x86_64-uriparser
+          mingw-w64-x86_64-poco
+    = uses: actions/checkout@v4
+    - shell: msys2 {0}
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        mkdir artifact
+        cp build/src/main/candy.exe artifact
+        cp build/src/tun/wintun/bin/amd64/wintun.dll artifact
+        scripts/search-deps.sh artifact/candy.exe artifact
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ github.event.release.tag_name }}
+        path: |
+          artifact/
+    - uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r ${{ github.event.release.tag_name }}.zip artifact
+    - uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ github.event.release.tag_name }}.zip

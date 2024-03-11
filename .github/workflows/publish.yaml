@@ -1,4 +1,4 @@
-name: Publish
+name: publish
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     types: [ published ]
 
 jobs:
-  build-and-publish:
+  docker:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -43,3 +43,4 @@ jobs:
           tags: |
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/candy:${{ env.IMAGE_TAG || 'latest' }}
             ghcr.io/${{ github.actor }}/candy:${{ env.IMAGE_TAG || 'latest' }}
+
