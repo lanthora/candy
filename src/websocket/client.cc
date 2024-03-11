@@ -13,9 +13,13 @@ namespace Candy {
 
 int WebSocketClient::connect(const std::string &address) {
     Uri uri(address);
-
+    if (!uri.isValid()) {
+        spdlog::critical("invalid websocket server: {}", address);
+        return -1;
+    }
     try {
-        Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, uri.path(), Poco::Net::HTTPMessage::HTTP_1_1);
+        const std::string path = uri.path().empty() ? "/" : uri.path();
+        Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, path, Poco::Net::HTTPMessage::HTTP_1_1);
         Poco::Net::HTTPResponse response;
         if (uri.scheme() == "wss") {
             // FIXME: MSYS2 下编译的 Windows 版本会因为找不到证书而导致无法连接,暂时关闭证书校验.

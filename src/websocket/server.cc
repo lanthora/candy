@@ -37,7 +37,7 @@ public:
                     continue;
                 }
 
-                if (frameOp == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
+                if ((length == 0 && flags == 0) || frameOp == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
                     WebSocketMessage msg;
                     msg.type = WebSocketMessageType::Close;
                     msg.buffer.assign(buffer, length);
@@ -69,7 +69,7 @@ public:
                 this->server->push(msg);
                 break;
             }
-            spdlog::debug("unknown websocket request: flags {}", flags);
+            spdlog::debug("unknown websocket request: length {} flags {}", length, flags);
         }
     }
 
