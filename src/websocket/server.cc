@@ -20,13 +20,13 @@ public:
     }
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
         std::shared_ptr<Poco::Net::WebSocket> ws = std::make_shared<Poco::Net::WebSocket>(request, response);
-        ws->setReceiveTimeout(this->server->timeout);
+        ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->server->timeout)));
 
         char buffer[1500] = {0};
         int length = 0;
         int flags = 0;
 
-        while (true) {
+        while (this->server->running) {
             try {
                 length = ws->receiveFrame(buffer, sizeof(buffer), flags);
                 int frameOp = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
@@ -56,10 +56,6 @@ public:
                 }
 
             } catch (Poco::TimeoutException const &e) {
-                if (!this->server->running) {
-                    ws->close();
-                    break;
-                }
                 continue;
             } catch (std::exception &e) {
                 WebSocketMessage msg;
@@ -71,6 +67,7 @@ public:
             }
             spdlog::debug("unknown websocket request: length {} flags {}", length, flags);
         }
+        ws->close();
     }
 
 private:
