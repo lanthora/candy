@@ -2,6 +2,7 @@
 #include "websocket/client.h"
 #include "utility/time.h"
 #include "utility/uri.h"
+#include <Poco/Exception.h>
 #include <Poco/Net/HTTPMessage.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
@@ -17,7 +18,10 @@ int WebSocketClient::connect(const std::string &address) {
         Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, uri.path(), Poco::Net::HTTPMessage::HTTP_1_1);
         Poco::Net::HTTPResponse response;
         if (uri.scheme() == "wss") {
-            Poco::Net::HTTPSClientSession cs(uri.host(), uri.port().empty() ? 443 : std::stoi(uri.port()));
+            // FIXME: MSYS2 下编译的 Windows 版本会因为找不到证书而导致无法连接,暂时关闭证书校验.
+            using Poco::Net::Context;
+            Context::Ptr context = new Context(Context::TLS_CLIENT_USE, "", "", "", Context::VERIFY_NONE);
+            Poco::Net::HTTPSClientSession cs(uri.host(), uri.port().empty() ? 443 : std::stoi(uri.port()), context);
             this->ws = std::make_shared<Poco::Net::WebSocket>(cs, request, response);
         } else if (uri.scheme() == "ws") {
             Poco::Net::HTTPClientSession cs(uri.host(), uri.port().empty() ? 80 : std::stoi(uri.port()));
@@ -28,6 +32,8 @@ int WebSocketClient::connect(const std::string &address) {
         }
         this->ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->timeout)));
         this->timestamp = Time::bootTime();
+    } catch (const Poco::Exception &e) {
+        spdlog::critical("websocket connect failed: {}: {}", e.what(), e.message());
     } catch (std::exception &e) {
         spdlog::critical("websocket connect failed: {}", e.what());
         return -1;
