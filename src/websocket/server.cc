@@ -79,9 +79,8 @@ public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
         response.setStatus(Poco::Net::HTTPResponse::HTTP_FORBIDDEN);
         response.setReason("Forbidden");
-        response.setContentType("text/plain");
         response.setContentLength(0);
-        response.send().flush();
+        response.send();
     }
 };
 
@@ -91,7 +90,7 @@ public:
         this->server = server;
     }
     Poco::Net::HTTPRequestHandler *createRequestHandler(const Poco::Net::HTTPServerRequest &request) {
-        if (request.get("Upgrade") == "websocket") {
+        if (request.get("Upgrade", "") == "websocket") {
             return new WebSocketHandler(this->server);
         } else {
             return new ForbiddenHandler();
