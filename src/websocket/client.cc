@@ -36,8 +36,6 @@ int WebSocketClient::connect(const std::string &address) {
         }
         this->ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->timeout)));
         this->timestamp = Time::bootTime();
-    } catch (const Poco::Exception &e) {
-        spdlog::critical("websocket connect failed: {}: {}", e.what(), e.message());
     } catch (std::exception &e) {
         spdlog::critical("websocket connect failed: {}", e.what());
         return -1;
