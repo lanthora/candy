@@ -70,12 +70,16 @@ jobs:
         cp build/src/main/candy.exe artifact
         cp build/src/tun/wintun/bin/amd64/wintun.dll artifact
         scripts/search-deps.sh artifact/candy.exe artifact
-    - name: set package name
-      run: echo "PKGNAME=candy-windows-portable-${{ github.event.release.tag_name || github.sha }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+    - name: set release package name
+      shell: bash
+      if: github.event_name == 'release'
+      run: |
+        GIT_TAG=${{ github.event.release.tag_name }}
+        echo "PKGNAME=candy_${GIT_TAG#v}+windows_portable" >> $GITHUB_ENV
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.PKGNAME }}
+        name: windows-${{ github.event.release.tag_name || github.sha }}
         path: artifact
     - name: zip release
       uses: thedoctor0/zip-release@0.7.5
@@ -121,20 +125,18 @@ jobs:
       with:
         buildpackage-opts: --build=binary --no-sign
         extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')" -D stable --create "CI BUILD"
+        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+debian" -D stable --create "CI BUILD"
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: debian
+        name: debian-${{ github.event.release.tag_name || github.sha }}
         path: debian/artifacts
-    - name: rename deb
-      if: github.event_name == 'release'
-      run: mv debian/artifacts/*.deb debian/artifacts/candy-debian-${{ github.event.release.tag_name }}.deb
     - name: upload release
       uses: softprops/action-gh-release@v2
       if: github.event_name == 'release'
       with:
-        files: debian/artifacts/candy-debian-${{ github.event.release.tag_name }}.deb
+        files: debian/artifacts/*.deb
+
   ubuntu:
     runs-on: ubuntu-latest
     steps:
@@ -158,18 +160,15 @@ jobs:
         docker-image: ubuntu:latest
         buildpackage-opts: --build=binary --no-sign
         extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')" -D stable --create "CI BUILD"
+        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+ubuntu" -D stable --create "CI BUILD"
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu
+        name: ubuntu-${{ github.event.release.tag_name || github.sha }}
         path: debian/artifacts
-    - name: rename deb
-      if: github.event_name == 'release'
-      run: mv debian/artifacts/*.deb debian/artifacts/candy-ubuntu-${{ github.event.release.tag_name }}.deb
     - name: upload release
       uses: softprops/action-gh-release@v2
       if: github.event_name == 'release'
       with:
-        files: debian/artifacts/candy-ubuntu-${{ github.event.release.tag_name }}.deb
+        files: debian/artifacts/*.deb
 
