@@ -3,6 +3,7 @@
 #define CANDY_WEBSOCKET_COMMON_H
 
 #include <Poco/Net/WebSocket.h>
+#include <memory>
 #include <string>
 
 namespace Candy {
