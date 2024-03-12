@@ -7,6 +7,7 @@
 #include <Poco/Net/HTTPServerResponse.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/WebSocket.h>
+#include <Poco/Timespan.h>
 #include <spdlog/spdlog.h>
 
 namespace {
@@ -20,7 +21,7 @@ public:
     }
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
         std::shared_ptr<Poco::Net::WebSocket> ws = std::make_shared<Poco::Net::WebSocket>(request, response);
-        ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->server->timeout)));
+        ws->setReceiveTimeout(Poco::Timespan(this->server->timeout, 0));
 
         char buffer[1500] = {0};
         int length = 0;

@@ -7,6 +7,7 @@
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPSClientSession.h>
+#include <Poco/Timespan.h>
 #include <spdlog/spdlog.h>
 
 namespace Candy {
@@ -34,7 +35,7 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
-        this->ws->setReceiveTimeout(Poco::Timespan(std::chrono::seconds(this->timeout)));
+        this->ws->setReceiveTimeout(Poco::Timespan(this->timeout, 0));
         this->timestamp = Time::bootTime();
     } catch (std::exception &e) {
         spdlog::critical("websocket connect failed: {}", e.what());
