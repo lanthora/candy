@@ -18,10 +18,10 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-      - name: build
-        run: docker build .
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: build
+      run: docker build .
 
   macos:
     runs-on: macos-13

@@ -1,0 +1,26 @@
+Source: candy
+Section: net
+Priority: optional
+Maintainer: YangMame <yangmame@icloud.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ libssl-dev,
+ liburiparser-dev,
+ libconfig++-dev,
+ libpoco-dev,
+ libpcre2-dev,
+ libfmt-dev,
+ libspdlog-dev,
+Standards-Version: 4.6.2
+Homepage: https://github.com/lanthora/candy
+Vcs-Git: https://github.com/lanthora/candy.git
+
+Package: candy
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Another virtual private network
+ that supports peer-to-peer connections
