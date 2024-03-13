@@ -8,7 +8,7 @@ COPY . candy
 RUN cd candy/build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release .. && cmake --build . && cmake --install .
 
 FROM base AS product
-VOLUME /var/lib/candy
+RUN install -D /dev/null /var/lib/candy/lost
 COPY --from=build /usr/local/bin/candy /usr/bin/candy
 COPY candy.conf /etc/candy.conf
 ENTRYPOINT ["/usr/bin/candy"]
