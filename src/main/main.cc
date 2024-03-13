@@ -290,11 +290,24 @@ std::string getVirtualMac(const std::string &name) {
     return ss.str();
 }
 
-} // namespace
+bool checkStorageDirectory(const struct arguments &arguments) {
+    if (arguments.mode != "client") {
+        return true;
+    }
+    if (!arguments.tun.empty()) {
+        return true;
+    }
+    if (!std::filesystem::exists(storageDirectory + "lost")) {
+        return true;
+    }
+    return false;
+}
 
 volatile bool running = true;
 std::mutex mutex;
 std::condition_variable condition;
+
+} // namespace
 
 namespace Candy {
 void shutdown() {
@@ -306,13 +319,15 @@ void shutdown() {
 }
 } // namespace Candy
 
+namespace {
+
 volatile int exitCode = 1;
+
 void signalHandler(int signal) {
     exitCode = 0;
     Candy::shutdown();
 }
 
-namespace {
 int serve(const struct arguments &arguments) {
 
     netStartup();
@@ -368,6 +383,11 @@ int main(int argc, char *argv[]) {
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+
+    if (!checkStorageDirectory(arguments)) {
+        spdlog::critical("tun not config, must set volume: {}", storageDirectory);
+        running = false;
+    }
 
     if (arguments.exitOnEOF) {
         std::thread([] {
