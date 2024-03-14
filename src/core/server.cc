@@ -107,8 +107,8 @@ void Server::handleWebSocketMessage() {
         if (message.type == WebSocketMessageType::Message) {
             uint8_t msgType = message.buffer.front();
             switch (msgType) {
-            case MessageType::DHCP:
-                handleDynamicAddressMessage(message);
+            case MessageType::EXPECTED:
+                handleExpectedAddressMessage(message);
                 break;
             case MessageType::VMAC:
                 handleVirtualMacMessage(message);
@@ -226,14 +226,14 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     return;
 }
 
-void Server::handleDynamicAddressMessage(WebSocketMessage &message) {
-    if (message.buffer.length() < sizeof(DynamicAddressMessage)) {
+void Server::handleExpectedAddressMessage(WebSocketMessage &message) {
+    if (message.buffer.length() < sizeof(ExpectedAddressMessage)) {
         spdlog::warn("invalid dynamic address message: len {}", message.buffer.length());
         this->ws.close(message.conn);
         return;
     }
 
-    DynamicAddressMessage *header = (DynamicAddressMessage *)message.buffer.data();
+    ExpectedAddressMessage *header = (ExpectedAddressMessage *)message.buffer.data();
     if (!header->check(this->password)) {
         spdlog::warn("dynamic address header check failed: buffer {:n}", spdlog::to_hex(message.buffer));
         this->ws.close(message.conn);

@@ -87,7 +87,7 @@ private:
     void sendDiscoveryMessage(uint32_t dst);
     void sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port);
     void handleForwardMessage(WebSocketMessage &message);
-    void handleDynamicAddressMessage(WebSocketMessage &message);
+    void handleExpectedAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleDiscoveryMessage(WebSocketMessage &message);
     void handleGeneralMessage(WebSocketMessage &message);

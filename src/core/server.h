@@ -25,7 +25,7 @@ private:
 
     void handleAuthMessage(WebSocketMessage &message);
     void handleForwardMessage(WebSocketMessage &message);
-    void handleDynamicAddressMessage(WebSocketMessage &message);
+    void handleExpectedAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleVirtualMacMessage(WebSocketMessage &message);
     void handleDiscoveryMessage(WebSocketMessage &message);

@@ -215,8 +215,8 @@ void Client::handleWebSocketMessage() {
                 break;
 
             // 动态地址响应包,启动 TUN 设备并发送 Auth 包
-            case MessageType::DHCP:
-                handleDynamicAddressMessage(message);
+            case MessageType::EXPECTED:
+                handleExpectedAddressMessage(message);
                 break;
 
             // 对端连接请求包
@@ -308,7 +308,10 @@ void Client::sendForwardMessage(const std::string &buffer) {
     WebSocketMessage message;
     message.buffer.push_back(MessageType::FORWARD);
     message.buffer.append(buffer);
-    ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send forward message failed");
+        Candy::shutdown();
+    }
 }
 
 void Client::sendVirtualMacMessage() {
@@ -317,7 +320,10 @@ void Client::sendVirtualMacMessage() {
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&buffer), sizeof(buffer));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send virtual mac message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -329,12 +335,15 @@ void Client::sendDynamicAddressMessage() {
         return;
     }
 
-    DynamicAddressMessage header(address.getCidr());
+    ExpectedAddressMessage header(address.getCidr());
     header.updateHash(this->password);
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(header));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send expected address message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -351,7 +360,10 @@ void Client::sendAuthMessage() {
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(AuthHeader));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send auth message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -364,7 +376,10 @@ void Client::sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t por
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send peer conn message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -376,7 +391,10 @@ void Client::sendDiscoveryMessage(uint32_t dst) {
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(DiscoveryMessage));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send discovery conn message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -391,7 +409,10 @@ void Client::sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(LocalPeerConnMessage));
-    this->ws.write(message);
+    if (this->ws.write(message)) {
+        spdlog::critical("send peer conn message failed");
+        Candy::shutdown();
+    }
     return;
 }
 
@@ -410,14 +431,14 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
     tryDirectConnection(Address::netToHost(header->saddr));
 }
 
-void Client::handleDynamicAddressMessage(WebSocketMessage &message) {
-    if (message.buffer.size() < sizeof(DynamicAddressMessage)) {
+void Client::handleExpectedAddressMessage(WebSocketMessage &message) {
+    if (message.buffer.size() < sizeof(ExpectedAddressMessage)) {
         spdlog::warn("invalid expected address message: len {}", message.buffer.length());
         spdlog::debug("expected address buffer: {:n}", spdlog::to_hex(message.buffer));
         return;
     }
 
-    DynamicAddressMessage *header = (DynamicAddressMessage *)message.buffer.c_str();
+    ExpectedAddressMessage *header = (ExpectedAddressMessage *)message.buffer.c_str();
 
     Address address;
     if (address.cidrUpdate(header->cidr)) {
