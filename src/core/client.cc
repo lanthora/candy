@@ -1001,7 +1001,7 @@ int Client::sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop) 
     UdpMessage message;
     message.ip = peer.ip;
     message.port = peer.port;
-    message.buffer.push_back(PeerMessageType::Forward);
+    message.buffer.push_back(PeerMessageType::FORWARD);
     message.buffer.append(buffer);
     message.buffer = encrypt(peer.getKey(), message.buffer);
     this->udpHolder.write(message);
@@ -1017,7 +1017,7 @@ bool Client::isHeartbeatMessage(const UdpMessage &message) {
 }
 
 bool Client::isPeerForwardMessage(const UdpMessage &message) {
-    return message.buffer.front() == PeerMessageType::Forward;
+    return message.buffer.front() == PeerMessageType::FORWARD;
 }
 
 int Client::handleStunResponse(const std::string &buffer) {

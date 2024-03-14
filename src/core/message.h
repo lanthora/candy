@@ -126,8 +126,9 @@ struct StunResponse {
 namespace PeerMessageType {
 
 constexpr uint8_t HEARTBEAT = 0;
-constexpr uint8_t Forward = 1;
+constexpr uint8_t FORWARD = 1;
 constexpr uint8_t DELAY = 2;
+// TODO: 遗漏了 3, 新功能时使用
 constexpr uint8_t ROUTE = 4;
 
 } // namespace PeerMessageType
