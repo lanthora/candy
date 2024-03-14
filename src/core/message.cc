@@ -47,20 +47,20 @@ ForwardHeader::ForwardHeader() {
     this->type = MessageType::FORWARD;
 }
 
-DynamicAddressMessage::DynamicAddressMessage(const std::string &cidr) {
-    this->type = MessageType::DHCP;
+ExpectedAddressMessage::ExpectedAddressMessage(const std::string &cidr) {
+    this->type = MessageType::EXPECTED;
     this->timestamp = Time::hostToNet(Time::unixTime());
     std::strcpy(this->cidr, cidr.c_str());
 }
 
-void DynamicAddressMessage::updateHash(const std::string &password) {
+void ExpectedAddressMessage::updateHash(const std::string &password) {
     std::string data;
     data.append(password);
     data.append((char *)&this->timestamp, sizeof(this->timestamp));
     SHA256((unsigned char *)data.data(), data.size(), this->hash);
 }
 
-bool DynamicAddressMessage::check(const std::string &password) {
+bool ExpectedAddressMessage::check(const std::string &password) {
     int64_t localTime = Time::unixTime();
     int64_t remoteTime = Time::netToHost(this->timestamp);
     if (std::abs(localTime - remoteTime) > 30) {

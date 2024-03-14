@@ -15,7 +15,7 @@ namespace MessageType {
 
 constexpr uint8_t AUTH = 0;
 constexpr uint8_t FORWARD = 1;
-constexpr uint8_t DHCP = 2;
+constexpr uint8_t EXPECTED = 2;
 constexpr uint8_t PEER = 3;
 constexpr uint8_t VMAC = 4;
 constexpr uint8_t DISCOVERY = 5;
@@ -41,13 +41,13 @@ struct ForwardHeader {
     ForwardHeader();
 } __attribute__((packed));
 
-struct DynamicAddressMessage {
+struct ExpectedAddressMessage {
     uint8_t type;
     int64_t timestamp;
     char cidr[32];
     uint8_t hash[SHA256_DIGEST_LENGTH];
 
-    DynamicAddressMessage(const std::string &cidr);
+    ExpectedAddressMessage(const std::string &cidr);
     void updateHash(const std::string &password);
     bool check(const std::string &password);
 } __attribute__((packed));
