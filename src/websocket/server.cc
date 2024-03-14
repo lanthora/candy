@@ -109,8 +109,7 @@ namespace Candy {
 int WebSocketServer::listen(const std::string &host, uint16_t port) {
     Poco::Net::ServerSocket socket(Poco::Net::SocketAddress(host, port));
     Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams();
-    params->setMaxQueued(100);
-    params->setMaxThreads(4);
+    params->setMaxThreads(0x00FFFFFF);
     this->server = std::make_shared<Poco::Net::HTTPServer>(new WebSocketHandlerFactory(this), socket, params);
     this->running = true;
     this->server->start();
