@@ -75,7 +75,7 @@ jobs:
       if: github.event_name == 'release'
       run: |
         GIT_TAG=${{ github.event.release.tag_name }}
-        echo "PKGNAME=candy_${GIT_TAG#v}+windows_portable" >> $GITHUB_ENV
+        echo "PKGNAME=candy_${GIT_TAG#v}+windows_amd64" >> $GITHUB_ENV
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
