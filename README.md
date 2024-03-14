@@ -51,8 +51,7 @@ emerge --sync guru && emerge -av candy
 ```bash
 # 以 Tumbleweed 为例,更新仓库缓存时选择信任签名
 zypper addrepo https://download.opensuse.org/repositories/home:lanthora:candy/openSUSE_Tumbleweed/home:lanthora:candy.repo
-zypper refresh
-zypper install candy
+zypper refresh && zypper install candy
 ```
 
 #### Debian/Ubuntu
@@ -171,15 +170,7 @@ route = 5
 localhost = "127.0.0.1"
 ```
 
-## 类似产品
-
-- [WireGuard](https://www.wireguard.com/): fast, modern, secure VPN tunnel
-- [n2n](https://github.com/ntop/n2n): Peer-to-peer VPN
-- [ZeroTier](https://www.zerotier.com/): Global Area Networking
-- [Tailscale](https://tailscale.com/): Best VPN Service for Secure Networks
-- [vnt](https://github.com/lbl8603/vnt): A virtual network tool (or VPN),简便高效的异地组网、内网穿透工具
-
 ## 联系我们
 
-- Telegram: [@CandyUserGroup](https://t.me/CandyUserGroup)
-- QQ群: 768305206
+- [Telegram](https://t.me/CandyUserGroup)
+- [QQ](https://qm.qq.com/q/xyVx4ckbNm)
