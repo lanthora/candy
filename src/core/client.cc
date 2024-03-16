@@ -7,6 +7,7 @@
 #include "utility/uri.h"
 #include <algorithm>
 #include <bit>
+#include <fmt/core.h>
 #include <functional>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -14,6 +15,7 @@
 #include <ranges>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+#include <unistd.h>
 
 namespace {
 
@@ -165,6 +167,8 @@ int Client::startWsThread() {
         spdlog::critical("websocket client connect failed");
         return -1;
     }
+
+    ws.setPingMessage(fmt::format("candy::{}::{}", CANDY_SYSTEM, CANDY_VERSION));
 
     // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
     this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
