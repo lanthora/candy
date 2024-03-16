@@ -96,7 +96,7 @@ int WebSocketClient::read(WebSocketMessage &message) {
         }
         if (Time::bootTime() - this->timestamp > 15000) {
             flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
-            this->ws->sendFrame(NULL, 0, flags);
+            this->ws->sendFrame(this->pingMessage.c_str(), this->pingMessage.size(), flags);
         }
         return 0;
     } catch (std::exception &e) {
@@ -119,6 +119,12 @@ int WebSocketClient::write(const WebSocketMessage &message) {
         spdlog::critical("websocket write failed: {}", e.what());
         return -1;
     }
+}
+
+int WebSocketClient::setPingMessage(const std::string &message) {
+    this->pingMessage = message;
+    spdlog::debug("set ping message: {}", this->pingMessage);
+    return 0;
 }
 
 } // namespace Candy

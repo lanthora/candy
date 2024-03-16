@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 #include "core/client.h"
+#include "core/common.h"
 #include "core/server.h"
 #include "utility/random.h"
 #include "utility/time.h"
+#include <argp.h>
 #include <bit>
 #include <condition_variable>
 #include <filesystem>
@@ -14,16 +16,6 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <winsock2.h>
-#endif
-
-#include <argp.h>
-
-#ifndef VERSION
-#define VERSION "unknown"
-#endif
 
 namespace {
 
@@ -101,7 +93,7 @@ int setLogLevelDebug() {
 }
 
 void showVersion() {
-    std::cout << VERSION << std::endl;
+    std::cout << CANDY_VERSION << std::endl;
     exit(0);
 }
 

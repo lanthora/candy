@@ -22,10 +22,13 @@ public:
     int read(WebSocketMessage &message);
     int write(const WebSocketMessage &message);
 
+    int setPingMessage(const std::string &message);
+
 private:
     int timeout;
     std::shared_ptr<Poco::Net::WebSocket> ws;
     int64_t timestamp;
+    std::string pingMessage;
 };
 
 } // namespace Candy
