@@ -3,8 +3,8 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
     FetchContent_Declare(
         argp-standalone
-        GIT_REPOSITORY https://github.com/tom42/argp-standalone.git
-        GIT_TAG        1684ac2e8d75918e5e244057ae4dd01369bed660
+        GIT_REPOSITORY https://github.com/argp-standalone/argp-standalone.git
+        GIT_TAG        7e0a1aff334459e09c58a2afcea6041bca894bb5
     )
 
     FetchContent_GetProperties(argp-standalone)
