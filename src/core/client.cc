@@ -251,7 +251,7 @@ void Client::handleWebSocketMessage() {
         }
         // 通信出现错误,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Error) {
-            spdlog::critical("client websocket error: {}", message.buffer);
+            spdlog::warn("client websocket error: {}", message.buffer);
             Candy::shutdown();
             break;
         }

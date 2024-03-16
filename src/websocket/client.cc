@@ -66,6 +66,11 @@ int WebSocketClient::read(WebSocketMessage &message) {
 
     try {
         int length = this->ws->receiveFrame(buffer, sizeof(buffer), flags);
+        if (length == 0 && flags == 0) {
+            message.type = WebSocketMessageType::Error;
+            message.buffer = "abnormal disconnect";
+            return 1;
+        }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PING) {
             flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
             this->ws->sendFrame(buffer, length, flags);
@@ -76,9 +81,9 @@ int WebSocketClient::read(WebSocketMessage &message) {
             this->timestamp = Time::bootTime();
             return 0;
         }
-        if (length == 0 && flags == 0) {
+        if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
             message.type = WebSocketMessageType::Close;
-            message.buffer = "peer has shut down or closed the connection";
+            message.buffer.assign(buffer, length);
             return 1;
         }
         if (length > 0) {
