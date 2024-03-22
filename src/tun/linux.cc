@@ -51,7 +51,7 @@ public:
     int up() {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
-            spdlog::critical("open /dev/net/tun failed");
+            spdlog::critical("open /dev/net/tun failed: {}", strerror(errno));
             return -1;
         }
         int flags = fcntl(this->tunFd, F_GETFL, 0);
