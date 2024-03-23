@@ -22,5 +22,4 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: Another virtual private network
- that supports peer-to-peer connections
+Description: A reliable, low-latency, and anti-censorship virtual private network

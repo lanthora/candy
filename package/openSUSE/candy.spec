@@ -18,7 +18,7 @@
 Name:           candy
 Version:        9999
 Release:        0
-Summary:        Another P2P VPN
+Summary:        A reliable, low-latency, and anti-censorship VPN
 License:        MIT
 Group:          Productivity/Networking/Security
 URL:            https://github.com/lanthora/candy
@@ -37,7 +37,7 @@ Requires:  openssl
 Requires:  uriparser
 
 %description
-Another virtual private network that supports peer-to-peer connections
+A reliable, low-latency, and anti-censorship virtual private network
 
 %prep
 %setup -q -n candy

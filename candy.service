@@ -1,5 +1,5 @@
 [Unit]
-Description=Another virtual private network that supports peer-to-peer connections
+Description=A reliable, low-latency, and anti-censorship virtual private network
 StartLimitIntervalSec=0
 
 [Service]
