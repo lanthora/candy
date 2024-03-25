@@ -160,7 +160,7 @@ route = 5
 localhost = "127.0.0.1"
 ```
 
-## 联系我们
+## 交流群
 
-- [Telegram Group](https://t.me/CandyUserGroup)
-- QQ 群 : 768305206
+- TG: [Click to Join](https://t.me/CandyUserGroup)
+- QQ: 768305206
