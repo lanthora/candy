@@ -29,6 +29,7 @@ struct arguments {
 
     // 服务端配置
     std::string dhcp;
+    bool disableRelay = false;
 
     // 客户端配置
     std::string name;
@@ -38,6 +39,7 @@ struct arguments {
     int udpPort = 0;
     int discoveryInterval = 0;
     int routeCost = 0;
+    bool disableEncrypt = false;
 };
 
 const int OPT_NO_TIMESTAMP = 1;
@@ -47,6 +49,8 @@ const int OPT_EXIT_ON_EOF = 4;
 const int OPT_DISCOVERY_INTERVAL = 5;
 const int OPT_UDP_BIND_PORT = 6;
 const int OPT_UDP_P2P_IP = 7;
+const int OPT_DISABLE_RELAY = 8;
+const int OPT_DISABLE_ENCRYPT = 9;
 
 const int GROUP_CLIENT_AND_SERVER = 1;
 const int GROUP_SERVER_ONLY = 2;
@@ -61,6 +65,7 @@ struct argp_option options[] = {
 
     {0, 0, 0, 0, "Server:", GROUP_SERVER_ONLY},
     {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range", GROUP_SERVER_ONLY},
+    {"disable-relay", OPT_DISABLE_RELAY, "BOOL", 0, "Disable server relay", GROUP_SERVER_ONLY},
 
     {0, 0, 0, 0, "Client:", GROUP_CLIENT_ONLY},
     {"name", 'n', "TEXT", 0, "Network interface name", GROUP_CLIENT_ONLY},
@@ -70,6 +75,7 @@ struct argp_option options[] = {
     {"route", 'r', "COST", 0, "Cost of routing", GROUP_CLIENT_ONLY},
     {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval", GROUP_CLIENT_ONLY},
     {"localhost", OPT_UDP_P2P_IP, "IP", 0, "Local P2P IP", GROUP_CLIENT_ONLY},
+    {"disable-encrypt", OPT_DISABLE_ENCRYPT, "BOOL", 0, "Disable P2P encryption", GROUP_CLIENT_ONLY},
 
     {0, 0, 0, 0, "Others:", GROUP_OTHERS},
     {"config", 'c', "PATH", 0, "Configuration file path", GROUP_OTHERS},
@@ -125,6 +131,8 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("route", arguments->routeCost);
         cfg.lookupValue("port", arguments->udpPort);
         cfg.lookupValue("localhost", arguments->localhost);
+        cfg.lookupValue("disable-relay", arguments->disableRelay);
+        cfg.lookupValue("disable-encrypt", arguments->disableEncrypt);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -170,6 +178,12 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case OPT_UDP_P2P_IP:
         arguments->localhost = arg;
+        break;
+    case OPT_DISABLE_RELAY:
+        arguments->disableRelay = (std::string(arg) == std::string("true"));
+        break;
+    case OPT_DISABLE_ENCRYPT:
+        arguments->disableEncrypt = (std::string(arg) == std::string("true"));
         break;
     case 'c':
         parseConfigFile(arguments, arg);
@@ -331,6 +345,7 @@ int serve(const struct arguments &arguments) {
         server.setPassword(arguments.password);
         server.setWebSocketServer(arguments.websocket);
         server.setDynamicAddressRange(arguments.dhcp);
+        server.setDisableRelay(arguments.disableRelay);
         server.run();
     }
 

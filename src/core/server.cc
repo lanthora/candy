@@ -47,6 +47,11 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
     return 0;
 }
 
+int Server::setDisableRelay(bool disableRelay) {
+    this->disableRelay = disableRelay;
+    return 0;
+}
+
 int Server::run() {
     this->running = true;
     if (startWsThread()) {
@@ -180,6 +185,10 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
 }
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
+    if (this->disableRelay) {
+        return;
+    }
+
     if (!this->wsIpMap.contains(message.conn)) {
         spdlog::debug("unauthorized forward websocket client");
         return;

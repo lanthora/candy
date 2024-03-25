@@ -66,6 +66,9 @@ public:
     // 用于局域网连接的地址
     int setLocalhost(std::string ip);
 
+    // 禁用 P2P 加密
+    int setDisableEncrypt(bool encrypt);
+
     // 启停客户端用于处理任务的线程
     int run();
     int shutdown();
@@ -137,6 +140,7 @@ private:
     std::thread tickThread;
     uint64_t tickTick = std::rand();
     uint32_t discoveryInterval;
+    bool disableEncrypt;
 
     // Route
     void showRouteChange(const RouteEntry &entry);

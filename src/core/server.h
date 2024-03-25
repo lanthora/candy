@@ -15,6 +15,7 @@ public:
     int setWebSocketServer(const std::string &uri);
     int setPassword(const std::string &password);
     int setDynamicAddressRange(const std::string &cidr);
+    int setDisableRelay(bool relay);
 
     int run();
     int shutdown();
@@ -41,6 +42,8 @@ private:
 
     Address dynamic;
     bool dynamicAddrEnabled = false;
+
+    bool disableRelay = true;
 
     std::map<uint32_t, WebSocketConn> ipWsMap;
     std::map<WebSocketConn, uint32_t> wsIpMap;

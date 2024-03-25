@@ -111,6 +111,11 @@ int Client::setLocalhost(std::string ip) {
     return 0;
 }
 
+int Client::setDisableEncrypt(bool disableEncrypt) {
+    this->disableEncrypt = disableEncrypt;
+    return 0;
+}
+
 int Client::run() {
     this->running = true;
     if (this->udpHolder.init()) {
@@ -789,6 +794,10 @@ void Client::tick() {
 }
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
+    if (this->disableEncrypt) {
+        return plaintext;
+    }
+
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key size: {}", key.size());
         return "";
@@ -849,6 +858,10 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
 }
 
 std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
+    if (this->disableEncrypt) {
+        return ciphertext;
+    }
+
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key length: {}", key.size());
         return "";
