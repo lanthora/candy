@@ -913,10 +913,7 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
 
     EVP_CIPHER_CTX_free(ctx);
 
-    std::string result;
-    result.append((char *)plaintext, plaintextLen);
-
-    return result;
+    return std::string((char *)plaintext, plaintextLen);
 }
 
 int Client::sendStunRequest() {
@@ -1031,7 +1028,7 @@ int Client::handleStunResponse(const std::string &buffer) {
     }
     StunResponse *response = (StunResponse *)buffer.c_str();
     if (Address::netToHost(response->type) != 0x0101) {
-        spdlog::debug("stun not success response");
+        spdlog::debug("stun not success response: {:n}", spdlog::to_hex(buffer));
         return -1;
     }
 

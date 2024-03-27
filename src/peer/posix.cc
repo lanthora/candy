@@ -112,14 +112,14 @@ size_t UdpHolder::read(UdpMessage &message) {
         return -1;
     }
 
-    char buffer[1500];
+    message.buffer.resize(1500);
     struct sockaddr_in from;
     socklen_t addr_len = sizeof(from);
     memset(&from, 0, sizeof(from));
 
-    ssize_t len = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &addr_len);
+    ssize_t len = recvfrom(fd, message.buffer.data(), message.buffer.size(), 0, (struct sockaddr *)&from, &addr_len);
     if (len >= 0) {
-        message.buffer.assign(buffer, len);
+        message.buffer.resize(len);
         message.ip = Address::netToHost(from.sin_addr.s_addr);
         message.port = Address::netToHost(from.sin_port);
         return len;

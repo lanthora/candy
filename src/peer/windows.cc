@@ -110,14 +110,15 @@ size_t UdpHolder::read(UdpMessage &message) {
         spdlog::error("udp socket not initialized successfully");
         return -1;
     }
-    char buffer[1500];
+
+    message.buffer.resize(1500);
     struct sockaddr_in from;
     int addr_len = sizeof(from);
     memset(&from, 0, sizeof(from));
 
-    int len = recvfrom(winsock, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &addr_len);
+    int len = recvfrom(winsock, message.buffer.data(), message.buffer.size(), 0, (struct sockaddr *)&from, &addr_len);
     if (len != SOCKET_ERROR) {
-        message.buffer.assign(buffer, len);
+        message.buffer.resize(len);
         message.ip = Address::netToHost((uint32_t)from.sin_addr.s_addr);
         message.port = Address::netToHost((uint16_t)from.sin_port);
         return len;
