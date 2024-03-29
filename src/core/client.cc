@@ -939,6 +939,8 @@ int Client::sendStunRequest() {
     this->stun.ip = Address::netToHost((uint32_t)((struct sockaddr_in *)info->ai_addr)->sin_addr.s_addr);
     this->stun.port = Address::netToHost((uint16_t)((struct sockaddr_in *)info->ai_addr)->sin_port);
 
+    freeaddrinfo(info);
+
     UdpMessage message;
     StunRequest request;
     message.ip = this->stun.ip;

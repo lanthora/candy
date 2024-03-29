@@ -6,10 +6,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wfatal-errors")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CANDY_LIBRARY_NAME "lib${CMAKE_PROJECT_NAME}")
+
 add_compile_definitions(CANDY_VERSION="${CMAKE_PROJECT_VERSION}")
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/cffi)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/main)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/core)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/websocket)
