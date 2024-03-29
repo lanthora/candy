@@ -296,13 +296,23 @@ std::condition_variable condition;
 } // namespace
 
 namespace Candy {
-void shutdown() {
+
+void shutdown(Client *client) {
     {
         std::lock_guard<std::mutex> lock(mutex);
         running = false;
     }
     condition.notify_one();
 }
+
+void shutdown(Server *server) {
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        running = false;
+    }
+    condition.notify_one();
+}
+
 } // namespace Candy
 
 namespace {
@@ -311,7 +321,11 @@ volatile int exitCode = 1;
 
 void signalHandler(int signal) {
     exitCode = 0;
-    Candy::shutdown();
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        running = false;
+    }
+    condition.notify_one();
 }
 
 int serve(const struct arguments &arguments) {

@@ -84,20 +84,20 @@ int candy_client_shutdown(void *candy) {
 }
 
 namespace {
-void (*internal_error_cb)() = NULL;
+void (*internal_error_cb)(void *) = NULL;
 }
 
 namespace Candy {
-void shutdown() {
+void shutdown(Client *c) {
     if (internal_error_cb) {
-        internal_error_cb();
+        internal_error_cb(c);
     } else {
         exit(1);
     }
 }
 } // namespace Candy
 
-int candy_client_set_internal_error_cb(void (*callback)()) {
+int candy_client_set_error_cb(void (*callback)(void *)) {
     internal_error_cb = callback;
     return 0;
 }
