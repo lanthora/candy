@@ -25,7 +25,6 @@ struct arguments {
     std::string websocket;
     std::string password;
     bool autoRestart = false;
-    bool exitOnEOF = false;
 
     // 服务端配置
     std::string dhcp;
@@ -43,10 +42,9 @@ struct arguments {
 const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
 const int OPT_AUTO_RESTART = 3;
-const int OPT_EXIT_ON_EOF = 4;
-const int OPT_DISCOVERY_INTERVAL = 5;
-const int OPT_UDP_BIND_PORT = 6;
-const int OPT_UDP_P2P_IP = 7;
+const int OPT_DISCOVERY_INTERVAL = 4;
+const int OPT_UDP_BIND_PORT = 5;
+const int OPT_UDP_P2P_IP = 6;
 
 const int GROUP_CLIENT_AND_SERVER = 1;
 const int GROUP_SERVER_ONLY = 2;
@@ -76,7 +74,6 @@ struct argp_option options[] = {
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time", GROUP_OTHERS},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs", GROUP_OTHERS},
     {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart", GROUP_OTHERS},
-    {"eof-exit", OPT_EXIT_ON_EOF, 0, 0, "Exit the process after receiving EOF", GROUP_OTHERS},
     {"version", 'v', 0, 0, "Show version", GROUP_OTHERS},
     {},
 };
@@ -185,9 +182,6 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         break;
     case OPT_AUTO_RESTART:
         arguments->autoRestart = true;
-        break;
-    case OPT_EXIT_ON_EOF:
-        arguments->exitOnEOF = true;
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state))
@@ -379,21 +373,6 @@ int main(int argc, char *argv[]) {
     if (!checkStorageDirectory(arguments)) {
         spdlog::critical("tun not config, must set volume: {}", storageDirectory);
         running = false;
-    }
-
-    if (arguments.exitOnEOF) {
-        std::thread([] {
-            std::ios::sync_with_stdio(false);
-            std::cin.tie(nullptr);
-            std::cout.tie(nullptr);
-
-            while (std::cin.ignore()) {
-                if (std::cin.eof()) {
-                    signalHandler(SIGTERM);
-                    return;
-                }
-            }
-        }).detach();
     }
 
     while (running && serve(arguments) && arguments.autoRestart) {
