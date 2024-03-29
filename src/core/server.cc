@@ -51,7 +51,7 @@ int Server::run() {
     this->running = true;
     if (startWsThread()) {
         spdlog::critical("start websocket server thread failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return -1;
     }
     return 0;
@@ -100,7 +100,7 @@ void Server::handleWebSocketMessage() {
         }
         if (error < 0) {
             spdlog::error("websocket server read failed: error {}", error);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
 
@@ -141,7 +141,7 @@ void Server::handleWebSocketMessage() {
 
         if (message.type == WebSocketMessageType::Error) {
             spdlog::critical("server websocket error: {}", message.buffer);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
     }

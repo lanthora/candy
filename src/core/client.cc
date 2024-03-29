@@ -115,17 +115,17 @@ int Client::run() {
     this->running = true;
     if (this->udpHolder.init()) {
         spdlog::critical("udpHolder init failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return -1;
     }
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return -1;
     }
     if (startTickThread()) {
         spdlog::critical("start tick thread failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return -1;
     }
     return 0;
@@ -207,7 +207,7 @@ void Client::handleWebSocketMessage() {
         }
         if (error < 0) {
             spdlog::critical("webSocket client read failed: error {}", error);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
         if (message.type == WebSocketMessageType::Message) {
@@ -246,13 +246,13 @@ void Client::handleWebSocketMessage() {
         // 连接断开,可能是地址冲突,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Close) {
             spdlog::info("client websocket close: {}", message.buffer);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
         // 通信出现错误,触发正常退出进程的流程
         if (message.type == WebSocketMessageType::Error) {
             spdlog::warn("client websocket error: {}", message.buffer);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
     }
@@ -270,7 +270,7 @@ void Client::handleUdpMessage() {
         }
         if (error < 0) {
             spdlog::critical("udp read failed: error {}", error);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
         if (isStunResponse(message)) {
@@ -314,7 +314,7 @@ void Client::sendForwardMessage(const std::string &buffer) {
     message.buffer.append(buffer);
     if (this->ws.write(message)) {
         spdlog::critical("send forward message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
 }
 
@@ -326,7 +326,7 @@ void Client::sendVirtualMacMessage() {
     message.buffer.assign((char *)(&buffer), sizeof(buffer));
     if (this->ws.write(message)) {
         spdlog::critical("send virtual mac message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -335,7 +335,7 @@ void Client::sendDynamicAddressMessage() {
     Address address;
     if (address.cidrUpdate(this->expectedAddress)) {
         spdlog::critical("cannot send invalid expected address");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return;
     }
 
@@ -346,7 +346,7 @@ void Client::sendDynamicAddressMessage() {
     message.buffer.assign((char *)(&header), sizeof(header));
     if (this->ws.write(message)) {
         spdlog::critical("send expected address message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -355,7 +355,7 @@ void Client::sendAuthMessage() {
     Address address;
     if (address.cidrUpdate(this->tunAddress)) {
         spdlog::critical("cannot send invalid auth address");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return;
     }
 
@@ -366,7 +366,7 @@ void Client::sendAuthMessage() {
     message.buffer.assign((char *)(&header), sizeof(AuthHeader));
     if (this->ws.write(message)) {
         spdlog::critical("send auth message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -382,7 +382,7 @@ void Client::sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t por
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
     if (this->ws.write(message)) {
         spdlog::critical("send peer conn message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -397,7 +397,7 @@ void Client::sendDiscoveryMessage(uint32_t dst) {
     message.buffer.assign((char *)(&header), sizeof(DiscoveryMessage));
     if (this->ws.write(message)) {
         spdlog::critical("send discovery conn message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -415,7 +415,7 @@ void Client::sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_
     message.buffer.assign((char *)(&header), sizeof(LocalPeerConnMessage));
     if (this->ws.write(message)) {
         spdlog::critical("send peer conn message failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
     }
     return;
 }
@@ -453,12 +453,12 @@ void Client::handleExpectedAddressMessage(WebSocketMessage &message) {
     setTunAddress(address.getCidr());
     if (startTunThread()) {
         spdlog::critical("start tun thread with expected address failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return;
     }
     if (startUdpThread()) {
         spdlog::critical("start udp thread failed");
-        Candy::shutdown();
+        Candy::shutdown(this);
         return;
     }
 }
@@ -642,7 +642,7 @@ void Client::handleTunMessage() {
         }
         if (error < 0) {
             spdlog::critical("tun read failed. error {}", error);
-            Candy::shutdown();
+            Candy::shutdown(this);
             break;
         }
         if (buffer.length() < sizeof(IPv4Header)) {
