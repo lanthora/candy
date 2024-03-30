@@ -68,6 +68,8 @@ install -D -m 644 candy@.service %{buildroot}%{_unitdir}/candy@.service
 %files
 %doc README.md
 %{_bindir}/candy
+%{_includedir}/candy.h
+%{_libdir}/libcandy.so
 %config(noreplace) /etc/candy.conf
 %{_unitdir}/candy.service
 %{_unitdir}/candy@.service
