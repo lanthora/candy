@@ -9,3 +9,6 @@ target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE websocket)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE tun)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE peer)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE utility)
+
+install(FILES candy.h DESTINATION include)
+install(TARGETS ${CANDY_LIBRARY_NAME} DESTINATION lib)
