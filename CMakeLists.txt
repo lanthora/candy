@@ -20,5 +20,3 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src/websocket)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/tun)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/peer)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/utility)
-
-install(TARGETS ${CMAKE_PROJECT_NAME})

@@ -16,3 +16,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websocket)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE tun)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
+
+install(TARGETS ${CMAKE_PROJECT_NAME})
