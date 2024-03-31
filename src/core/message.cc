@@ -83,7 +83,11 @@ bool ExpectedAddressMessage::check(const std::string &password) {
 VMacMessage::VMacMessage(const std::string &vmac) {
     this->type = MessageType::VMAC;
     this->timestamp = Time::hostToNet(Time::unixTime());
-    memcpy(this->vmac, vmac.c_str(), sizeof(this->vmac));
+    if (vmac.length() >= sizeof(this->vmac)) {
+        memcpy(this->vmac, vmac.c_str(), sizeof(this->vmac));
+    } else {
+        memset(this->vmac, 0, sizeof(this->vmac));
+    }
 }
 
 DiscoveryMessage::DiscoveryMessage() {
