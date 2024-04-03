@@ -107,8 +107,8 @@ jobs:
   deb:
     strategy:
       matrix:
-        image: 
-        - "debian:12" 
+        image:
+        - "debian:12"
         - "ubuntu:22.04"
     runs-on: ubuntu-latest
     steps:
