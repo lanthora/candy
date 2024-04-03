@@ -70,8 +70,6 @@ jobs:
         cp candy.conf artifact
         cp build/src/main/candy.exe artifact
         cp build/src/tun/wintun/bin/amd64/wintun.dll artifact
-        cp build/src/cffi/libcandy.dll artifact
-        cp src/cffi/candy.h artifact
         scripts/search-deps.sh artifact/candy.exe artifact
     - name: set release package name
       shell: bash
@@ -97,7 +95,7 @@ jobs:
       with:
         files: artifact/${{ env.PKGNAME }}.zip
 
-  openSUSE:
+  opensuse:
     runs-on: ubuntu-latest
     steps:
     - name: trigger openSUSE build
@@ -106,19 +104,22 @@ jobs:
         webhook_url: ${{ secrets.WEBHOOK_URL }}
         webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
 
-  debian:
+  deb:
+    strategy:
+      matrix:
+        image: [debian, ubuntu]
     runs-on: ubuntu-latest
     steps:
     - name: checkout
       uses: actions/checkout@v4
-    - name: create debian directory
+    - name: create ${{ matrix.image }} directory
       run: |
         mkdir debian
         cp -r package/debian/* debian
         cp README.md debian/candy-docs.docs
         cp LICENSE debian/copyright
         git fetch --tags origin
-    - name: build debian deb
+    - name: build ${{ matrix.image }} deb
       uses: jtdor/build-deb-action@v1
       env:
         DEB_BUILD_OPTIONS: noautodbgsym
@@ -126,52 +127,17 @@ jobs:
         USER: YangMame
         EDITOR: true
       with:
+        docker-image: ${{ matrix.image }}:latest
         buildpackage-opts: --build=binary --no-sign
         extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+debian" -D stable --create "CI BUILD"
+        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+${{ matrix.image }}" -D stable --create "CI BUILD"
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: debian-${{ github.event.release.tag_name || github.sha }}
+        name: ${{ matrix.image }}-${{ github.event.release.tag_name || github.sha }}
         path: debian/artifacts
     - name: upload release
       uses: softprops/action-gh-release@v2
       if: github.event_name == 'release'
       with:
         files: debian/artifacts/*.deb
-
-  ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v4
-    - name: create debian directory
-      run: |
-        mkdir debian
-        cp -r package/debian/* debian
-        cp README.md debian/candy-docs.docs
-        cp LICENSE debian/copyright
-        git fetch --tags origin
-    - name: build ubuntu deb
-      uses: jtdor/build-deb-action@v1
-      env:
-        DEB_BUILD_OPTIONS: noautodbgsym
-        EMAIL: yangmame@icloud.com
-        USER: YangMame
-        EDITOR: true
-      with:
-        docker-image: ubuntu:latest
-        buildpackage-opts: --build=binary --no-sign
-        extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+ubuntu" -D stable --create "CI BUILD"
-    - name: upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ubuntu-${{ github.event.release.tag_name || github.sha }}
-        path: debian/artifacts
-    - name: upload release
-      uses: softprops/action-gh-release@v2
-      if: github.event_name == 'release'
-      with:
-        files: debian/artifacts/*.deb
-
