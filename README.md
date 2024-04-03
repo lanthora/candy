@@ -56,7 +56,7 @@ zypper refresh && zypper install candy
 
 #### Debian/Ubuntu
 
-在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供 deb 安装包,安装包基于最新发布的 Debian Stable 和 Ubuntu LTS 构建.
+在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供 deb 安装包.
 
 ### macOS
 

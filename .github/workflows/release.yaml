@@ -107,7 +107,9 @@ jobs:
   deb:
     strategy:
       matrix:
-        image: [debian, ubuntu]
+        image: 
+        - "debian:12" 
+        - "ubuntu:22.04"
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -119,7 +121,11 @@ jobs:
         cp README.md debian/candy-docs.docs
         cp LICENSE debian/copyright
         git fetch --tags origin
-    - name: build ${{ matrix.image }} deb
+    - name: setup artifact name
+      run: |
+        IMAGE_NAME=${{ matrix.image }}
+        echo "ARTIFACT_NAME=${IMAGE_NAME//:/}" >> $GITHUB_ENV
+    - name: build ${{ env.ARTIFACT_NAME }} deb
       uses: jtdor/build-deb-action@v1
       env:
         DEB_BUILD_OPTIONS: noautodbgsym
@@ -127,14 +133,15 @@ jobs:
         USER: YangMame
         EDITOR: true
       with:
-        docker-image: ${{ matrix.image }}:latest
+        docker-image: ${{ matrix.image }}
         buildpackage-opts: --build=binary --no-sign
         extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+${{ matrix.image }}" -D stable --create "CI BUILD"
+        before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+${{ env.ARTIFACT_NAME }}" -D stable --create "CI BUILD"
+
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.image }}-${{ github.event.release.tag_name || github.sha }}
+        name: ${{ env.ARTIFACT_NAME }}-${{ github.event.release.tag_name || github.sha }}
         path: debian/artifacts
     - name: upload release
       uses: softprops/action-gh-release@v2
