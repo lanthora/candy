@@ -1,5 +1,5 @@
 aux_source_directory(. DIR_SRCS)
-add_library(${CANDY_LIBRARY_NAME} SHARED ${DIR_SRCS})
+add_library(${CANDY_LIBRARY_NAME} STATIC ${DIR_SRCS})
 
 set_target_properties(${CANDY_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${CANDY_EXECUTE_NAME})
 set_target_properties(${CANDY_LIBRARY_NAME} PROPERTIES CXX_STANDARD 20)
