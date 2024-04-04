@@ -4,7 +4,6 @@ add_library(peer STATIC ${DIR_LIB_SRCS})
 set_target_properties(peer PROPERTIES CXX_STANDARD 20)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    target_link_libraries(peer PRIVATE iphlpapi)
     target_link_libraries(peer PRIVATE ws2_32)
 endif()
 
