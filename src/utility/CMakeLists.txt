@@ -3,6 +3,10 @@ add_library(utility STATIC ${DIR_LIB_SRCS})
 
 set_target_properties(utility PROPERTIES CXX_STANDARD 20)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    target_link_libraries(utility PRIVATE ws2_32)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DEPS REQUIRED spdlog liburiparser)
 
