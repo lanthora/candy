@@ -3,5 +3,9 @@ add_library(utility STATIC ${DIR_LIB_SRCS})
 
 set_target_properties(utility PROPERTIES CXX_STANDARD 20)
 
-include(${CMAKE_SOURCE_DIR}/cmake/liburiparser.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/spdlog.cmake)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(DEPS REQUIRED spdlog liburiparser)
+
+add_definitions(${DEPS_CFLAGS})
+include_directories(${DEPS_INCLUDEDIR})
+target_link_libraries(utility PRIVATE ${DEPS_LIBRARIES})
