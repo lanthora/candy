@@ -1,22 +1,39 @@
-aux_source_directory(. DIR_SRCS)
-add_executable(${CMAKE_PROJECT_NAME} ${DIR_SRCS})
-
-include(${CMAKE_SOURCE_DIR}/cmake/argp.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/libconfig++.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/spdlog.cmake)
-
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads)
-
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE core)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE websocket)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE tun)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE peer)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE utility)
-
 if (NOT DEFINED CANDY_NO_EXE OR NOT ${CANDY_NO_EXE})
-    install(TARGETS ${CMAKE_PROJECT_NAME})
+    aux_source_directory(. DIR_SRCS)
+    add_executable(${CANDY_EXECUTE_NAME} ${DIR_SRCS})
+
+    set_target_properties(${CANDY_EXECUTE_NAME} PROPERTIES CXX_STANDARD 20)
+
+    include(${PROJECT_SOURCE_DIR}/cmake/argp.cmake)
+    include(${PROJECT_SOURCE_DIR}/cmake/fmt.cmake)
+    include(${PROJECT_SOURCE_DIR}/cmake/libconfig++.cmake)
+    include(${PROJECT_SOURCE_DIR}/cmake/liburiparser.cmake)
+    include(${PROJECT_SOURCE_DIR}/cmake/poco.cmake)
+    include(${PROJECT_SOURCE_DIR}/cmake/spdlog.cmake)
+
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE core)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE websocket)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE tun)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE peer)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE utility)
+
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${FMT_LIBRARIES})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${LIBURIPARSER_LIBRARIES})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${SPDLOG_LIBRARIES})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${LIBCONFIGXX_LIBRARIES})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+        target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE iphlpapi)
+        target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ws2_32)
+        target_link_libraries(candy PRIVATE argp-standalone)  
+    endif()
+    if(ARGP_LIB)
+        target_link_libraries(candy PRIVATE ${ARGP_LIB})
+    endif()
+
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Threads::Threads)
+
+    install(TARGETS ${CANDY_EXECUTE_NAME})
 endif()
