@@ -18,7 +18,7 @@ public:
     // 重载等于号,用于判断是否是相同的连接
     bool operator==(const WebSocketConn &other) const;
 
-    std::weak_ptr<Poco::Net::WebSocket> conn;
+    std::weak_ptr<Poco::Net::WebSocket> ws;
 };
 
 // 消息会被放到消息队列里,从消息队列里取出来的时候至少要包含消息的类型和来源,

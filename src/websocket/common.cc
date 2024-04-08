@@ -6,11 +6,11 @@
 namespace Candy {
 
 bool WebSocketConn::operator<(const WebSocketConn &other) const {
-    return std::owner_less<std::weak_ptr<Poco::Net::WebSocket>>()(this->conn, other.conn);
+    return std::owner_less<std::weak_ptr<Poco::Net::WebSocket>>()(this->ws, other.ws);
 }
 
 bool WebSocketConn::operator==(const WebSocketConn &other) const {
-    return this->conn.lock() == other.conn.lock();
+    return this->ws.lock() == other.ws.lock();
 }
 
 } // namespace Candy
