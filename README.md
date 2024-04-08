@@ -66,7 +66,7 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 ### Windows
 
-通过 Web 服务提供[安装包版本](https://dl.icandy.one/),这个版本将命令行工具通过 [WinSW](https://github.com/winsw/winsw) 制作成服务,并由图形用户界面管理服务.
+通过 Web 服务提供[安装包版本](https://dl.canets.org/),这个版本将命令行工具通过 [WinSW](https://github.com/winsw/winsw) 制作成服务,并由图形用户界面管理服务.
 
 对于无人值守的设备: 1.请确认系统不会休眠; 2.能够在无人干预的情况下随系统正常启动
 
