@@ -42,7 +42,7 @@ public:
                     WebSocketMessage msg;
                     msg.type = WebSocketMessageType::Close;
                     msg.buffer.assign(buffer, length);
-                    msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                    msg.conn.ws = std::weak_ptr<Poco::Net::WebSocket>(ws);
                     this->server->push(msg);
                     break;
                 }
@@ -51,18 +51,17 @@ public:
                     WebSocketMessage msg;
                     msg.type = WebSocketMessageType::Message;
                     msg.buffer.assign(buffer, length);
-                    msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                    msg.conn.ws = std::weak_ptr<Poco::Net::WebSocket>(ws);
                     this->server->push(msg);
                     continue;
                 }
-
             } catch (Poco::TimeoutException const &e) {
                 continue;
             } catch (std::exception &e) {
                 WebSocketMessage msg;
                 msg.type = WebSocketMessageType::Close;
                 msg.buffer = e.what();
-                msg.conn.conn = std::weak_ptr<Poco::Net::WebSocket>(ws);
+                msg.conn.ws = std::weak_ptr<Poco::Net::WebSocket>(ws);
                 this->server->push(msg);
                 break;
             }
@@ -139,15 +138,19 @@ int WebSocketServer::read(WebSocketMessage &message) {
 }
 
 int WebSocketServer::write(const WebSocketMessage &message) {
-    auto ws = message.conn.conn.lock();
+    auto ws = message.conn.ws.lock();
     if (ws) {
-        ws->sendFrame(message.buffer.c_str(), message.buffer.size(), Poco::Net::WebSocket::FRAME_BINARY);
+        try {
+            ws->sendFrame(message.buffer.c_str(), message.buffer.size(), Poco::Net::WebSocket::FRAME_BINARY);
+        } catch (std::exception &e) {
+            spdlog::warn("websocket server write failed: {}", e.what());
+        }
     }
     return 0;
 }
 
 int WebSocketServer::close(WebSocketConn conn) {
-    auto ws = conn.conn.lock();
+    auto ws = conn.ws.lock();
     if (ws) {
         ws->close();
     }
