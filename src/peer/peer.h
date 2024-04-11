@@ -59,6 +59,7 @@ public:
     ~UdpHolder();
 
     int init();
+    void reset();
 
     void setBindPort(uint16_t port);
     uint16_t getBindPort();
