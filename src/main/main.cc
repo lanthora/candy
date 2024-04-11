@@ -391,7 +391,7 @@ int main(int argc, char *argv[]) {
 
     while (running && serve(arguments) && arguments.autoRestart) {
         running = true;
-        Candy::Time::reset();
+        Candy::Time::useSystemTime = false;
         std::this_thread::sleep_for(std::chrono::seconds(3));
     }
 

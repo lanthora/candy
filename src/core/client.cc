@@ -117,11 +117,7 @@ int Client::setLocalhost(std::string ip) {
 
 int Client::run() {
     this->running = true;
-    if (this->udpHolder.init()) {
-        spdlog::critical("udpHolder init failed");
-        Candy::shutdown(this);
-        return -1;
-    }
+
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
         Candy::shutdown(this);
@@ -685,6 +681,11 @@ void Client::handleTunMessage() {
 int Client::startUdpThread() {
     if (this->stun.uri.empty()) {
         return 0;
+    }
+    if (this->udpHolder.init()) {
+        spdlog::critical("udpHolder init failed");
+        Candy::shutdown(this);
+        return -1;
     }
     if (this->selfInfo.setTun(this->tun.getIP(), this->password)) {
         return -1;

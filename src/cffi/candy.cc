@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "cffi/candy.h"
 #include "core/client.h"
+#include "utility/time.h"
 #include <stdlib.h>
 
 void *candy_client_create() {
@@ -100,4 +101,8 @@ void shutdown(Client *c) {
 int candy_client_set_error_cb(void (*callback)(void *)) {
     internal_error_cb = callback;
     return 0;
+}
+
+void candy_client_use_system_time() {
+    Candy::Time::useSystemTime = true;
 }
