@@ -60,6 +60,8 @@ void UdpHolder::reset() {
         closesocket(winsock);
         this->socket = INVALID_SOCKET;
     }
+    this->port = 0;
+    this->ip = 0;
 }
 
 uint16_t UdpHolder::getBindPort() {

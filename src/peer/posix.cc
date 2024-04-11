@@ -62,6 +62,8 @@ void UdpHolder::reset() {
         close(fd);
         this->socket = 0;
     }
+    this->port = 0;
+    this->ip = 0;
 }
 
 uint16_t UdpHolder::getBindPort() {
