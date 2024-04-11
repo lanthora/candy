@@ -32,6 +32,10 @@ int Client::setName(const std::string &name) {
     return 0;
 }
 
+std::string Client::getName() const {
+    return this->tunName;
+}
+
 int Client::setPassword(const std::string &password) {
     this->password = password;
     return 0;
@@ -306,6 +310,8 @@ void Client::handleUdpMessage() {
         }
         spdlog::debug("unknown peer message: type {}", int(message.buffer.front()));
     }
+
+    this->udpHolder.reset();
 }
 
 void Client::sendForwardMessage(const std::string &buffer) {

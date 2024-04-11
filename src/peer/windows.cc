@@ -20,11 +20,6 @@ UdpHolder::UdpHolder() {
 }
 
 UdpHolder::~UdpHolder() {
-    SOCKET winsock = std::any_cast<SOCKET>(this->socket);
-    if (winsock != INVALID_SOCKET) {
-        closesocket(winsock);
-        this->socket = INVALID_SOCKET;
-    }
     return;
 }
 
@@ -57,6 +52,14 @@ int UdpHolder::init() {
     }
     this->socket = winsock;
     return 0;
+}
+
+void UdpHolder::reset() {
+    SOCKET winsock = std::any_cast<SOCKET>(this->socket);
+    if (winsock != INVALID_SOCKET) {
+        closesocket(winsock);
+        this->socket = INVALID_SOCKET;
+    }
 }
 
 uint16_t UdpHolder::getBindPort() {
@@ -107,7 +110,7 @@ uint32_t UdpHolder::getDefaultIP() {
 size_t UdpHolder::read(UdpMessage &message) {
     SOCKET winsock = std::any_cast<SOCKET>(this->socket);
     if (winsock == INVALID_SOCKET) {
-        spdlog::error("udp socket not initialized successfully");
+        spdlog::error("udp socket read failed: uninitialized");
         return -1;
     }
     char buffer[1500];
@@ -136,9 +139,14 @@ size_t UdpHolder::read(UdpMessage &message) {
 }
 
 size_t UdpHolder::write(const UdpMessage &message) {
+    if (message.buffer.empty()) {
+        spdlog::debug("udp socket write failed: empty message");
+        return -1;
+    }
+
     SOCKET winsock = std::any_cast<SOCKET>(this->socket);
     if (winsock == INVALID_SOCKET) {
-        spdlog::error("udp socket not initialized successfully");
+        spdlog::debug("udp socket write failed: uninitialized");
         return -1;
     }
 

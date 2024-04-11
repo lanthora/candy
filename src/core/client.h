@@ -32,6 +32,7 @@ class Client {
 public:
     // 设置客户端名称,用于设置 TUN 设备的名称,格式为 candy-name, 如果 name 为空将被命名为 candy.
     int setName(const std::string &name);
+    std::string getName() const;
 
     // 连接 websocket 服务端时身份认证的密码
     int setPassword(const std::string &password);
