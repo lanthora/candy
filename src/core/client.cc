@@ -57,6 +57,7 @@ int Client::setWebSocketServer(const std::string &uri) {
 
 int Client::setTunAddress(const std::string &cidr) {
     this->tunAddress = cidr;
+    this->realAddress = cidr;
     return 0;
 }
 
@@ -355,7 +356,7 @@ void Client::sendDynamicAddressMessage() {
 
 void Client::sendAuthMessage() {
     Address address;
-    if (address.cidrUpdate(this->tunAddress)) {
+    if (address.cidrUpdate(this->realAddress)) {
         spdlog::critical("cannot send invalid auth address");
         Candy::shutdown(this);
         return;
@@ -452,7 +453,7 @@ void Client::handleExpectedAddressMessage(WebSocketMessage &message) {
         return;
     }
 
-    setTunAddress(address.getCidr());
+    this->realAddress = address.getCidr();
     if (startTunThread()) {
         spdlog::critical("start tun thread with expected address failed");
         Candy::shutdown(this);
@@ -608,7 +609,7 @@ int Client::startTunThread() {
     if (this->tun.setName(this->tunName)) {
         return -1;
     }
-    if (this->tun.setAddress(this->tunAddress)) {
+    if (this->tun.setAddress(this->realAddress)) {
         return -1;
     }
     if (this->tun.setMTU(1400)) {
@@ -626,7 +627,7 @@ int Client::startTunThread() {
     sendAuthMessage();
 
     if (addressUpdateCallback) {
-        addressUpdateCallback(this->tunAddress);
+        addressUpdateCallback(this->realAddress);
     }
 
     return 0;
