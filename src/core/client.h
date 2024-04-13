@@ -107,6 +107,7 @@ private:
     std::string tunName;
     std::string tunAddress;
     std::string expectedAddress;
+    std::string realAddress;
     std::string virtualMac;
     std::thread tunThread;
 
