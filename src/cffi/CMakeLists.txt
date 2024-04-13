@@ -10,6 +10,13 @@ target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE tun)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE peer)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE utility)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(DEPS REQUIRED spdlog)
+
+add_definitions(${DEPS_CFLAGS})
+include_directories(${DEPS_INCLUDEDIR})
+target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE ${DEPS_LIBRARIES})
+
 if (${CANDY_DEVEL})
     install(FILES candy.h DESTINATION include)
     install(TARGETS ${CANDY_LIBRARY_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

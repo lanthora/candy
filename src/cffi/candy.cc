@@ -2,6 +2,8 @@
 #include "cffi/candy.h"
 #include "core/client.h"
 #include "utility/time.h"
+#include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/spdlog.h>
 #include <stdlib.h>
 
 void *candy_client_create() {
@@ -85,13 +87,13 @@ int candy_client_shutdown(void *candy) {
 }
 
 namespace {
-void (*internal_error_cb)(void *) = NULL;
+void (*client_error_cb)(void *) = NULL;
 }
 
 namespace Candy {
 void shutdown(Client *c) {
-    if (internal_error_cb) {
-        internal_error_cb(c);
+    if (client_error_cb) {
+        client_error_cb(c);
     } else {
         exit(1);
     }
@@ -99,10 +101,16 @@ void shutdown(Client *c) {
 } // namespace Candy
 
 int candy_client_set_error_cb(void (*callback)(void *)) {
-    internal_error_cb = callback;
+    client_error_cb = callback;
     return 0;
 }
 
-void candy_client_use_system_time() {
+void candy_use_system_time() {
     Candy::Time::useSystemTime = true;
+}
+
+void candy_set_log_path(const char *path) {
+    auto logger = spdlog::daily_logger_mt("candy", path);
+    spdlog::set_default_logger(logger);
+    spdlog::flush_every(std::chrono::seconds(1));
 }
