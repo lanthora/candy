@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 
+void candy_init();
 void *candy_client_create();
 int candy_client_set_name(void *candy, const char *name);
 int candy_client_set_password(void *candy, const char *password);
@@ -26,6 +27,7 @@ void candy_client_release(void *candy);
 void candy_use_system_time();
 void candy_set_log_path(const char *path);
 void candy_enable_debug();
+void candy_release();
 
 #ifdef __cplusplus
 }
