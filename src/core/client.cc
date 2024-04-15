@@ -172,7 +172,10 @@ int Client::startWsThread() {
     ws.setPingMessage(fmt::format("candy::{}::{}", CANDY_SYSTEM, CANDY_VERSION));
 
     // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
-    this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
+    this->wsThread = std::thread([&] {
+        this->handleWebSocketMessage();
+        spdlog::debug("websocket client thread exit");
+    });
 
     sendVirtualMacMessage();
 
@@ -622,7 +625,10 @@ int Client::startTunThread() {
         return -1;
     }
 
-    this->tunThread = std::thread([&] { this->handleTunMessage(); });
+    this->tunThread = std::thread([&] {
+        this->handleTunMessage();
+        spdlog::debug("tun thread exit");
+    });
 
     sendAuthMessage();
 
@@ -694,7 +700,10 @@ int Client::startUdpThread() {
     sendStunRequest();
     spdlog::debug("udp ip: {}", Address::ipToStr(udpHolder.getDefaultIP()));
     spdlog::debug("udp port: {}", udpHolder.getBindPort());
-    this->udpThread = std::thread([&] { this->handleUdpMessage(); });
+    this->udpThread = std::thread([&] {
+        this->handleUdpMessage();
+        spdlog::debug("udp thread exit");
+    });
     return 0;
 }
 
@@ -707,6 +716,7 @@ int Client::startTickThread() {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             this->tick();
         }
+        spdlog::debug("tick thread exit");
     });
     return 0;
 }

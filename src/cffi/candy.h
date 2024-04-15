@@ -25,6 +25,7 @@ int candy_client_shutdown(void *candy);
 void candy_client_release(void *candy);
 void candy_use_system_time();
 void candy_set_log_path(const char *path);
+void candy_enable_debug();
 
 #ifdef __cplusplus
 }

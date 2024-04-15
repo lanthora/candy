@@ -83,7 +83,10 @@ int Server::startWsThread() {
         return -1;
     }
 
-    this->wsThread = std::thread([&] { this->handleWebSocketMessage(); });
+    this->wsThread = std::thread([&] {
+        this->handleWebSocketMessage();
+        spdlog::debug("websocket server thread exit");
+    });
     return 0;
 }
 
