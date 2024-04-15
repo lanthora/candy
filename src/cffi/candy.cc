@@ -110,7 +110,11 @@ void candy_use_system_time() {
 }
 
 void candy_set_log_path(const char *path) {
-    auto logger = spdlog::daily_logger_mt("candy", path);
+    auto logger = spdlog::daily_logger_mt("candy", path, 0, 0, false, 7);
     spdlog::set_default_logger(logger);
     spdlog::flush_every(std::chrono::seconds(1));
+}
+
+void candy_enable_debug() {
+    spdlog::set_level(spdlog::level::debug);
 }
