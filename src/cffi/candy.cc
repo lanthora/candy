@@ -6,6 +6,8 @@
 #include <spdlog/spdlog.h>
 #include <stdlib.h>
 
+void candy_init() {}
+
 void *candy_client_create() {
     Candy::Client *c = new Candy::Client();
     return c;
@@ -117,4 +119,9 @@ void candy_set_log_path(const char *path) {
 
 void candy_enable_debug() {
     spdlog::set_level(spdlog::level::debug);
+}
+
+void candy_release() {
+    spdlog::drop_all();
+    spdlog::shutdown();
 }
