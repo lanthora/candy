@@ -8,7 +8,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CANDY_EXECUTE_NAME "candy")
 set(CANDY_LIBRARY_NAME "libcandy")
 
-add_compile_definitions(CANDY_VERSION="${CMAKE_PROJECT_VERSION}")
+add_compile_definitions(CANDY_VERSION="${PROJECT_VERSION}")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
