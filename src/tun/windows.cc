@@ -41,26 +41,44 @@ WINTUN_RELEASE_RECEIVE_PACKET_FUNC *WintunReleaseReceivePacket;
 WINTUN_ALLOCATE_SEND_PACKET_FUNC *WintunAllocateSendPacket;
 WINTUN_SEND_PACKET_FUNC *WintunSendPacket;
 
-HMODULE InitializeWintun(void) {
-    HMODULE Wintun = LoadLibraryExW(L"wintun.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
-    if (!Wintun) {
-        spdlog::critical("load wintun.dll failed");
-        return NULL;
+class Holder {
+public:
+    static bool Ok() {
+        static Holder instance;
+        return instance.wintun;
     }
 
-#define X(Name) ((*(FARPROC *)&Name = GetProcAddress(Wintun, #Name)) == NULL)
-    if (X(WintunCreateAdapter) || X(WintunCloseAdapter) || X(WintunOpenAdapter) || X(WintunGetAdapterLUID) ||
-        X(WintunGetRunningDriverVersion) || X(WintunDeleteDriver) || X(WintunSetLogger) || X(WintunStartSession) ||
-        X(WintunEndSession) || X(WintunGetReadWaitEvent) || X(WintunReceivePacket) || X(WintunReleaseReceivePacket) ||
-        X(WintunAllocateSendPacket) || X(WintunSendPacket))
+private:
+    Holder() {
+        this->wintun = LoadLibraryExW(L"wintun.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
+        if (!this->wintun) {
+            spdlog::critical("load wintun.dll failed");
+            return;
+        }
+
+#define X(Name) ((*(FARPROC *)&Name = GetProcAddress(this->wintun, #Name)) == NULL)
+        if (X(WintunCreateAdapter) || X(WintunCloseAdapter) || X(WintunOpenAdapter) || X(WintunGetAdapterLUID) ||
+            X(WintunGetRunningDriverVersion) || X(WintunDeleteDriver) || X(WintunSetLogger) || X(WintunStartSession) ||
+            X(WintunEndSession) || X(WintunGetReadWaitEvent) || X(WintunReceivePacket) || X(WintunReleaseReceivePacket) ||
+            X(WintunAllocateSendPacket) || X(WintunSendPacket))
 #undef X
-    {
-        spdlog::critical("get function from wintun.dll failed");
-        FreeLibrary(Wintun);
-        return NULL;
+        {
+            spdlog::critical("get function from wintun.dll failed");
+            FreeLibrary(this->wintun);
+            this->wintun = NULL;
+            return;
+        }
     }
-    return Wintun;
-}
+
+    ~Holder() {
+        if (this->wintun) {
+            FreeLibrary(this->wintun);
+            this->wintun = NULL;
+        }
+    }
+
+    HMODULE wintun = NULL;
+};
 
 class WindowsTun {
 public:
@@ -94,8 +112,7 @@ public:
     }
 
     int up() {
-        this->wintun = InitializeWintun();
-        if (!this->wintun) {
+        if (!Holder::Ok()) {
             spdlog::critical("init wintun failed");
             return -1;
         }
@@ -158,10 +175,6 @@ public:
             WintunCloseAdapter(this->adapter);
             this->adapter = NULL;
         }
-        if (this->wintun) {
-            FreeLibrary(this->wintun);
-            this->wintun = NULL;
-        }
         return 0;
     }
 
@@ -202,7 +215,6 @@ private:
     int mtu;
     int timeout;
 
-    HMODULE wintun = NULL;
     WINTUN_ADAPTER_HANDLE adapter = NULL;
     WINTUN_SESSION_HANDLE session = NULL;
 };
