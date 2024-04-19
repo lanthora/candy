@@ -75,6 +75,7 @@ private:
     // Common
     std::string password;
     bool running = false;
+    std::mutex runningMutex;
     std::function<void(const std::string &)> addressUpdateCallback;
 
     // WebSocket
