@@ -117,6 +117,7 @@ int Client::setLocalhost(std::string ip) {
 }
 
 int Client::run() {
+    std::lock_guard lock(this->runningMutex);
     this->running = true;
 
     if (startWsThread()) {
@@ -133,6 +134,8 @@ int Client::run() {
 }
 
 int Client::shutdown() {
+    std::lock_guard lock(this->runningMutex);
+
     if (!this->running) {
         return 0;
     }
