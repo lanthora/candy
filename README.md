@@ -66,7 +66,7 @@ Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠�
 
 ### Windows
 
-[Cake](https://github.com/lanthora/cake)是将本项目作为依赖库构建的 GUI 版本,其 Release 中提供[安装包](https://github.com/lanthora/cake/releases/latest).
+[Cake](https://github.com/lanthora/cake) 是将本项目作为依赖库构建的 GUI 版本,其 Release 中提供[安装包](https://github.com/lanthora/cake/releases/latest).
 
 在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供了由 CI 构建的命令行版本.用户可以在此基础上自行定制.
 
