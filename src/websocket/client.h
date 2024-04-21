@@ -25,6 +25,8 @@ public:
     int setPingMessage(const std::string &message);
 
 private:
+    int sendPingMessage(WebSocketMessage &message);
+
     int timeout;
     std::shared_ptr<Poco::Net::WebSocket> ws;
     int64_t timestamp;
