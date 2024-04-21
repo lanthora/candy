@@ -100,8 +100,7 @@ int WebSocketClient::read(WebSocketMessage &message) {
             return 1;
         }
         if (Time::bootTime() - this->timestamp > 15000) {
-            flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
-            this->ws->sendFrame(this->pingMessage.c_str(), this->pingMessage.size(), flags);
+            return sendPingMessage(message);
         }
         return 0;
     } catch (std::exception &e) {
@@ -129,6 +128,18 @@ int WebSocketClient::write(const WebSocketMessage &message) {
 int WebSocketClient::setPingMessage(const std::string &message) {
     this->pingMessage = message;
     spdlog::debug("set ping message: {}", this->pingMessage);
+    return 0;
+}
+
+int WebSocketClient::sendPingMessage(WebSocketMessage &message) {
+    try {
+        int flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
+        this->ws->sendFrame(this->pingMessage.c_str(), this->pingMessage.size(), flags);
+    } catch (std::exception &e) {
+        message.type = WebSocketMessageType::Error;
+        message.buffer = e.what();
+        return 1;
+    }
     return 0;
 }
 
