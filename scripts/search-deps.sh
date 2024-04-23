@@ -18,42 +18,38 @@ recursive_search_deps () {
         continue
       fi
 
-      # If there are two arguments, copy the dependency to the specified directory
-      if [ "$#" -eq 2 ]; then
-        # Copy the dependency to the specified directory
-        cp "$dep" "$2"
-        # Output the copied file path and name
-        echo "Copied $dep to $2/"
-      else
-        # Show the dependency
-        echo "$dep"
-      fi
+      # Copy the dependency to the specified directory
+      cp -n "$dep" "$2"
+      # Output the copied file path and name
+      echo "Copied $dep to $2"
 
       # Add the dependency to the processed array
       processed+=("$dep")
 
       # Recursively call the function to process the dependency's dependencies
-      recursive_search_deps "$dep" ${2:-}
+      recursive_search_deps "$dep" "$2"
     fi
   done
 }
 
 # Check if the executable file is given as an argument
-if [ -z "$1" ]; then
-  echo "Usage: $0 <PATH> [DESTINATION]"
+if [ -z "$2" ]; then
+  echo "Usage: $0 <PATH> <DESTINATION>"
   exit 1
 fi
 
-# If there are two arguments, check if the directory exists before proceeding
-if [ "$#" -eq 2 ]; then
-  if [ ! -d "$2" ]; then
-    echo "Error: Directory $2 does not exist."
-    exit 1
-  fi
+# Create the directory if it does not exist
+if [ ! -d "$2" ]; then
+  mkdir -p $2
 fi
 
 # Get the absolute path of the executable file
 exe=$(readlink -f "$1")
 
+# Copy the executable file to the target directory
+cp "$exe" "$2"
+exe=$2/$(basename "$exe")
+exe=$(readlink -f "$exe")
+
 # Call the function to get the whole list of dependencies recursively
-recursive_search_deps "$exe" ${2:-}
+recursive_search_deps "$exe" "$2"

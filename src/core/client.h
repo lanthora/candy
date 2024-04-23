@@ -34,10 +34,10 @@ public:
     int setName(const std::string &name);
     std::string getName() const;
 
-    // 连接 websocket 服务端时身份认证的密码
+    // 连接 websocket 服务端时身份认证的口令
     int setPassword(const std::string &password);
 
-    // 用于数据转发的服务端地址
+    // 用于数据转发和对等连接控制的服务端地址
     int setWebSocketServer(const std::string &server);
 
     // TUN 地址,向服务端要求强制使用这个地址,使用相同地址的前一个设备会被踢出网络

@@ -62,11 +62,9 @@ zypper refresh && zypper install candy
 
 请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 仓库中提供的方法安装.
 
-Mac 默认的睡眠策略是: 1.在关闭屏幕一段时间后睡眠; 2.睡眠时收到网络包唤醒. Candy 运行过程中每 30 秒产生一个心跳,这会导致机器被频繁唤醒.对于作为服务器长期开机的 Mac 设备来说,可以关闭睡眠功能;对于作为普通设备的笔记本来说,可以关闭网络唤醒功能.参考苹果官网[睡眠与唤醒](https://support.apple.com/zh-cn/guide/mac-help/mchle41a6ccd/mac)完成设置.
-
 ### Windows
 
-[Cake](https://github.com/lanthora/cake) 是将本项目作为依赖库构建的 GUI 版本,其 Release 中提供[安装包](https://github.com/lanthora/cake/releases/latest).
+[Cake](https://github.com/lanthora/cake) 是将本项目作为依赖库构建的 GUI 版本,其 [Release](https://github.com/lanthora/cake/releases/latest) 中提供安装包.
 
 在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供了由 CI 构建的命令行版本.用户可以在此基础上自行定制.
 
