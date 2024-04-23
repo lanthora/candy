@@ -593,7 +593,7 @@ void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
     }
 }
 
-// 调用这个函数是需要确保双方同时调用.
+// 需要确保双方同时调用.
 // 1. 收到对方报文时,一般会回包,此时调用
 // 2. 收到主动发现报文时,这时一定会回包
 void Client::tryDirectConnection(uint32_t ip) {
@@ -736,7 +736,7 @@ void Client::tick() {
     for (auto &[ip, peer] : this->ipPeerMap) {
         switch (peer.getState()) {
         case PeerState::INIT:
-            // 收到对方通过服务器转发的数据的时候,会切换为 PREPARING,这里不做处理
+            // 收到对方通过服务器转发的数据的时候,会切换为 PREPARING, 这里不做处理
             break;
 
         case PeerState::PREPARING:
@@ -1115,7 +1115,7 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         return -1;
     }
 
-    // 收到对端的心跳,检查地址,更新端口,并将状态调整为 CONNECTED
+    // 收到对端的心跳,更新地址和端口
     PeerHeartbeatMessage *heartbeat = (PeerHeartbeatMessage *)message.buffer.c_str();
     std::unique_lock lock(this->ipPeerMutex);
     uint32_t tun = Address::netToHost(heartbeat->tun);
@@ -1134,12 +1134,14 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         spdlog::debug("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
         peer.port = message.port;
     }
+    // 设置确认标识,下次向对方发送的心跳将携带确认标识
     if (!peer.ack) {
         peer.ack = 1;
     }
     if (peer.getState() == PeerState::PREPARING) {
         sendHeartbeatMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
     }
+    // 对方发来的心跳中包含确认标识,状态更新为 CONNECTED
     if (heartbeat->ack) {
         if (peer.getState() == PeerState::CONNECTED) {
             peer.count = 0;
@@ -1204,7 +1206,7 @@ int Client::updateRouteTable(RouteEntry entry) {
 
     std::unique_lock lock(this->rtTableMutex);
 
-    // 拿到的到达此目的地址的历史路由,下一跳可能不同
+    // 到达此目的地址的历史路由,下一跳可能不同
     auto oldEntry = this->rtTable.find(entry.dst);
 
     // 本机检测到连接断开,删除所有以断联设备作为下一跳的路由并广播
@@ -1232,7 +1234,7 @@ int Client::updateRouteTable(RouteEntry entry) {
         return 0;
     }
 
-    // 收到设备断联广播,删除本机相同的路由并广播
+    // 收到设备断连广播,删除本机相同的路由并广播
     if (!isDirect && isDelete) {
         if (oldEntry != this->rtTable.end() && oldEntry->second.next == entry.next) {
             oldEntry->second.delay = DELAY_LIMIT;

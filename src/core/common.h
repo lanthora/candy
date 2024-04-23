@@ -27,7 +27,7 @@
 
 namespace Candy {
 
-// 出现内部异常时调用,调整进程退出码为 1, 并模拟产生 SIGTERM, 进程将回收资源并退出
+// 出现内部异常时调用
 void shutdown(Client *client);
 void shutdown(Server *client);
 
