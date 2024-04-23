@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "cffi/candy.h"
 #include "core/client.h"
+#include "spdlog/sinks/rotating_file_sink.h"
 #include "utility/time.h"
-#include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/spdlog.h>
 #include <stdlib.h>
 
@@ -112,7 +112,9 @@ void candy_use_system_time() {
 }
 
 void candy_set_log_path(const char *path) {
-    auto logger = spdlog::daily_logger_mt("candy", path, 0, 0, false, 7);
+    auto max_size = 1048576 * 5;
+    auto max_files = 3;
+    auto logger = spdlog::rotating_logger_mt("candy", path, max_size, max_files, true);
     spdlog::set_default_logger(logger);
     spdlog::flush_every(std::chrono::seconds(1));
 }
