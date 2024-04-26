@@ -12,16 +12,10 @@
 
 建议使用 Docker 镜像,已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy).
 
-Candy 会缓存上次从服务端分配到的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.创建与容器内相同的目录以方便理解.
-
-```bash
-mkdir -p /var/lib/candy
-```
-
 容器需要管理员权限读取设备创建虚拟网卡并设置路由,同时需要 Host 网络命名空间共享虚拟网卡.
 
 ```bash
-docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy docker.io/lanthora/candy:latest
+docker run --rm --privileged=true --net=host docker.io/lanthora/candy:latest --help
 ```
 
 #### Arch Linux
@@ -77,6 +71,20 @@ zypper refresh && zypper install candy
 ### 接入测试网络
 
 客户端的[默认配置](candy.conf)会连到测试网络 172.16.0.0/16, 并被随机分配一个地址.
+
+客户端会缓存服务端分配的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.
+
+创建与容器内相同的目录以方便理解.
+
+```bash
+mkdir -p /var/lib/candy
+```
+
+以容器的方式接入测试网络
+
+```bash
+docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy docker.io/lanthora/candy:latest
+```
 
 当成功部署两个及以上客户端后,客户端之间可以相互访问.得益于路由功能,网络中的客户端数量越多,访问时延越低.
 
