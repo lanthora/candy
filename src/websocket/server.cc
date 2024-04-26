@@ -5,6 +5,7 @@
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerResponse.h>
+#include <Poco/Net/NetException.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/WebSocket.h>
 #include <Poco/Timespan.h>
@@ -106,19 +107,29 @@ private:
 namespace Candy {
 
 int WebSocketServer::listen(const std::string &host, uint16_t port) {
-    Poco::Net::ServerSocket socket(Poco::Net::SocketAddress(host, port));
-    Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams();
-    params->setMaxThreads(0x00FFFFFF);
-    this->server = std::make_shared<Poco::Net::HTTPServer>(new WebSocketHandlerFactory(this), socket, params);
-    this->running = true;
-    this->server->start();
-    return 0;
+    try {
+        Poco::Net::ServerSocket socket(Poco::Net::SocketAddress(host, port));
+        Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams();
+        params->setMaxThreads(0x00FFFFFF);
+        this->server = std::make_shared<Poco::Net::HTTPServer>(new WebSocketHandlerFactory(this), socket, params);
+        this->running = true;
+        this->server->start();
+        return 0;
+    } catch (Poco::Net::NetException &e) {
+        spdlog::critical("websocket listen failed: {}: {}", e.what(), e.message());
+        return -1;
+    } catch (std::exception &e) {
+        spdlog::critical("listen failed: {}", e.what());
+        return -1;
+    }
 }
 
 int WebSocketServer::stop() {
     this->running = false;
-    this->server->stop();
-    this->server->stopAll();
+    if (this->server) {
+        this->server->stop();
+        this->server->stopAll();
+    }
     return 0;
 }
 
