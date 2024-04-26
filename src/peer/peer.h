@@ -14,7 +14,7 @@ enum class PeerState {
     SYNCHRONIZING,
     CONNECTING,
     CONNECTED,
-    WAITTING,
+    WAITING,
     FAILED,
 };
 

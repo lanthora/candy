@@ -32,7 +32,7 @@ void PeerInfo::updateState(PeerState state) {
     }
 
     spdlog::debug("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
-    if (state == PeerState::INIT || state == PeerState::WAITTING || state == PeerState::FAILED) {
+    if (state == PeerState::INIT || state == PeerState::WAITING || state == PeerState::FAILED) {
         this->ip = 0;
         this->port = 0;
         this->ack = 0;
@@ -62,8 +62,8 @@ std::string PeerInfo::getStateStr(PeerState state) {
         return "CONNECTING";
     case PeerState::CONNECTED:
         return "CONNECTED";
-    case PeerState::WAITTING:
-        return "WAITTING";
+    case PeerState::WAITING:
+        return "WAITING";
     case PeerState::FAILED:
         return "FAILED";
     default:
