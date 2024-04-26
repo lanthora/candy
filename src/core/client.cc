@@ -756,9 +756,9 @@ void Client::tick() {
             break;
 
         case PeerState::CONNECTING:
-            // 进行超时检测,超时后进入 WAITTING 状态,否则发送心跳
+            // 进行超时检测,超时后进入 WAITING 状态,否则发送心跳
             if (peer.count > 10) {
-                peer.updateState(PeerState::WAITTING);
+                peer.updateState(PeerState::WAITING);
             } else {
                 if (peer.count == 0) {
                     std::string ip = Address::ipToStr(peer.getTun());
@@ -787,7 +787,7 @@ void Client::tick() {
             }
             break;
 
-        case PeerState::WAITTING:
+        case PeerState::WAITING:
             // 指数退避算法
             if (peer.count > peer.retry) {
                 uint32_t next = std::min(peer.retry * 2, 3600U);
