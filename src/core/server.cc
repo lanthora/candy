@@ -212,8 +212,21 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
         return;
     }
 
-    bool isBroadcast = !((~this->dynamic.getMask()) & (daddr + 1));
-    if (this->dynamicAddrEnabled && isBroadcast) {
+    bool broadcast = [&] {
+        // 配置网络范围时才能判断是否为定向广播
+        if (this->dynamicAddrEnabled) {
+            if (!((~this->dynamic.getMask()) & (daddr + 1))) {
+                return true;
+            }
+        };
+        // 本地子网 224.0.0.0 到 224.0.0.255
+        if ((daddr & 0xFFFFFF00) == 0xE0000000) {
+            return true;
+        }
+        return false;
+    }();
+
+    if (broadcast) {
         for (auto conn : this->ipWsMap) {
             if (conn.first != saddr) {
                 message.conn = conn.second;
