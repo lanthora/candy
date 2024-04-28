@@ -22,13 +22,4 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: A reliable, low-latency, and anti-censorship virtual private network.
-
-Package: libcandy-dev
-Architecture: any
-Depends:
- ${shlibs:Depends},
- ${misc:Depends},
-Description: A reliable, low-latency, and anti-censorship virtual private network.
- .
- It contains development libraries and header files for candy.
+Description: A reliable, low-latency, and anti-censorship virtual private network

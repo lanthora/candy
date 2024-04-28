@@ -1,3 +1,2 @@
-usr/bin/candy
 candy.conf etc
 candy*.service usr/lib/systemd/system/
