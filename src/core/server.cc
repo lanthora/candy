@@ -219,8 +219,8 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
                 return true;
             }
         };
-        // 本地子网 224.0.0.0 到 224.0.0.255
-        if ((daddr & 0xFFFFFF00) == 0xE0000000) {
+        // 多播地址
+        if ((daddr & 0xF0000000) == 0xE0000000) {
             return true;
         }
         return false;
