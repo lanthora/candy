@@ -4,7 +4,6 @@ project(candy LANGUAGES C CXX VERSION 5.6)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wfatal-errors")
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CANDY_EXECUTE_NAME "candy")
 set(CANDY_LIBRARY_NAME "libcandy")
 
