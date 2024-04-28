@@ -4,6 +4,7 @@
 - [对等连接](peer-to-peer.md)
 - [路由选择](routing.md)
 - [协议规范](specification.md)
+- [常见问题](faq.md)
 
 ## 什么是虚拟专用网络
 
