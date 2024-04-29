@@ -280,10 +280,13 @@ bool checkStorageDirectory(const struct arguments &arguments) {
     if (arguments.mode != "client") {
         return true;
     }
-    if (!arguments.tun.empty()) {
+    if (!std::filesystem::exists(storageDirectory + "lost")) {
         return true;
     }
-    if (!std::filesystem::exists(storageDirectory + "lost")) {
+    if (arguments.websocket.starts_with("wss://canets.org/")) {
+        return false;
+    }
+    if (!arguments.tun.empty()) {
         return true;
     }
     return false;
@@ -385,7 +388,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, signalHandler);
 
     if (!checkStorageDirectory(arguments)) {
-        spdlog::critical("tun not config, must set volume: {}", storageDirectory);
+        spdlog::critical("the container needs to add a storage volume: {}", storageDirectory);
         running = false;
     }
 
