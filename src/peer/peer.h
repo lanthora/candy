@@ -23,8 +23,10 @@ constexpr uint32_t RETRY_MIN = 30;
 
 class PeerInfo {
 public:
-    uint32_t ip = 0;
-    uint16_t port = 0;
+    struct {
+        uint32_t ip = 0;
+        uint16_t port = 0;
+    } wide, local, real;
     uint8_t ack = 0;
     uint32_t count = 0;
     uint32_t tick = std::rand();

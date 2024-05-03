@@ -195,7 +195,7 @@ int Client::startWsThread() {
         Address address;
         if (this->expectedAddress.empty() || address.cidrUpdate(this->expectedAddress)) {
             this->expectedAddress = "0.0.0.0/0";
-            spdlog::debug("invalid expected address, set expected address to {}", this->expectedAddress);
+            spdlog::debug("set default expected address");
         }
         sendDynamicAddressMessage();
     }
@@ -380,12 +380,12 @@ void Client::sendAuthMessage() {
     return;
 }
 
-void Client::sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port) {
+void Client::sendPeerConnMessage(const PeerInfo &peer) {
     PeerConnMessage header;
     header.src = Address::hostToNet(this->tun.getIP());
     header.dst = Address::hostToNet(peer.getTun());
-    header.ip = Address::hostToNet(ip);
-    header.port = Address::hostToNet(port);
+    header.ip = Address::hostToNet(this->selfInfo.wide.ip);
+    header.port = Address::hostToNet(this->selfInfo.wide.port);
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(PeerConnMessage));
@@ -411,14 +411,14 @@ void Client::sendDiscoveryMessage(uint32_t dst) {
     return;
 }
 
-void Client::sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port) {
+void Client::sendLocalPeerConnMessage(const PeerInfo &peer) {
     LocalPeerConnMessage header;
     header.ge.subtype = GeSubType::LOCAL_PEER_CONN;
     header.ge.extra = 0;
     header.ge.src = Address::hostToNet(this->tun.getIP());
     header.ge.dst = Address::hostToNet(peer.getTun());
-    header.ip = Address::hostToNet(ip);
-    header.port = Address::hostToNet(port);
+    header.ip = Address::hostToNet(this->selfInfo.local.ip);
+    header.port = Address::hostToNet(this->selfInfo.local.port);
 
     WebSocketMessage message;
     message.buffer.assign((char *)(&header), sizeof(LocalPeerConnMessage));
@@ -497,8 +497,8 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[src];
 
-    peer.ip = ip;
-    peer.port = port;
+    peer.wide.ip = ip;
+    peer.wide.port = port;
     peer.count = 0;
     peer.setTun(src, this->password);
 
@@ -514,6 +514,7 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
 
     if (peer.getState() != PeerState::CONNECTING) {
         peer.updateState(PeerState::PREPARING);
+        sendLocalPeerConnMessage(peer);
         return;
     }
 }
@@ -576,8 +577,8 @@ void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     PeerInfo &peer = this->ipPeerMap[src];
 
-    peer.ip = ip;
-    peer.port = port;
+    peer.local.ip = ip;
+    peer.local.port = port;
     peer.setTun(src, this->password);
 
     if (this->stun.uri.empty()) {
@@ -587,8 +588,7 @@ void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
 
     if (peer.getState() == PeerState::INIT) {
         peer.updateState(PeerState::PREPARING);
-        sendHeartbeatMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
-        sendLocalPeerConnMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
+        sendLocalPeerConnMessage(peer);
         return;
     }
 }
@@ -606,7 +606,7 @@ void Client::tryDirectConnection(uint32_t ip) {
     }
     if (peer.getState() == PeerState::INIT) {
         peer.updateState(PeerState::PREPARING);
-        sendLocalPeerConnMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
+        sendLocalPeerConnMessage(peer);
     }
 }
 
@@ -701,8 +701,10 @@ int Client::startUdpThread() {
         return -1;
     }
     sendStunRequest();
-    spdlog::debug("udp ip: {}", Address::ipToStr(udpHolder.getDefaultIP()));
-    spdlog::debug("udp port: {}", udpHolder.getBindPort());
+    this->selfInfo.local.ip = udpHolder.getDefaultIP();
+    this->selfInfo.local.port = udpHolder.getBindPort();
+    spdlog::debug("local ip: {}", Address::ipToStr(this->selfInfo.local.ip));
+    spdlog::debug("local port: {}", this->selfInfo.local.port);
     this->udpThread = std::thread([&] {
         this->handleUdpMessage();
         spdlog::debug("udp thread exit");
@@ -743,7 +745,8 @@ void Client::tick() {
             // 长时间处于 PREPARING 状态,无法获取本机的公网信息,进入失败状态
             if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
-            } else if (peer.count > 1) {
+            } else {
+                sendHeartbeatMessage(peer);
                 needSendStunRequest = true;
             }
             break;
@@ -752,6 +755,8 @@ void Client::tick() {
             // 1.对方版本不支持 2.没有启用对等连接 3.对方无法获取到自己在公网中的信息
             if (peer.count > 10) {
                 peer.updateState(PeerState::FAILED);
+            } else {
+                sendHeartbeatMessage(peer);
             }
             break;
 
@@ -760,14 +765,6 @@ void Client::tick() {
             if (peer.count > 10) {
                 peer.updateState(PeerState::WAITING);
             } else {
-                if (peer.count == 0) {
-                    std::string ip = Address::ipToStr(peer.getTun());
-                    std::string saddr = Address::ipToStr(this->selfInfo.ip);
-                    std::string daddr = Address::ipToStr(peer.ip);
-                    uint16_t sport = this->selfInfo.port;
-                    uint16_t dport = peer.port;
-                    spdlog::debug("connecting: {} {}:{} => {}:{}", ip, saddr, sport, daddr, dport);
-                }
                 sendHeartbeatMessage(peer);
             }
             break;
@@ -974,22 +971,41 @@ int Client::sendStunRequest() {
 }
 
 int Client::sendHeartbeatMessage(const PeerInfo &peer) {
-    return sendHeartbeatMessage(peer, this->selfInfo.ip, this->selfInfo.port);
-}
-
-int Client::sendHeartbeatMessage(const PeerInfo &peer, uint32_t ip, uint32_t port) {
+    UdpMessage message;
     PeerHeartbeatMessage heartbeat;
     heartbeat.type = PeerMessageType::HEARTBEAT;
     heartbeat.tun = Address::hostToNet(this->tun.getIP());
-    heartbeat.ip = Address::hostToNet(ip);
-    heartbeat.port = Address::hostToNet(port);
     heartbeat.ack = peer.ack;
 
-    UdpMessage message;
-    message.ip = peer.ip;
-    message.port = peer.port;
-    message.buffer = encrypt(peer.getKey(), std::string((char *)&heartbeat, sizeof(heartbeat)));
-    this->udpHolder.write(message);
+    if ((peer.getState() == PeerState::CONNECTED) && (peer.real.ip && peer.real.port)) {
+        heartbeat.ip = Address::hostToNet(this->selfInfo.real.ip);
+        heartbeat.port = Address::hostToNet(this->selfInfo.real.port);
+        message.ip = peer.real.ip;
+        message.port = peer.real.port;
+        message.buffer = encrypt(peer.getKey(), std::string((char *)&heartbeat, sizeof(heartbeat)));
+        this->udpHolder.write(message);
+    }
+
+    if ((peer.getState() == PeerState::CONNECTING) && (peer.wide.ip && peer.wide.port)) {
+        heartbeat.ip = Address::hostToNet(this->selfInfo.wide.ip);
+        heartbeat.port = Address::hostToNet(this->selfInfo.wide.port);
+        message.ip = peer.wide.ip;
+        message.port = peer.wide.port;
+        message.buffer = encrypt(peer.getKey(), std::string((char *)&heartbeat, sizeof(heartbeat)));
+        this->udpHolder.write(message);
+    }
+
+    if ((peer.getState() == PeerState::PREPARING || peer.getState() == PeerState::SYNCHRONIZING ||
+         peer.getState() == PeerState::CONNECTING) &&
+        (peer.local.ip && peer.local.port)) {
+        heartbeat.ip = Address::hostToNet(this->selfInfo.local.ip);
+        heartbeat.port = Address::hostToNet(this->selfInfo.local.port);
+        message.ip = peer.local.ip;
+        message.port = peer.local.port;
+        message.buffer = encrypt(peer.getKey(), std::string((char *)&heartbeat, sizeof(heartbeat)));
+        this->udpHolder.write(message);
+    }
+
     return 0;
 }
 
@@ -1017,17 +1033,17 @@ int Client::sendPeerForwardMessage(const std::string &buffer) {
 int Client::sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop) {
     auto it = this->ipPeerMap.find(nextHop);
     if (it == this->ipPeerMap.end()) {
-        return 1;
+        return -1;
     }
 
     const auto &peer = it->second;
     if (peer.getState() != PeerState::CONNECTED) {
-        return 1;
+        return -1;
     }
 
     UdpMessage message;
-    message.ip = peer.ip;
-    message.port = peer.port;
+    message.ip = peer.real.ip;
+    message.port = peer.real.port;
     message.buffer.push_back(PeerMessageType::FORWARD);
     message.buffer.append(buffer);
     message.buffer = encrypt(peer.getKey(), message.buffer);
@@ -1089,20 +1105,20 @@ int Client::handleStunResponse(const std::string &buffer) {
         return -1;
     }
 
-    this->selfInfo.ip = ip;
-    this->selfInfo.port = port;
+    this->selfInfo.wide.ip = ip;
+    this->selfInfo.wide.port = port;
 
     // 收到 STUN 响应后,向所有 PREPARING 状态的对端发送自己的公网信息,如果当前持有对端公网信息,就将状态调整为 CONNECTING,
     // 否则调整为 SYNCHRONIZING
     std::unique_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
-        if (peer.getState() == PeerState::PREPARING && peer.count > 2) {
-            if (peer.ip && peer.port) {
+        if (peer.getState() == PeerState::PREPARING) {
+            if (peer.wide.ip && peer.wide.port) {
                 peer.updateState(PeerState::CONNECTING);
             } else {
                 peer.updateState(PeerState::SYNCHRONIZING);
             }
-            sendPeerConnMessage(peer, ip, port);
+            sendPeerConnMessage(peer);
         }
     }
 
@@ -1120,27 +1136,29 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
     std::unique_lock lock(this->ipPeerMutex);
     uint32_t tun = Address::netToHost(heartbeat->tun);
     PeerInfo &peer = this->ipPeerMap[tun];
-    if (peer.getState() != PeerState::CONNECTING && peer.getState() != PeerState::CONNECTED &&
-        peer.getState() != PeerState::PREPARING) {
+    if (peer.getState() == PeerState::INIT || peer.getState() == PeerState::WAITING || peer.getState() == PeerState::FAILED) {
         spdlog::debug("heartbeat peer state invalid: {} {}", Address::ipToStr(tun), peer.getStateStr());
         return -1;
     }
-    if (peer.ip != message.ip) {
-        spdlog::debug("heartbeat ip mismatch: {} auth {} real {}", Address::ipToStr(tun), Address::ipToStr(peer.ip),
-                      Address::ipToStr(message.ip));
-        peer.ip = message.ip;
+
+    if (isLocalIp(message.ip)) {
+        peer.local.ip = message.ip;
+        peer.local.port = message.port;
+    } else {
+        peer.wide.ip = message.ip;
+        peer.wide.port = message.port;
     }
-    if (peer.port != message.port) {
-        spdlog::debug("heartbeat port mismatch: {} auth {} real {}", Address::ipToStr(tun), peer.port, message.port);
-        peer.port = message.port;
+
+    if (isLocalIp(message.ip) || !isLocalIp(peer.real.ip)) {
+        peer.real.ip = message.ip;
+        peer.real.port = message.port;
     }
+
     // 设置确认标识,下次向对方发送的心跳将携带确认标识
     if (!peer.ack) {
         peer.ack = 1;
     }
-    if (peer.getState() == PeerState::PREPARING) {
-        sendHeartbeatMessage(peer, udpHolder.getDefaultIP(), udpHolder.getBindPort());
-    }
+
     // 对方发来的心跳中包含确认标识,状态更新为 CONNECTED
     if (heartbeat->ack) {
         if (peer.getState() == PeerState::CONNECTED) {
@@ -1185,11 +1203,27 @@ int Client::handlePeerForwardMessage(const UdpMessage &message) {
     }
 
     UdpMessage forward;
-    forward.ip = peer->second.ip;
-    forward.port = peer->second.port;
+    forward.ip = peer->second.real.ip;
+    forward.port = peer->second.real.port;
     forward.buffer = encrypt(peer->second.getKey(), message.buffer);
     this->udpHolder.write(forward);
     return 0;
+}
+
+bool Client::isLocalIp(uint32_t ip) {
+    // 10.0.0.0/8
+    if ((ip & 0xFF000000) == 0x0A000000) {
+        return true;
+    }
+    // 172.16.0.0/12
+    if ((ip & 0xFFF00000) == 0xAC000000) {
+        return true;
+    }
+    // 192.168.0.0/16
+    if ((ip & 0xFFFF0000) == 0xC0A80000) {
+        return true;
+    }
+    return false;
 }
 
 // Route
@@ -1275,8 +1309,8 @@ int Client::sendDelayMessage(const PeerInfo &peer) {
 
 int Client::sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay) {
     UdpMessage message;
-    message.ip = peer.ip;
-    message.port = peer.port;
+    message.ip = peer.real.ip;
+    message.port = peer.real.port;
     message.buffer = encrypt(peer.getKey(), std::string((char *)&delay, sizeof(delay)));
     this->udpHolder.write(message);
     return 0;
@@ -1292,8 +1326,8 @@ int Client::sendRouteMessage(uint32_t dst, int32_t delay) {
     for (auto &[_, peer] : this->ipPeerMap) {
         if (peer.getState() == PeerState::CONNECTED) {
             UdpMessage message;
-            message.ip = peer.ip;
-            message.port = peer.port;
+            message.ip = peer.real.ip;
+            message.port = peer.real.port;
             message.buffer = encrypt(peer.getKey(), std::string((char *)&routeMessage, sizeof(routeMessage)));
             this->udpHolder.write(message);
         }
