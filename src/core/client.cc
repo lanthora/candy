@@ -514,6 +514,7 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
 
     if (peer.getState() != PeerState::CONNECTING) {
         peer.updateState(PeerState::PREPARING);
+        sendLocalPeerConnMessage(peer);
         return;
     }
 }
@@ -1032,12 +1033,12 @@ int Client::sendPeerForwardMessage(const std::string &buffer) {
 int Client::sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop) {
     auto it = this->ipPeerMap.find(nextHop);
     if (it == this->ipPeerMap.end()) {
-        return 1;
+        return -1;
     }
 
     const auto &peer = it->second;
     if (peer.getState() != PeerState::CONNECTED) {
-        return 1;
+        return -1;
     }
 
     UdpMessage message;
@@ -1114,10 +1115,10 @@ int Client::handleStunResponse(const std::string &buffer) {
         if (peer.getState() == PeerState::PREPARING) {
             if (peer.wide.ip && peer.wide.port) {
                 peer.updateState(PeerState::CONNECTING);
+                sendPeerConnMessage(peer);
             } else {
                 peer.updateState(PeerState::SYNCHRONIZING);
             }
-            sendPeerConnMessage(peer);
         }
     }
 
