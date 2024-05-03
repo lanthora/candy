@@ -33,8 +33,12 @@ void PeerInfo::updateState(PeerState state) {
 
     spdlog::debug("conn state: {} {} => {}", Address::ipToStr(this->tun), getStateStr(this->state), getStateStr(state));
     if (state == PeerState::INIT || state == PeerState::WAITING || state == PeerState::FAILED) {
-        this->ip = 0;
-        this->port = 0;
+        this->wide.ip = 0;
+        this->wide.port = 0;
+        this->local.ip = 0;
+        this->local.port = 0;
+        this->real.ip = 0;
+        this->real.port = 0;
         this->ack = 0;
         this->retry = RETRY_MIN;
         this->delay = DELAY_LIMIT;

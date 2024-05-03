@@ -85,9 +85,9 @@ private:
     void sendVirtualMacMessage();
     void sendDynamicAddressMessage();
     void sendAuthMessage();
-    void sendPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port);
+    void sendPeerConnMessage(const PeerInfo &peer);
     void sendDiscoveryMessage(uint32_t dst);
-    void sendLocalPeerConnMessage(const PeerInfo &peer, uint32_t ip, uint16_t port);
+    void sendLocalPeerConnMessage(const PeerInfo &peer);
     void handleForwardMessage(WebSocketMessage &message);
     void handleExpectedAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
@@ -121,7 +121,6 @@ private:
     std::string decrypt(const std::string &key, const std::string &ciphertext);
     int sendStunRequest();
     int sendHeartbeatMessage(const PeerInfo &peer);
-    int sendHeartbeatMessage(const PeerInfo &peer, uint32_t ip, uint32_t port);
     int sendPeerForwardMessage(const std::string &buffer);
     int sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop);
     bool isStunResponse(const UdpMessage &message);
@@ -130,6 +129,7 @@ private:
     int handleStunResponse(const std::string &buffer);
     int handleHeartbeatMessage(const UdpMessage &message);
     int handlePeerForwardMessage(const UdpMessage &message);
+    static bool isLocalIp(uint32_t ip);
 
     UdpHolder udpHolder;
     StunCache stun;
