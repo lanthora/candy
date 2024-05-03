@@ -20,7 +20,6 @@ UdpHolder::UdpHolder() {
 }
 
 UdpHolder::~UdpHolder() {
-
     return;
 }
 
