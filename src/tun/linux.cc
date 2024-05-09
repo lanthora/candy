@@ -90,7 +90,7 @@ public:
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
             spdlog::critical("set ip address failed: ip {:08x}", this->ip);
             close(sockfd);
-            exit(1);
+            return -1;
         }
 
         // 设置掩码
@@ -106,7 +106,7 @@ public:
         if (ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
             spdlog::critical("set mtu failed: mtu {}", this->mtu);
             close(sockfd);
-            exit(1);
+            return -1;
         }
 
         // 设置 flags

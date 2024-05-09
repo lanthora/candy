@@ -116,15 +116,16 @@ public:
 
         // 设置地址
         addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
-        if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
+        if (ioctl(sockfd, SIOCSIFADDR, &ifr) == -1) {
             spdlog::critical("set ip address failed: ip {:08x}", this->ip);
             close(sockfd);
-            exit(1);
+            return -1;
         }
 
         // 设置掩码
+        // FIXME: 不能设置出 172.16.0.0/24, 但是可以 172.16.0.0/8, 行为很奇怪,可能是 macOS 的 BUG.
         addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
-        if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
+        if (ioctl(sockfd, SIOCSIFNETMASK, &ifr) == -1) {
             spdlog::critical("set mask failed: mask {:08x}", this->mask);
             close(sockfd);
             return -1;
@@ -132,10 +133,10 @@ public:
 
         // 设置 MTU
         ifr.ifr_mtu = this->mtu;
-        if (ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
+        if (ioctl(sockfd, SIOCSIFMTU, &ifr) == -1) {
             spdlog::critical("set mtu failed: mtu {}", this->mtu);
             close(sockfd);
-            exit(1);
+            return -1;
         }
 
         // 设置 flags
