@@ -174,12 +174,6 @@ int Client::startWsThread() {
 
     ws.setPingMessage(fmt::format("candy::{}::{}", CANDY_SYSTEM, CANDY_VERSION));
 
-    // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
-    this->wsThread = std::thread([&] {
-        this->handleWebSocketMessage();
-        spdlog::debug("websocket client thread exit");
-    });
-
     sendVirtualMacMessage();
 
     if (!this->tunAddress.empty()) {
@@ -199,6 +193,13 @@ int Client::startWsThread() {
         }
         sendDynamicAddressMessage();
     }
+
+    // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
+    this->wsThread = std::thread([&] {
+        this->handleWebSocketMessage();
+        spdlog::debug("websocket client thread exit");
+    });
+
     return 0;
 }
 
