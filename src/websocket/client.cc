@@ -37,11 +37,11 @@ int WebSocketClient::connect(const std::string &address) {
         }
         this->ws->setReceiveTimeout(Poco::Timespan(this->timeout, 0));
         this->timestamp = Time::bootTime();
+        return 0;
     } catch (std::exception &e) {
         spdlog::critical("websocket connect failed: {}", e.what());
         return -1;
     }
-    return 0;
 }
 
 int WebSocketClient::disconnect() {
@@ -61,10 +61,10 @@ int WebSocketClient::read(WebSocketMessage &message) {
         spdlog::critical("websocket read before connected");
         return -1;
     }
-    char buffer[1500];
-    int flags = 0;
 
     try {
+        char buffer[1500] = {0};
+        int flags = 0;
         int length = this->ws->receiveFrame(buffer, sizeof(buffer), flags);
         if (length == 0 && flags == 0) {
             message.type = WebSocketMessageType::Error;
@@ -131,16 +131,21 @@ int WebSocketClient::setPingMessage(const std::string &message) {
     return 0;
 }
 
+int WebSocketClient::sendPingMessage() {
+    WebSocketMessage wsMessage;
+    return sendPingMessage(wsMessage);
+}
+
 int WebSocketClient::sendPingMessage(WebSocketMessage &message) {
     try {
         int flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
         this->ws->sendFrame(this->pingMessage.c_str(), this->pingMessage.size(), flags);
+        return 0;
     } catch (std::exception &e) {
         message.type = WebSocketMessageType::Error;
         message.buffer = e.what();
         return 1;
     }
-    return 0;
 }
 
 } // namespace Candy
