@@ -49,7 +49,7 @@ A reliable, low-latency, and anti-censorship virtual private network
 %install
 %cmake_install
 
-install -D -m 644 candy.conf %{buildroot}/etc/candy.conf
+install -D -m 644 candy.cfg %{buildroot}/etc/candy.cfg
 install -D -m 644 candy.service %{buildroot}%{_unitdir}/candy.service
 install -D -m 644 candy@.service %{buildroot}%{_unitdir}/candy@.service
 
@@ -68,7 +68,7 @@ install -D -m 644 candy@.service %{buildroot}%{_unitdir}/candy@.service
 %files
 %doc README.md
 %{_bindir}/candy
-%config(noreplace) /etc/candy.conf
+%config(noreplace) /etc/candy.cfg
 %{_unitdir}/candy.service
 %{_unitdir}/candy@.service
 

@@ -70,7 +70,7 @@ zypper refresh && zypper install candy
 
 ### 接入测试网络
 
-客户端的[默认配置](candy.conf)会连到测试网络 172.16.0.0/16, 并被随机分配一个地址.
+客户端的[默认配置](candy.cfg)会连到测试网络并被随机分配一个地址.
 
 客户端会缓存服务端分配的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.
 
@@ -101,7 +101,7 @@ candy --help
 
 ```bash
 # 指定配置文件路径
-candy -c /path/to/candy.conf
+candy -c /path/to/candy.cfg
 ```
 
 #### 服务端

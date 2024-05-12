@@ -25,6 +25,8 @@ struct arguments {
     std::string websocket;
     std::string password;
     bool autoRestart = false;
+    bool noTimestamp = false;
+    bool debug = false;
 
     // 服务端配置
     std::string dhcp;
@@ -107,10 +109,10 @@ bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
     return false;
 }
 
-void parseConfigFile(struct arguments *arguments, std::string config) {
+void parseConfigFile(struct arguments *arguments, std::string cfgFile) {
     try {
         libconfig::Config cfg;
-        cfg.readFile(config.c_str());
+        cfg.readFile(cfgFile.c_str());
         cfg.lookupValue("mode", arguments->mode);
         cfg.lookupValue("websocket", arguments->websocket);
         cfg.lookupValue("tun", arguments->tun);
@@ -122,6 +124,7 @@ void parseConfigFile(struct arguments *arguments, std::string config) {
         cfg.lookupValue("route", arguments->routeCost);
         cfg.lookupValue("port", arguments->udpPort);
         cfg.lookupValue("localhost", arguments->localhost);
+        cfg.lookupValue("debug", arguments->debug);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -175,26 +178,36 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         showVersion();
         break;
     case OPT_NO_TIMESTAMP:
-        disableLogTimestamp();
+        arguments->noTimestamp = true;
         break;
     case OPT_LOG_LEVEL_DEBUG:
-        setLogLevelDebug();
+        arguments->debug = true;
         break;
     case OPT_AUTO_RESTART:
         arguments->autoRestart = true;
         break;
     case ARGP_KEY_END:
-        if (needShowUsage(arguments, state))
+        if (needShowUsage(arguments, state)) {
             argp_usage(state);
+            break;
+        }
+        if (arguments->noTimestamp) {
+            disableLogTimestamp();
+        }
+        if (arguments->debug) {
+            setLogLevelDebug();
+        }
         break;
     }
     return 0;
 }
 
+extern "C" {
 struct argp config = {
     .options = options,
     .parser = parseOption,
 };
+}
 
 #if defined(_WIN32) || defined(_WIN64)
 

@@ -8,7 +8,7 @@
             "program": "${workspaceFolder}/build/src/main/candy",
             "args": [
                 "-c",
-                "candy.conf",
+                "candy.cfg",
                 "--debug"
             ],
             "stopAtEntry": true,
@@ -25,7 +25,7 @@
             "program": "${workspaceFolder}/build/src/main/candy",
             "args": [
                 "-c",
-                "candy.conf",
+                "candy.cfg",
                 "--debug"
             ],
             "stopAtEntry": false,
