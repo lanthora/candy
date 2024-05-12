@@ -23,6 +23,7 @@ public:
     int write(const WebSocketMessage &message);
 
     int setPingMessage(const std::string &message);
+    int sendPingMessage();
 
 private:
     int sendPingMessage(WebSocketMessage &message);

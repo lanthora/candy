@@ -378,6 +378,8 @@ void Client::sendAuthMessage() {
         spdlog::critical("send auth message failed");
         Candy::shutdown(this);
     }
+
+    this->ws.sendPingMessage();
     return;
 }
 
