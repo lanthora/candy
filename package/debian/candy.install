@@ -1,2 +1,2 @@
-candy.conf etc
+candy.cfg etc
 candy*.service usr/lib/systemd/system/

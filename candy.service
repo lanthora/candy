@@ -3,7 +3,7 @@ Description=A reliable, low-latency, and anti-censorship virtual private network
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/bin/candy --no-timestamp -c /etc/candy.conf
+ExecStart=/usr/bin/candy --no-timestamp -c /etc/candy.cfg
 Restart=always
 RestartSec=3
 
