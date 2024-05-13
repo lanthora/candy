@@ -2,6 +2,7 @@
 #ifndef CANDY_PEER_PEER_H
 #define CANDY_PEER_PEER_H
 
+#include "utility/random.h"
 #include <any>
 #include <cstdint>
 #include <string>
@@ -29,7 +30,7 @@ public:
     } wide, local, real;
     uint8_t ack = 0;
     uint32_t count = 0;
-    uint32_t tick = std::rand();
+    uint32_t tick = randomUint32();
     uint32_t retry = RETRY_MIN;
     int32_t delay = DELAY_LIMIT;
 

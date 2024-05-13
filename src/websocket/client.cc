@@ -35,7 +35,6 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
-        this->ws->setReceiveTimeout(Poco::Timespan(this->timeout, 0));
         this->timestamp = Time::bootTime();
         return 0;
     } catch (std::exception &e) {
@@ -63,6 +62,13 @@ int WebSocketClient::read(WebSocketMessage &message) {
     }
 
     try {
+        Poco::Net::Socket::SocketList readList, writeList, exceptList;
+        readList.push_back(*this->ws.get());
+        if (Poco::Net::Socket::select(readList, writeList, exceptList, Poco::Timespan(this->timeout, 0)) <= 0 ||
+            readList.empty()) {
+            return 0;
+        }
+
         char buffer[1500] = {0};
         int flags = 0;
         int length = this->ws->receiveFrame(buffer, sizeof(buffer), flags);
