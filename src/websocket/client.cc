@@ -35,6 +35,7 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
+        this->pollSet.add(*this->ws.get(), Poco::Net::PollSet::POLL_READ);
         this->timestamp = Time::bootTime();
         return 0;
     } catch (std::exception &e) {
@@ -44,8 +45,11 @@ int WebSocketClient::connect(const std::string &address) {
 }
 
 int WebSocketClient::disconnect() {
+    this->pollSet.clear();
     if (this->ws) {
+        this->ws->shutdown();
         this->ws->close();
+        this->ws.reset();
     }
     return 0;
 }
@@ -62,10 +66,16 @@ int WebSocketClient::read(WebSocketMessage &message) {
     }
 
     try {
-        Poco::Net::Socket::SocketList readList, writeList, exceptList;
-        readList.push_back(*this->ws.get());
-        if (Poco::Net::Socket::select(readList, writeList, exceptList, Poco::Timespan(this->timeout, 0)) <= 0 ||
-            readList.empty()) {
+        Poco::Net::PollSet::SocketModeMap socketModeMap = this->pollSet.poll(Poco::Timespan(this->timeout, 0));
+        if (socketModeMap.empty()) {
+            if (Time::bootTime() - this->timestamp > 30000) {
+                message.type = WebSocketMessageType::Error;
+                message.buffer = "websocket pong timeout";
+                return 1;
+            }
+            if (Time::bootTime() - this->timestamp > 15000) {
+                return sendPingMessage(message);
+            }
             return 0;
         }
 
@@ -97,16 +107,6 @@ int WebSocketClient::read(WebSocketMessage &message) {
             message.buffer.assign(buffer, length);
             this->timestamp = Time::bootTime();
             return 1;
-        }
-        return 0;
-    } catch (Poco::TimeoutException const &e) {
-        if (Time::bootTime() - this->timestamp > 30000) {
-            message.type = WebSocketMessageType::Error;
-            message.buffer = "websocket pong timeout";
-            return 1;
-        }
-        if (Time::bootTime() - this->timestamp > 15000) {
-            return sendPingMessage(message);
         }
         return 0;
     } catch (std::exception &e) {
