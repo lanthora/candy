@@ -3,6 +3,7 @@
 #define CANDY_WEBSOCKET_CLIENT_H
 
 #include "websocket/common.h"
+#include <Poco/Net/PollSet.h>
 #include <Poco/Net/WebSocket.h>
 #include <string>
 
@@ -29,6 +30,7 @@ private:
     int sendPingMessage(WebSocketMessage &message);
 
     int timeout;
+    Poco::Net::PollSet pollSet;
     std::shared_ptr<Poco::Net::WebSocket> ws;
     int64_t timestamp;
     std::string pingMessage;
