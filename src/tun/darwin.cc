@@ -91,7 +91,7 @@ public:
             return -1;
         }
 
-        char ifname[IFNAMSIZ];
+        char ifname[IFNAMSIZ] = {0};
         socklen_t ifname_len = sizeof(ifname);
         if (getsockopt(this->tunFd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, ifname, &ifname_len) == -1) {
             spdlog::critical("get interface name failed: {}", strerror(errno));
@@ -114,19 +114,24 @@ public:
             return -1;
         }
 
-        // 设置地址
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
-        if (ioctl(sockfd, SIOCSIFADDR, &ifr) == -1) {
-            spdlog::critical("set ip address failed: ip {:08x}", this->ip);
-            close(sockfd);
-            return -1;
-        }
+        // 设置地址和掩码
+        struct ifaliasreq areq;
+        memset(&areq, 0, sizeof(areq));
+        strncpy(areq.ifra_name, ifname, IFNAMSIZ);
+        ((struct sockaddr_in *)&areq.ifra_addr)->sin_family = AF_INET;
+        ((struct sockaddr_in *)&areq.ifra_addr)->sin_len = sizeof(areq.ifra_addr);
+        ((struct sockaddr_in *)&areq.ifra_addr)->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
 
-        // 设置掩码
-        // FIXME: 不能设置出 172.16.0.0/24, 但是可以 172.16.0.0/8, 行为很奇怪,可能是 macOS 的 BUG.
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
-        if (ioctl(sockfd, SIOCSIFNETMASK, &ifr) == -1) {
-            spdlog::critical("set mask failed: mask {:08x}", this->mask);
+        ((struct sockaddr_in *)&areq.ifra_mask)->sin_family = AF_INET;
+        ((struct sockaddr_in *)&areq.ifra_mask)->sin_len = sizeof(areq.ifra_mask);
+        ((struct sockaddr_in *)&areq.ifra_mask)->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
+
+        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_family = AF_INET;
+        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_len = sizeof(areq.ifra_broadaddr);
+        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = Candy::Address::hostToNet((this->ip & this->mask));
+
+        if (ioctl(sockfd, SIOCAIFADDR, (void *)&areq) == -1) {
+            spdlog::critical("set ip mask failed: {}: ip {:08x} mask {:08x}", strerror(errno), this->ip, this->mask);
             close(sockfd);
             return -1;
         }
