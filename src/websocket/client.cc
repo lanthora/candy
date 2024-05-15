@@ -45,11 +45,15 @@ int WebSocketClient::connect(const std::string &address) {
 }
 
 int WebSocketClient::disconnect() {
-    this->pollSet.clear();
-    if (this->ws) {
-        this->ws->shutdown();
-        this->ws->close();
-        this->ws.reset();
+    try {
+        this->pollSet.clear();
+        if (this->ws) {
+            this->ws->shutdown();
+            this->ws->close();
+            this->ws.reset();
+        }
+    } catch (std::exception &e) {
+        spdlog::debug("websocket disconnect failed: {}", e.what());
     }
     return 0;
 }
