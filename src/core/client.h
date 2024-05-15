@@ -96,6 +96,7 @@ private:
     void handleGeneralMessage(WebSocketMessage &message);
     void handleLocalPeerConnMessage(WebSocketMessage &message);
     void tryDirectConnection(uint32_t ip);
+    std::string hostName();
 
     WebSocketClient ws;
     std::string wsUri;
