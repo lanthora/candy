@@ -161,6 +161,14 @@ int Client::shutdown() {
 }
 
 // WebSocket
+std::string Client::hostName() {
+    char hostname[64] = {0};
+    if (!gethostname(hostname, sizeof(hostname))) {
+        return std::string(hostname, strnlen(hostname, sizeof(hostname)));
+    }
+    return "";
+}
+
 int Client::startWsThread() {
     if (this->ws.setTimeout(1)) {
         spdlog::critical("websocket clinet set read write timeout failed");
@@ -172,7 +180,7 @@ int Client::startWsThread() {
         return -1;
     }
 
-    ws.setPingMessage(fmt::format("candy::{}::{}", CANDY_SYSTEM, CANDY_VERSION));
+    ws.setPingMessage(fmt::format("candy::{}::{}::{}", CANDY_SYSTEM, CANDY_VERSION, hostName()));
 
     // 只需要开 wsThread, 执行过程中会设置 tun 并开 tunThread.
     this->wsThread = std::thread([&] {
@@ -509,12 +517,16 @@ void Client::handlePeerConnMessage(WebSocketMessage &message) {
         return;
     }
 
+    if (peer.getState() == PeerState::CONNECTED) {
+        return;
+    }
+
     if (peer.getState() == PeerState::SYNCHRONIZING) {
         peer.updateState(PeerState::CONNECTING);
         return;
     }
 
-    if (peer.getState() != PeerState::CONNECTING && peer.getState() != PeerState::PREPARING) {
+    if (peer.getState() != PeerState::CONNECTING) {
         peer.updateState(PeerState::PREPARING);
         sendLocalPeerConnMessage(peer);
         return;
