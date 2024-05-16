@@ -164,6 +164,16 @@ route = 5
 localhost = "127.0.0.1"
 ```
 
+## 未来规划
+
+目前已经达成了最初的目标: __让装了客户端的设备之间可以通过虚拟 IP 相互访问__.对于 C++ 版本,将尽可能维持稳定,不添加新功能.
+
+未来将加强[新版服务端](https://github.com/lanthora/cucurbita)对客户端的管控能力.
+
+## 相关项目
+
+- [EasyTier](https://github.com/EasyTier/EasyTier): A simple, decentralized mesh VPN with WireGuard support
+
 ## 交流群
 
 - TG: [Click to Join](https://t.me/CandyUserGroup)
