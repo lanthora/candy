@@ -10,6 +10,9 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DEPS REQUIRED spdlog)
 
+find_package(Poco REQUIRED Net)
+target_link_libraries(peer PRIVATE Poco::Net)
+
 add_definitions(${DEPS_CFLAGS})
 include_directories(${DEPS_INCLUDEDIR})
 target_link_libraries(peer PRIVATE ${DEPS_LIBRARIES})

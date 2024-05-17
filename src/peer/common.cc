@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "peer/peer.h"
 #include "utility/address.h"
+#include <Poco/Net/NetworkInterface.h>
 #include <cstdlib>
 #include <openssl/sha.h>
 #include <spdlog/spdlog.h>
@@ -75,12 +76,30 @@ std::string PeerInfo::getStateStr(PeerState state) {
     }
 }
 
-void UdpHolder::setBindPort(uint16_t port) {
+void UdpHolder::setPort(uint16_t port) {
     this->port = port;
 }
 
-void UdpHolder::setDefaultIP(uint32_t ip) {
+void UdpHolder::setIP(uint32_t ip) {
     this->ip = ip;
+}
+
+uint32_t UdpHolder::IP() {
+    if (!this->ip) {
+        try {
+            for (const auto &iface : Poco::Net::NetworkInterface::list()) {
+                if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint()) {
+                    auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
+                    memcpy(&this->ip, firstAddress.toV4Bytes().data(), sizeof(this->ip));
+                    this->ip = ntohl(this->ip);
+                    break;
+                }
+            }
+        } catch (std::exception &e) {
+            spdlog::warn("local ip failed: {}", e.what());
+        }
+    }
+    return this->ip;
 }
 
 } // namespace Candy

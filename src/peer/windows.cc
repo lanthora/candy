@@ -64,7 +64,7 @@ void UdpHolder::reset() {
     this->ip = 0;
 }
 
-uint16_t UdpHolder::getBindPort() {
+uint16_t UdpHolder::Port() {
     if (this->port) {
         return this->port;
     }
@@ -80,33 +80,6 @@ uint16_t UdpHolder::getBindPort() {
         }
     }
     return 0;
-}
-
-uint32_t UdpHolder::getDefaultIP() {
-    if (this->ip) {
-        return this->ip;
-    }
-    SOCKET winsock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (winsock == INVALID_SOCKET) {
-        return 0;
-    }
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_addr.s_addr = 0x12345678;
-    addr.sin_family = AF_INET;
-    if (connect(winsock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
-        closesocket(winsock);
-        return 0;
-    }
-    int len = sizeof(addr);
-    if (getsockname(winsock, (struct sockaddr *)&addr, &len) == SOCKET_ERROR) {
-        closesocket(winsock);
-        return 0;
-    }
-    this->ip = ntohl(addr.sin_addr.s_addr);
-    closesocket(winsock);
-    return this->ip;
 }
 
 size_t UdpHolder::read(UdpMessage &message) {

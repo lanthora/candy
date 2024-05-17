@@ -99,7 +99,7 @@ int Client::setAddressUpdateCallback(std::function<void(const std::string &)> ca
 
 int Client::setUdpBindPort(int port) {
     if (port > 0 && port < UINT16_MAX) {
-        this->udpHolder.setBindPort(port);
+        this->udpHolder.setPort(port);
     }
     return 0;
 }
@@ -112,7 +112,7 @@ int Client::setLocalhost(std::string ip) {
     if (addr.ipStrUpdate(ip)) {
         return 0;
     }
-    this->udpHolder.setDefaultIP(addr.getIp());
+    this->udpHolder.setIP(addr.getIp());
     return 0;
 }
 
@@ -715,8 +715,8 @@ int Client::startUdpThread() {
         return -1;
     }
     sendStunRequest();
-    this->selfInfo.local.ip = udpHolder.getDefaultIP();
-    this->selfInfo.local.port = udpHolder.getBindPort();
+    this->selfInfo.local.ip = udpHolder.IP();
+    this->selfInfo.local.port = udpHolder.Port();
     spdlog::debug("local ip: {}", Address::ipToStr(this->selfInfo.local.ip));
     spdlog::debug("local port: {}", this->selfInfo.local.port);
     this->udpThread = std::thread([&] {
