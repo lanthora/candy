@@ -90,7 +90,7 @@ uint32_t UdpHolder::IP() {
             for (const auto &iface : Poco::Net::NetworkInterface::list()) {
                 if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint()) {
                     auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
-                    memcpy(&this->ip, firstAddress.toV4Bytes().data(), sizeof(this->ip));
+                    memcpy(&this->ip, firstAddress.addr(), sizeof(this->ip));
                     this->ip = ntohl(this->ip);
                     break;
                 }
