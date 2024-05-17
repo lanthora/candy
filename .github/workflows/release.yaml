@@ -137,7 +137,6 @@ jobs:
         buildpackage-opts: --build=binary --no-sign
         extra-build-deps: git-buildpackage
         before-build-hook: dch --package candy -v "$(git tag -l | tail -n1 | sed 's/v//g')+${{ env.ARTIFACT_NAME }}" -D stable --create "CI BUILD"
-
     - name: upload artifact
       uses: actions/upload-artifact@v4
       with:
