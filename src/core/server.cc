@@ -213,17 +213,27 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
     }
 
     bool broadcast = [&] {
-        // 配置网络范围时才能判断是否为定向广播
-        if (this->dynamicAddrEnabled) {
-            if (!((~this->dynamic.getMask()) & (daddr + 1))) {
-                return true;
-            }
-        };
         // 多播地址
         if ((daddr & 0xF0000000) == 0xE0000000) {
             return true;
         }
-        return false;
+        // 广播
+        if (daddr == UINT32_MAX) {
+            return true;
+        }
+        // 服务端没有配置动态分配地址的范围,没法检查是否为定向广播
+        if (!this->dynamicAddrEnabled) {
+            return false;
+        }
+        // 网络号不同,不是定向广播
+        if ((this->dynamic.getMask() & daddr) != this->dynamic.getNet()) {
+            return false;
+        }
+        // 主机号部分不全为 1,不是定向广播
+        if ((~this->dynamic.getMask()) & (daddr + 1)) {
+            return false;
+        }
+        return true;
     }();
 
     if (broadcast) {
@@ -238,7 +248,7 @@ void Server::handleForwardMessage(WebSocketMessage &message) {
 
     Address destination;
     destination.ipUpdate(daddr);
-    spdlog::debug("forward dest address not logged in: source {} dest {}", source.getIpStr(), destination.getIpStr());
+    spdlog::debug("forward failed: source {} dest {}", source.getIpStr(), destination.getIpStr());
     return;
 }
 
