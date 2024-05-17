@@ -64,10 +64,11 @@ public:
     int init();
     void reset();
 
-    void setBindPort(uint16_t port);
-    uint16_t getBindPort();
-    void setDefaultIP(uint32_t ip);
-    uint32_t getDefaultIP();
+    void setPort(uint16_t port);
+    void setIP(uint32_t ip);
+
+    uint16_t Port();
+    uint32_t IP();
 
     size_t read(UdpMessage &message);
     size_t write(const UdpMessage &message);
