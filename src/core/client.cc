@@ -828,6 +828,8 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
     unsigned char iv[AES_256_GCM_IV_LEN] = {0};
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
 
+    std::lock_guard lock(cryptMutex);
+
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key size: {}", key.size());
         return "";
@@ -886,6 +888,8 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
     unsigned char plaintext[1500] = {0};
     unsigned char iv[AES_256_GCM_IV_LEN] = {0};
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
+
+    std::lock_guard lock(cryptMutex);
 
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key length: {}", key.size());
