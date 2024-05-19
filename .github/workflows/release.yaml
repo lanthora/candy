@@ -62,6 +62,11 @@ jobs:
           mingw-w64-x86_64-poco
     - name: checkout
       uses: actions/checkout@v4
+    - name: cache
+      uses: actions/cache@v4
+      with:
+        path: build
+        key: ${{ hashFiles('CMakeLists.txt') }}
     - name: build
       shell: msys2 {0}
       run: |
