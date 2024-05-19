@@ -852,7 +852,7 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
         return "";
     }
     int len;
-    unsigned char ciphertext[plaintext.size()];
+    unsigned char ciphertext[1500] = {0};
     if (!EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)plaintext.data(), plaintext.size())) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to encrypt plaintext");
@@ -920,7 +920,7 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
     }
 
     int len;
-    unsigned char plaintext[ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN];
+    unsigned char plaintext[1500] = {0};
     if (!EVP_DecryptUpdate(ctx, plaintext, &len, enc, ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to decrypt ciphertext");

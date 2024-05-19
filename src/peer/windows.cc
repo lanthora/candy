@@ -88,7 +88,7 @@ size_t UdpHolder::read(UdpMessage &message) {
         spdlog::error("udp socket read failed: uninitialized");
         return -1;
     }
-    char buffer[1500];
+    char buffer[1500] = {0};
     struct sockaddr_in from;
     int addr_len = sizeof(from);
     memset(&from, 0, sizeof(from));
