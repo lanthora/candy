@@ -877,10 +877,12 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
     result.append((char *)iv, AES_256_GCM_IV_LEN);
     result.append((char *)tag, AES_256_GCM_TAG_LEN);
     result.append((char *)ciphertext, ciphertextLen);
+    spdlog::info("encrypt[{}]: {:n}", result.size(), spdlog::to_hex(result));
     return result;
 }
 
 std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
+    spdlog::info("decrypt[{}]: {:n}", ciphertext.size(), spdlog::to_hex(ciphertext));
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key length: {}", key.size());
         return "";
