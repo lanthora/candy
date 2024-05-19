@@ -142,6 +142,7 @@ private:
     std::thread tickThread;
     uint64_t tickTick = randomUint32();
     uint32_t discoveryInterval;
+    std::mutex cryptMutex;
 
     // Route
     void showRouteChange(const RouteEntry &entry);
