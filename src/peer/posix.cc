@@ -90,7 +90,7 @@ size_t UdpHolder::read(UdpMessage &message) {
         return -1;
     }
 
-    char buffer[1500];
+    char buffer[1500] = {0};
     struct sockaddr_in from;
     socklen_t addr_len = sizeof(from);
     memset(&from, 0, sizeof(from));
