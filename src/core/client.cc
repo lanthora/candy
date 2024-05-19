@@ -821,16 +821,32 @@ void Client::tick() {
 }
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
+    spdlog::info("encrypt[{}]: {:n}", plaintext.size(), spdlog::to_hex(plaintext));
+    return plaintext;
+
+    int len = 0;
+    int ciphertextLen = 0;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char ciphertext[1500] = {0};
+    unsigned char iv[AES_256_GCM_IV_LEN] = {0};
+    unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
+
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key size: {}", key.size());
         return "";
     }
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         spdlog::debug("failed to create cipher context");
         return "";
     }
-    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+
+    if (!RAND_bytes(iv, AES_256_GCM_IV_LEN)) {
+        EVP_CIPHER_CTX_free(ctx);
+        spdlog::debug("failed to generate random IV");
+        return "";
+    }
+    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to initialize cipher context");
         return "";
@@ -840,32 +856,20 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
         spdlog::debug("failed to set IV length");
         return "";
     }
-    unsigned char iv[AES_256_GCM_IV_LEN];
-    if (!RAND_bytes(iv, AES_256_GCM_IV_LEN)) {
-        EVP_CIPHER_CTX_free(ctx);
-        spdlog::debug("failed to generate random IV");
-        return "";
-    }
-    if (!EVP_EncryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
-        EVP_CIPHER_CTX_free(ctx);
-        spdlog::debug("failed to set key and IV");
-        return "";
-    }
-    int len;
-    unsigned char ciphertext[1500] = {0};
+
     if (!EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)plaintext.data(), plaintext.size())) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to encrypt plaintext");
         return "";
     }
-    int ciphertextLen = len;
+    ciphertextLen = len;
     if (!EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to finalize encryption");
         return "";
     }
     ciphertextLen += len;
-    unsigned char tag[AES_256_GCM_TAG_LEN];
+
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AES_256_GCM_TAG_LEN, tag)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to get tag");
@@ -877,12 +881,21 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
     result.append((char *)iv, AES_256_GCM_IV_LEN);
     result.append((char *)tag, AES_256_GCM_TAG_LEN);
     result.append((char *)ciphertext, ciphertextLen);
-    spdlog::info("encrypt[{}]: {:n}", result.size(), spdlog::to_hex(result));
     return result;
 }
 
 std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
     spdlog::info("decrypt[{}]: {:n}", ciphertext.size(), spdlog::to_hex(ciphertext));
+    return ciphertext;
+
+    int len = 0;
+    int plaintextLen = 0;
+    unsigned char *enc = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char plaintext[1500] = {0};
+    unsigned char iv[AES_256_GCM_IV_LEN] = {0};
+    unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
+
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key length: {}", key.size());
         return "";
@@ -891,12 +904,19 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
         spdlog::debug("invalid ciphertext length");
         return "";
     }
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         spdlog::debug("failed to create cipher context");
         return "";
     }
-    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+
+    enc = (unsigned char *)ciphertext.data();
+
+    memcpy(iv, enc, AES_256_GCM_IV_LEN);
+    memcpy(tag, enc + AES_256_GCM_IV_LEN, AES_256_GCM_TAG_LEN);
+    enc += AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN;
+
+    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to initialize cipher context");
         return "";
@@ -906,37 +926,18 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
         spdlog::debug("failed to set IV length");
         return "";
     }
-
-    unsigned char iv[AES_256_GCM_IV_LEN];
-    unsigned char tag[AES_256_GCM_TAG_LEN];
-    unsigned char *enc = (unsigned char *)ciphertext.data();
-
-    memcpy(iv, enc, AES_256_GCM_IV_LEN);
-    memcpy(tag, enc + AES_256_GCM_IV_LEN, AES_256_GCM_TAG_LEN);
-    enc += AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN;
-
-    if (!EVP_DecryptInit_ex(ctx, NULL, NULL, (unsigned char *)key.data(), iv)) {
-        EVP_CIPHER_CTX_free(ctx);
-        spdlog::debug("failed to set key and IV");
-        return "";
-    }
-
-    int len;
-    unsigned char plaintext[1500] = {0};
     if (!EVP_DecryptUpdate(ctx, plaintext, &len, enc, ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to decrypt ciphertext");
         return "";
     }
 
-    int plaintextLen = len;
-
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AES_256_GCM_TAG_LEN, tag)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to set tag");
         return "";
     }
-
+    plaintextLen = len;
     if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
         spdlog::debug("failed to finalize decryption");
@@ -944,12 +945,10 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
     }
 
     plaintextLen += len;
-
     EVP_CIPHER_CTX_free(ctx);
 
     std::string result;
     result.append((char *)plaintext, plaintextLen);
-
     return result;
 }
 
