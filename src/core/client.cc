@@ -717,8 +717,7 @@ int Client::startUdpThread() {
     sendStunRequest();
     this->selfInfo.local.ip = udpHolder.IP();
     this->selfInfo.local.port = udpHolder.Port();
-    spdlog::debug("local ip: {}", Address::ipToStr(this->selfInfo.local.ip));
-    spdlog::debug("local port: {}", this->selfInfo.local.port);
+    spdlog::info("localhost: {}", Address::ipToStr(this->selfInfo.local.ip));
     this->udpThread = std::thread([&] {
         this->handleUdpMessage();
         spdlog::debug("udp thread exit");
