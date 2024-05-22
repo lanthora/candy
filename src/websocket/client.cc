@@ -35,7 +35,8 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
-        this->pollSet.add(*this->ws.get(), Poco::Net::PollSet::POLL_READ);
+        this->pollSet = std::make_shared<Poco::Net::PollSet>();
+        this->pollSet->add(*this->ws.get(), Poco::Net::PollSet::POLL_READ);
         this->timestamp = Time::bootTime();
         return 0;
     } catch (std::exception &e) {
@@ -46,7 +47,10 @@ int WebSocketClient::connect(const std::string &address) {
 
 int WebSocketClient::disconnect() {
     try {
-        this->pollSet.clear();
+        if (this->pollSet) {
+            this->pollSet->clear();
+            this->pollSet.reset();
+        }
         if (this->ws) {
             this->ws->shutdown();
             this->ws->close();
@@ -70,7 +74,7 @@ int WebSocketClient::read(WebSocketMessage &message) {
     }
 
     try {
-        Poco::Net::PollSet::SocketModeMap socketModeMap = this->pollSet.poll(Poco::Timespan(this->timeout, 0));
+        Poco::Net::PollSet::SocketModeMap socketModeMap = this->pollSet->poll(Poco::Timespan(this->timeout, 0));
         if (socketModeMap.empty()) {
             if (Time::bootTime() - this->timestamp > 30000) {
                 message.type = WebSocketMessageType::Error;
