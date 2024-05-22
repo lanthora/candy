@@ -30,7 +30,7 @@ private:
     int sendPingMessage(WebSocketMessage &message);
 
     int timeout;
-    Poco::Net::PollSet pollSet;
+    std::shared_ptr<Poco::Net::PollSet> pollSet;
     std::shared_ptr<Poco::Net::WebSocket> ws;
     int64_t timestamp;
     std::string pingMessage;
