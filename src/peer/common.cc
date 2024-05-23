@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "peer/peer.h"
 #include "utility/address.h"
+#include "utility/byteswap.h"
 #include <Poco/Net/NetworkInterface.h>
 #include <cstdlib>
 #include <openssl/sha.h>
@@ -10,9 +11,15 @@ namespace Candy {
 
 int PeerInfo::setTun(uint32_t tun, const std::string &password) {
     this->tun = tun;
+
+    if (std::endian::native == std::endian::big) {
+        tun = byteswap(tun);
+    }
+
     std::string data;
     data.append(password);
-    data.append((char *)&this->tun, sizeof(this->tun));
+    data.append((char *)&tun, sizeof(tun));
+
     this->key.resize(SHA256_DIGEST_LENGTH);
     SHA256((unsigned char *)data.data(), data.size(), (unsigned char *)this->key.data());
     return 0;

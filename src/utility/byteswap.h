@@ -6,10 +6,11 @@ namespace Candy {
 template <typename T> static inline T byteswap(const T &input) {
     T output(0);
     const std::size_t size = sizeof(input);
-    uint8_t *data = reinterpret_cast<uint8_t *>(&output);
+    const uint8_t *in = reinterpret_cast<const uint8_t *>(&input);
+    uint8_t *out = reinterpret_cast<uint8_t *>(&output);
 
     for (std::size_t i = 0; i < size; i++) {
-        data[i] = input >> ((size - i - 1) * 8);
+        out[i] = in[size - i - 1];
     }
 
     return output;
