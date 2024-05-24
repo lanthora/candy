@@ -24,7 +24,7 @@ struct arguments {
     std::string mode;
     std::string websocket;
     std::string password;
-    bool autoRestart = false;
+    int restartInterval = 0;
     bool noTimestamp = false;
     bool debug = false;
 
@@ -43,7 +43,7 @@ struct arguments {
 
 const int OPT_NO_TIMESTAMP = 1;
 const int OPT_LOG_LEVEL_DEBUG = 2;
-const int OPT_AUTO_RESTART = 3;
+const int OPT_RESTART = 3;
 const int OPT_DISCOVERY_INTERVAL = 4;
 const int OPT_UDP_BIND_PORT = 5;
 const int OPT_UDP_P2P_IP = 6;
@@ -58,6 +58,7 @@ struct argp_option options[] = {
     {"mode", 'm', "TEXT", 0, "Working mode", GROUP_CLIENT_AND_SERVER},
     {"websocket", 'w', "URI", 0, "Websocket address", GROUP_CLIENT_AND_SERVER},
     {"password", 'p', "TEXT", 0, "Authorization password", GROUP_CLIENT_AND_SERVER},
+    {"restart", OPT_RESTART, "SECONDS", 0, "Restart interval", GROUP_CLIENT_AND_SERVER},
 
     {0, 0, 0, 0, "Server:", GROUP_SERVER_ONLY},
     {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range", GROUP_SERVER_ONLY},
@@ -75,7 +76,6 @@ struct argp_option options[] = {
     {"config", 'c', "PATH", 0, "Configuration file path", GROUP_OTHERS},
     {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time", GROUP_OTHERS},
     {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs", GROUP_OTHERS},
-    {"auto-restart", OPT_AUTO_RESTART, 0, 0, "Automatic restart", GROUP_OTHERS},
     {"version", 'v', 0, 0, "Show version", GROUP_OTHERS},
     {},
 };
@@ -115,16 +115,19 @@ void parseConfigFile(struct arguments *arguments, std::string cfgFile) {
         cfg.readFile(cfgFile.c_str());
         cfg.lookupValue("mode", arguments->mode);
         cfg.lookupValue("websocket", arguments->websocket);
-        cfg.lookupValue("tun", arguments->tun);
-        cfg.lookupValue("dhcp", arguments->dhcp);
-        cfg.lookupValue("stun", arguments->stun);
         cfg.lookupValue("password", arguments->password);
+        cfg.lookupValue("debug", arguments->debug);
+        cfg.lookupValue("restart", arguments->restartInterval);
+
+        cfg.lookupValue("dhcp", arguments->dhcp);
+
+        cfg.lookupValue("tun", arguments->tun);
+        cfg.lookupValue("stun", arguments->stun);
         cfg.lookupValue("name", arguments->name);
         cfg.lookupValue("discovery", arguments->discoveryInterval);
         cfg.lookupValue("route", arguments->routeCost);
         cfg.lookupValue("port", arguments->udpPort);
         cfg.lookupValue("localhost", arguments->localhost);
-        cfg.lookupValue("debug", arguments->debug);
     } catch (const libconfig::FileIOException &fioex) {
         spdlog::critical("i/o error while reading configuration file");
         exit(1);
@@ -183,8 +186,8 @@ int parseOption(int key, char *arg, struct argp_state *state) {
     case OPT_LOG_LEVEL_DEBUG:
         arguments->debug = true;
         break;
-    case OPT_AUTO_RESTART:
-        arguments->autoRestart = true;
+    case OPT_RESTART:
+        arguments->restartInterval = atoi(arg);
         break;
     case ARGP_KEY_END:
         if (needShowUsage(arguments, state)) {
@@ -405,10 +408,11 @@ int main(int argc, char *argv[]) {
         running = false;
     }
 
-    while (running && serve(arguments) && arguments.autoRestart) {
+    while (running && serve(arguments) && arguments.restartInterval) {
         running = true;
         Candy::Time::useSystemTime = false;
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        spdlog::info("service will restart in {} seconds", arguments.restartInterval);
+        std::this_thread::sleep_for(std::chrono::seconds(arguments.restartInterval));
     }
 
     return exitCode;
