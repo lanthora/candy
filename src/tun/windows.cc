@@ -21,8 +21,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wintun.h>
 // clang-format on
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#include <wintun.h>
+#pragma GCC diagnostic pop
 
 namespace {
 
@@ -55,13 +58,15 @@ private:
             spdlog::critical("load wintun.dll failed");
             return;
         }
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #define X(Name) ((*(FARPROC *)&Name = GetProcAddress(this->wintun, #Name)) == NULL)
         if (X(WintunCreateAdapter) || X(WintunCloseAdapter) || X(WintunOpenAdapter) || X(WintunGetAdapterLUID) ||
             X(WintunGetRunningDriverVersion) || X(WintunDeleteDriver) || X(WintunSetLogger) || X(WintunStartSession) ||
             X(WintunEndSession) || X(WintunGetReadWaitEvent) || X(WintunReceivePacket) || X(WintunReleaseReceivePacket) ||
             X(WintunAllocateSendPacket) || X(WintunSendPacket))
 #undef X
+#pragma GCC diagnostic pop
         {
             spdlog::critical("get function from wintun.dll failed");
             FreeLibrary(this->wintun);
