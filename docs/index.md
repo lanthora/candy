@@ -1,10 +1,6 @@
 # 文档索引
 
-- [流量转发](forward.md)
-- [对等连接](peer-to-peer.md)
-- [路由选择](routing.md)
-- [协议规范](specification.md)
-- [常见问题](faq.md)
+[服务端中继](forward.md) | [对等连接](peer-to-peer.md) | [客户端中继](routing.md) | [协议规范](specification.md)
 
 ## 什么是虚拟专用网络
 
