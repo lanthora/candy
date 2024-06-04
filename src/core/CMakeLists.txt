@@ -3,12 +3,16 @@ add_library(core STATIC ${DIR_LIB_SRCS})
 
 set_target_properties(core PROPERTIES CXX_STANDARD 20)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED fmt spdlog)
-
-add_definitions(${DEPS_CFLAGS})
-include_directories(${DEPS_INCLUDEDIR})
-target_link_libraries(core PRIVATE ${DEPS_LIBRARIES})
+if (${CANDY_STATIC})
+    target_link_libraries(core PRIVATE fmt::fmt)
+    target_link_libraries(core PRIVATE spdlog::spdlog)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DEPS REQUIRED fmt spdlog)
+    add_definitions(${DEPS_CFLAGS})
+    include_directories(${DEPS_INCLUDEDIR})
+    target_link_libraries(core PRIVATE ${DEPS_LIBRARIES})
+endif()
 
 target_link_libraries(core PRIVATE websocket)
 target_link_libraries(core PRIVATE tun)

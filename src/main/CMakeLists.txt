@@ -3,7 +3,7 @@ add_executable(${CANDY_EXECUTE_NAME} ${DIR_SRCS})
 
 set_target_properties(${CANDY_EXECUTE_NAME} PROPERTIES CXX_STANDARD 20)
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows" OR ${CANDY_STATIC})
     include(FetchContent)
 
     FetchContent_Declare(
@@ -26,12 +26,17 @@ else()
     endif()
 endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED spdlog libconfig++)
+if (${CANDY_STATIC})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE spdlog::spdlog)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE config++)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DEPS REQUIRED spdlog libconfig++)
+    add_definitions(${DEPS_CFLAGS})
+    include_directories(${DEPS_INCLUDEDIR})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${DEPS_LIBRARIES})
+endif()
 
-add_definitions(${DEPS_CFLAGS})
-include_directories(${DEPS_INCLUDEDIR})
-target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${DEPS_LIBRARIES})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -40,6 +45,6 @@ target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Threads::Threads)
 target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE core)
 target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE utility)
 
-if (NOT DEFINED CANDY_NOEXE OR NOT ${CANDY_NOEXE})
+if (NOT ${CANDY_NOEXE})
     install(TARGETS ${CANDY_EXECUTE_NAME})
 endif()
