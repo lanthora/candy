@@ -5,13 +5,12 @@
 #include "utility/random.h"
 #include "utility/time.h"
 #include <argp.h>
+#include <atomic>
 #include <bit>
-#include <condition_variable>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <libconfig.h++>
-#include <mutex>
 #include <signal.h>
 #include <spdlog/spdlog.h>
 #include <sstream>
@@ -308,43 +307,32 @@ bool checkStorageDirectory(const struct arguments &arguments) {
     return false;
 }
 
-volatile bool running = true;
-std::mutex mutex;
-std::condition_variable condition;
+std::atomic<bool> running = true;
 
 } // namespace
 
 namespace Candy {
 
 void shutdown(Client *client) {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        running = false;
-    }
-    condition.notify_one();
+    running = false;
+    running.notify_one();
 }
 
 void shutdown(Server *server) {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        running = false;
-    }
-    condition.notify_one();
+    running = false;
+    running.notify_one();
 }
 
 } // namespace Candy
 
 namespace {
 
-volatile int exitCode = 1;
+std::atomic<int> exitCode = 1;
 
 void signalHandler(int signal) {
     exitCode = 0;
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        running = false;
-    }
-    condition.notify_one();
+    running = false;
+    running.notify_one();
 }
 
 int serve(const struct arguments &arguments) {
@@ -377,10 +365,7 @@ int serve(const struct arguments &arguments) {
         client.run();
     }
 
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-        condition.wait(lock, [&] { return !running; });
-    }
+    running.wait(true);
 
     server.shutdown();
     client.shutdown();
