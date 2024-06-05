@@ -64,7 +64,13 @@ zypper refresh && zypper install candy
 
 ### 从源码构建
 
-可以参考 [Github Actions](.github/workflows/check.yaml) 和 [Dockerfile](dockerfile) 了解各系统构建时所需的环境.
+支持构建静态链接的可执行文件.需要使用支持 C++20 的编译器.
+
+```bash
+cmake -B build -DCANDY_STATIC=1
+cmake --build build
+cmake --install build
+```
 
 ## 如何使用
 
