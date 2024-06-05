@@ -5,7 +5,6 @@
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerResponse.h>
-#include <Poco/Net/NetException.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/WebSocket.h>
 #include <Poco/Timespan.h>
@@ -115,9 +114,6 @@ int WebSocketServer::listen(const std::string &host, uint16_t port) {
         this->running = true;
         this->server->start();
         return 0;
-    } catch (Poco::Net::NetException &e) {
-        spdlog::critical("websocket listen failed: {}: {}", e.what(), e.message());
-        return -1;
     } catch (std::exception &e) {
         spdlog::critical("listen failed: {}", e.what());
         return -1;

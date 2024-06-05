@@ -26,7 +26,6 @@ Source:         candy.tar.gz
 BuildRequires:  cmake
 BuildRequires:  gcc13-c++
 BuildRequires:  libopenssl-devel
-BuildRequires:  uriparser-devel
 BuildRequires:  libconfig++-devel
 BuildRequires:  poco-devel
 BuildRequires:  pcre2-devel
@@ -34,7 +33,6 @@ BuildRequires:  fmt-devel
 BuildRequires:  spdlog-devel
 BuildRequires:  systemd-rpm-macros
 Requires:  openssl
-Requires:  uriparser
 
 %description
 A reliable, low-latency, and anti-censorship virtual private network

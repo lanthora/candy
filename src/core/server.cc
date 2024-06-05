@@ -4,26 +4,26 @@
 #include "core/message.h"
 #include "utility/address.h"
 #include "utility/random.h"
-#include "utility/uri.h"
+#include <Poco/URI.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 
 namespace Candy {
 
 int Server::setWebSocketServer(const std::string &uri) {
-    Uri parser(uri);
-    if (!parser.isValid()) {
-        spdlog::critical("invalid websocket uri: {}", uri);
+    try {
+        Poco::URI parser(uri);
+        if (parser.getScheme() != "ws") {
+            spdlog::critical("websocket server only support ws");
+            return -1;
+        }
+        this->host = parser.getHost();
+        this->port = parser.getPort();
+        return 0;
+    } catch (std::exception &e) {
+        spdlog::critical("invalid websocket uri: {}: {}", uri, e.what());
         return -1;
     }
-    if (parser.scheme() != "ws") {
-        spdlog::critical("websocket server only support ws. please use a proxy such as nginx to handle encryption");
-        return -1;
-    }
-
-    this->host = parser.host();
-    this->port = parser.port().empty() ? 80 : std::stoi(parser.port());
-    return 0;
 }
 
 int Server::setPassword(const std::string &password) {
