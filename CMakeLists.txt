@@ -2,22 +2,37 @@ cmake_minimum_required(VERSION 3.18.4)
 
 project(candy LANGUAGES C CXX VERSION 5.8.6)
 
-if (NOT DEFINED CANDY_NOEXE)
-    set(CANDY_NOEXE OFF)
-endif()
-
-if (NOT DEFINED CANDY_DEVEL)
-    set(CANDY_DEVEL OFF)
-endif()
-
-if (NOT DEFINED CANDY_STATIC)
-    set(CANDY_STATIC OFF)
-endif()
+option(CANDY_NOEXE "not build exe")
+option(CANDY_DEVEL "build static library")
+option(CANDY_STATIC "static link deps")
 
 if (${CANDY_STATIC})
+    set(CMAKE_EXE_LINKER_FLAGS "-static")
     set(BUILD_SHARED_LIBS OFF)
 
     include(FetchContent)
+    include(ExternalProject)
+
+    # openssl
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    ExternalProject_Add(
+        openssl
+        PREFIX            openssl
+        URL               https://www.openssl.org/source/openssl-3.3.1.tar.gz
+        LOG_BUILD         ON
+        BUILD_IN_SOURCE   YES
+        BUILD_COMMAND     make
+        CONFIGURE_COMMAND ./config no-unit-test no-shared --prefix=${CMAKE_BINARY_DIR}
+        INSTALL_COMMAND   ""
+        TEST_COMMAND      ""
+    )
+    set(OPENSSL_ROOT_DIR ${CMAKE_BINARY_DIR}/openssl/src/openssl)
+    set(OPENSSL_INCLUDE ${OPENSSL_ROOT_DIR}/include)
+
+    set(OPENSSL_LIB_CRYPTO ${OPENSSL_ROOT_DIR}/libcrypto.a)
+    set(OPENSSL_LIB_SSL ${OPENSSL_ROOT_DIR}/libssl.a)
+  
+    include_directories(${OPENSSL_INCLUDE})
 
     # fmt
     FetchContent_Declare(

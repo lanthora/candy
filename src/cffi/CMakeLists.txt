@@ -12,6 +12,7 @@ target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE utility)
 
 if (${CANDY_STATIC})
     target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE spdlog::spdlog)
+    target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DEPS REQUIRED spdlog)
