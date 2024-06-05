@@ -32,6 +32,7 @@ endif()
 
 if (${CANDY_STATIC})
     target_link_libraries(tun PRIVATE spdlog::spdlog)
+    target_link_libraries(tun PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DEPS REQUIRED spdlog)
