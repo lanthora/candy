@@ -7,7 +7,6 @@ Build-Depends:
  debhelper-compat (= 13),
  cmake,
  libssl-dev,
- liburiparser-dev,
  libconfig++-dev,
  libpoco-dev,
  libpcre2-dev,

@@ -4,7 +4,7 @@
 #include "core/message.h"
 #include "utility/address.h"
 #include "utility/time.h"
-#include "utility/uri.h"
+#include <Poco/URI.h>
 #include <algorithm>
 #include <bit>
 #include <fmt/core.h>
@@ -42,17 +42,18 @@ int Client::setPassword(const std::string &password) {
 }
 
 int Client::setWebSocketServer(const std::string &uri) {
-    Uri parser(uri);
-    if (!parser.isValid()) {
-        spdlog::critical("client websocket server parser failed");
+    try {
+        Poco::URI parser(uri);
+        if (parser.getScheme() != "ws" && parser.getScheme() != "wss") {
+            spdlog::critical("invalid websocket scheme {}", parser.getScheme());
+            return -1;
+        }
+        this->wsUri = uri;
+        return 0;
+    } catch (std::exception &e) {
+        spdlog::critical("client websocket server parser failed: {}", e.what());
         return -1;
     }
-    if (parser.scheme() != "ws" && parser.scheme() != "wss") {
-        spdlog::critical("invalid websocket scheme {}", parser.scheme());
-        return -1;
-    }
-    this->wsUri = uri;
-    return 0;
 }
 
 int Client::setTunAddress(const std::string &cidr) {
@@ -951,14 +952,15 @@ int Client::sendStunRequest() {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 
-    Uri uri(this->stun.uri);
-    if (!uri.isValid()) {
-        spdlog::error("invalid stun uri: {}", this->stun.uri);
-        return -1;
-    }
-    if (getaddrinfo(uri.host().c_str(), uri.port().empty() ? "3478" : uri.port().c_str(), &hints, &info)) {
-        spdlog::warn("resolve stun server domain name failed: {}:{}", uri.host(), uri.port());
-        return -1;
+    try {
+        Poco::URI uri(this->stun.uri);
+        std::string strPort = uri.getPort() == 0 ? "3478" : std::to_string(uri.getPort());
+        if (getaddrinfo(uri.getHost().c_str(), strPort.c_str(), &hints, &info)) {
+            spdlog::warn("resolve stun server domain name failed: {}:{}", uri.getHost(), uri.getPort());
+            return -1;
+        }
+    } catch (std::exception &e) {
+        spdlog::error("invalid stun uri: {}: {}", this->stun.uri, e.what());
     }
 
     this->stun.ip = Address::netToHost((uint32_t)((struct sockaddr_in *)info->ai_addr)->sin_addr.s_addr);

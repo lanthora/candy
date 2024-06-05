@@ -58,7 +58,6 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-libconfig
           mingw-w64-x86_64-spdlog
-          mingw-w64-x86_64-uriparser
           mingw-w64-x86_64-poco
     - name: checkout
       uses: actions/checkout@v4

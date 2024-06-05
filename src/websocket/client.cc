@@ -1,35 +1,38 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/client.h"
 #include "utility/time.h"
-#include "utility/uri.h"
-#include <Poco/Exception.h>
 #include <Poco/Net/HTTPMessage.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPSClientSession.h>
 #include <Poco/Timespan.h>
+#include <Poco/URI.h>
+#include <memory>
 #include <spdlog/spdlog.h>
 
 namespace Candy {
 
 int WebSocketClient::connect(const std::string &address) {
-    Uri uri(address);
-    if (!uri.isValid()) {
-        spdlog::critical("invalid websocket server: {}", address);
+    std::shared_ptr<Poco::URI> uri;
+    try {
+        uri = std::make_shared<Poco::URI>(address);
+    } catch (std::exception &e) {
+        spdlog::critical("invalid websocket server: {}: {}", address, e.what());
         return -1;
     }
+
     try {
-        const std::string path = uri.path().empty() ? "/" : uri.path();
+        const std::string path = uri->getPath().empty() ? "/" : uri->getPath();
         Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, path, Poco::Net::HTTPMessage::HTTP_1_1);
         Poco::Net::HTTPResponse response;
-        if (uri.scheme() == "wss") {
+        if (uri->getScheme() == "wss") {
             // FIXME: MSYS2 下编译的 Windows 版本会因为找不到证书而导致无法连接,暂时关闭证书校验.
             using Poco::Net::Context;
             Context::Ptr context = new Context(Context::TLS_CLIENT_USE, "", "", "", Context::VERIFY_NONE);
-            Poco::Net::HTTPSClientSession cs(uri.host(), uri.port().empty() ? 443 : std::stoi(uri.port()), context);
+            Poco::Net::HTTPSClientSession cs(uri->getHost(), uri->getPort(), context);
             this->ws = std::make_shared<Poco::Net::WebSocket>(cs, request, response);
-        } else if (uri.scheme() == "ws") {
-            Poco::Net::HTTPClientSession cs(uri.host(), uri.port().empty() ? 80 : std::stoi(uri.port()));
+        } else if (uri->getScheme() == "ws") {
+            Poco::Net::HTTPClientSession cs(uri->getHost(), uri->getPort());
             this->ws = std::make_shared<Poco::Net::WebSocket>(cs, request, response);
         } else {
             spdlog::critical("invalid websocket scheme: {}", address);

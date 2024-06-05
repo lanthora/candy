@@ -8,7 +8,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED spdlog liburiparser)
+pkg_check_modules(DEPS REQUIRED spdlog)
 
 add_definitions(${DEPS_CFLAGS})
 include_directories(${DEPS_INCLUDEDIR})
