@@ -64,7 +64,7 @@ zypper refresh && zypper install candy
 
 ### 从源码构建
 
-支持构建静态链接的可执行文件.需要使用支持 C++20 的编译器.
+支持构建单文件可执行程序,构建时依赖 C++20 的编译器.
 
 ```bash
 cmake -B build -DCANDY_STATIC=1
