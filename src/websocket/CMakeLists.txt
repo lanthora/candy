@@ -4,6 +4,7 @@ add_library(websocket STATIC ${DIR_LIB_SRCS})
 set_target_properties(websocket PROPERTIES CXX_STANDARD 20)
 
 if (${CANDY_STATIC})
+    target_link_libraries(websocket PRIVATE spdlog::spdlog)
     target_link_libraries(websocket PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
 else()
     find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)

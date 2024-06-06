@@ -11,7 +11,7 @@ ExternalProject_Add(
     LOG_BUILD                   ON
     BUILD_IN_SOURCE             YES
     BUILD_COMMAND               make
-    CONFIGURE_COMMAND           ./config no-unit-test no-shared
+    CONFIGURE_COMMAND           ./config no-unit-test no-shared ${OPENSSL_TARGET} CFLAGS=$ENV{CFLAGS} LDFLAGS=$ENV{LDFLAGS}
     INSTALL_COMMAND             ""
     TEST_COMMAND                ""
 )

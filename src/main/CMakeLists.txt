@@ -8,8 +8,8 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows" OR ${CANDY_STATIC})
 
     FetchContent_Declare(
         argp-standalone
-        GIT_REPOSITORY https://github.com/tom42/argp-standalone.git
-        GIT_TAG        1684ac2e8d75918e5e244057ae4dd01369bed660
+        GIT_REPOSITORY https://github.com/lanthora/argp-standalone.git
+        GIT_TAG        416f73e0badd0089dc759892f6e982dc39fb6fc6
     )
 
     FetchContent_GetProperties(argp-standalone)
@@ -27,9 +27,11 @@ else()
 endif()
 
 if (${CANDY_STATIC})
+    include_directories(${libconfig_SOURCE_DIR}/lib)
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE spdlog::spdlog)
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE config++)
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DEPS REQUIRED spdlog libconfig++)
