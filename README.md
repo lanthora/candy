@@ -76,36 +76,20 @@ cmake --install build
 
 #### 交叉编译 Linux 单文件可执行程序
 
-交叉编译脚本自动下载编译器到工作目录并构建对应目标的可执行程序.目前支持以下 `TARGET`, 请根据需要自行选择.
-
-- aarch64
-- armv7l-eabihf
-- armv7m-eabi
-- arm-eabi
-- arm-eabihf
-- mips
-- mipsel
-- i686
-- x86_64
-
-以构建 `aarch64` 为例
-
 ```bash
-# 设置工作目录
-export WORKSPACE=/tmp/candy
-# 设置架构
-export TARGET=aarch64
-# 设置是否 strip
-export ENABLE_STRIP=1
+export CANDY_WORKSPACE=/tmp/candy
+export CANDY_STRIP=1
+export CANDY_ARCH=x86_64
+export CANDY_OS=linux
 ```
 
-执行构建脚本
+在[构建脚本](scripts/build-standalone.sh)中查看受支持的系统和架构.
 
 ```bash
-scripts/build-single-file-exe.sh
+scripts/build-standalone.sh
 ```
 
-生成的二进制文件为 `$WORKSPACE/output/$TARGET/candy`.
+生成的二进制文件为 `$CANDY_WORKSPACE/output/$CANDY_OS-$CANDY_ARCH/candy`.
 
 ## 如何使用
 

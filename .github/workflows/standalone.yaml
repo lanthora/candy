@@ -1,0 +1,34 @@
+name: standalone
+
+on:
+  workflow_dispatch
+
+env:
+  DAY_OF_WEEK: Monday
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64,arm,mips,mipsel,x86_64]
+        os: [linux]
+    runs-on: ubuntu-latest
+    env:
+      WORKSPACE: "/opt"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cross compile
+        run: |
+          ./scripts/build-standalone.sh
+        env:
+          CANDY_WORKSPACE: ${{ env.WORKSPACE }}
+          CANDY_OS: ${{ matrix.os }}
+          CANDY_ARCH: ${{ matrix.arch }}
+          CANDY_STRIP: "1"
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ env.WORKSPACE }}/output/${{ matrix.os }}-${{ matrix.arch }}
