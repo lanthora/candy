@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.18.4)
+cmake_policy(VERSION 3.18.4)
 
 project(candy LANGUAGES C CXX VERSION 5.8.6)
 
