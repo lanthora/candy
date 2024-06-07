@@ -1,0 +1,44 @@
+#!/sbin/openrc-run
+# Copyright 2024 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+
+name="candy daemon"
+description="A reliable, low-latency, and anti-censorship virtual private network"
+CANDY_NAME=${SVCNAME##*.}
+if [ -n "${CANDY_NAME}" -a "${SVCNAME}" != "candy" ]; then
+	CANDY_PIDFILE="/run/candy.${CANDY_NAME}.pid"
+	CANDY_CONFIG="/etc/candy.d/${CANDY_NAME}.cfg"
+	CANDY_LOG="/var/log/candy/${CANDY_NAME}.log"
+else
+	CANDY_PIDFILE="/run/candy.pid"
+	CANDY_CONFIG="/etc/candy.cfg"
+	CANDY_LOG="/var/log/candy/candy.log"
+fi
+depend() {
+    need net
+}
+
+start_pre() {
+	if [ ! -d "/tmp/candy/" ]; then
+		mkdir "/tmp/candy"
+	fi
+	if [ ! -L "/var/log/candy" ]; then
+		ln -s "/tmp/candy" "/var/log/"
+	fi
+}
+
+start() {
+	ebegin "Starting Candy, Log File: ${CANDY_LOG}"
+	start-stop-daemon --start --background \
+		--stdout "${CANDY_LOG}" --stderr "${CANDY_LOG}" \
+		--make-pidfile --pidfile "${CANDY_PIDFILE}" \
+		--exec /usr/bin/candy -- --auto-restart -c "${CANDY_CONFIG}"
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping Candy"
+	start-stop-daemon --stop \
+		--pidfile "${CANDY_PIDFILE}"
+	eend $?
+}
