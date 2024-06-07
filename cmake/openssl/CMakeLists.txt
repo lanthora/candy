@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.18.4)
+cmake_policy(VERSION 3.18.4)
 
 project(openssl)
 
@@ -7,7 +8,6 @@ ExternalProject_Add(
     openssl
     PREFIX                      ${CMAKE_BINARY_DIR}/openssl
     URL                         https://www.openssl.org/source/openssl-3.3.1.tar.gz
-    DOWNLOAD_EXTRACT_TIMESTAMP  TRUE
     LOG_BUILD                   ON
     BUILD_IN_SOURCE             YES
     BUILD_COMMAND               make
