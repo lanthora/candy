@@ -32,7 +32,7 @@ start() {
 	start-stop-daemon --start --background \
 		--stdout "${CANDY_LOG}" --stderr "${CANDY_LOG}" \
 		--make-pidfile --pidfile "${CANDY_PIDFILE}" \
-		--exec /usr/bin/candy -- --auto-restart -c "${CANDY_CONFIG}"
+		--exec /usr/bin/candy -- -c "${CANDY_CONFIG}"
 	eend $?
 }
 
