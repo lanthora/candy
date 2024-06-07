@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.18.4)
-cmake_policy(VERSION 3.18.4)
 
 project(candy LANGUAGES C CXX VERSION 5.8.7)
 
@@ -20,7 +19,7 @@ if (${CANDY_STATIC})
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/openssl
     )
     execute_process(
-        COMMAND ${CMAKE_COMMAND} -DOPENSSL_TARGET=${OPENSSL_TARGET} ${CMAKE_SOURCE_DIR}/cmake/openssl
+        COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_SOURCE_DIR}/cmake/openssl
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/openssl
         RESULT_VARIABLE cfgresult
     )
