@@ -3,9 +3,6 @@ name: standalone
 on:
   workflow_dispatch
 
-env:
-  DAY_OF_WEEK: Monday
-
 jobs:
   build:
     strategy:
