@@ -21,17 +21,33 @@ if (${CANDY_STATIC})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_SOURCE_DIR}/cmake/openssl
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/openssl
-        RESULT_VARIABLE cfgresult
+        RESULT_VARIABLE result
     )
-    if(NOT cfgresult EQUAL "0")
-        message(FATAL_ERROR "Config OpenSSL failed")
+    if(NOT result EQUAL "0")
+        message(FATAL_ERROR "OpenSSL CMake failed")
     endif()
+
     execute_process(
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/openssl
-        RESULT_VARIABLE buildresult
+        RESULT_VARIABLE result
     )
-    if(NOT buildresult EQUAL "0")
-        message(FATAL_ERROR "Build OpenSSL failed")
+    if(NOT result EQUAL "0")
+        message(FATAL_ERROR "OpenSSL Download or Configure failed")
+    endif()
+
+    include(ProcessorCount)
+    ProcessorCount(nproc)
+    if(nproc EQUAL 0)
+        set(nproc 1)
+    endif()
+    set(OPENSSL_ROOT_DIR ${CMAKE_BINARY_DIR}/openssl/openssl/src/openssl)
+    execute_process(
+        COMMAND make -j${nproc}
+        WORKING_DIRECTORY ${OPENSSL_ROOT_DIR}
+        RESULT_VARIABLE result
+    )
+    if(NOT result EQUAL "0")
+        message(FATAL_ERROR "OpenSSL Build failed")
     endif()
 
     set(OPENSSL_ROOT_DIR ${CMAKE_BINARY_DIR}/openssl/openssl/src/openssl)
