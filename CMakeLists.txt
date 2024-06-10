@@ -80,20 +80,6 @@ if (${CANDY_STATIC})
         add_subdirectory(${spdlog_SOURCE_DIR} ${spdlog_BINARY_DIR} EXCLUDE_FROM_ALL)
     endif()
 
-    # libconfig
-    set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(
-        libconfig
-        GIT_REPOSITORY https://github.com/hyperrealm/libconfig.git
-        GIT_TAG v1.7.3
-    )
-    FetchContent_GetProperties(libconfig)
-    if(NOT libconfig_POPULATED)
-        FetchContent_Populate(libconfig)
-        add_subdirectory(${libconfig_SOURCE_DIR} ${libconfig_BINARY_DIR} EXCLUDE_FROM_ALL)
-    endif()
-
     # poco
     set(ENABLE_DATA OFF CACHE BOOL "" FORCE)
     set(ENABLE_DATA_MYSQL OFF CACHE BOOL "" FORCE)

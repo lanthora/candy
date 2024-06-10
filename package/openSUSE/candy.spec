@@ -26,7 +26,6 @@ Source:         candy.tar.gz
 BuildRequires:  cmake
 BuildRequires:  gcc13-c++
 BuildRequires:  libopenssl-devel
-BuildRequires:  libconfig++-devel
 BuildRequires:  poco-devel
 BuildRequires:  pcre2-devel
 BuildRequires:  fmt-devel

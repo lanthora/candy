@@ -4,13 +4,14 @@
 #include "core/server.h"
 #include "utility/random.h"
 #include "utility/time.h"
+#include <Poco/String.h>
 #include <argp.h>
 #include <atomic>
 #include <bit>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <libconfig.h++>
+#include <map>
 #include <signal.h>
 #include <spdlog/spdlog.h>
 #include <sstream>
@@ -108,30 +109,62 @@ bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
     return false;
 }
 
-void parseConfigFile(struct arguments *arguments, std::string cfgFile) {
+std::map<std::string, std::string> parseConfig(const std::string &filename) {
+    std::map<std::string, std::string> config;
+    std::ifstream file(filename);
+    std::string line;
+
+    while (std::getline(file, line)) {
+        line = Poco::trimLeft(line);
+        if (line.empty() || line.front() == '#')
+            continue;
+        line.erase(line.find_last_not_of(" \t;") + 1);
+        std::size_t delimiterPos = line.find('=');
+        if (delimiterPos != std::string::npos) {
+            std::string key = Poco::trim(line.substr(0, delimiterPos));
+            std::string value = Poco::trim(line.substr(delimiterPos + 1));
+            config[key] = value;
+        }
+    }
+    return config;
+}
+
+void parseConfig(struct arguments *arguments, std::string cfgFile) {
     try {
-        libconfig::Config cfg;
-        cfg.readFile(cfgFile.c_str());
-        cfg.lookupValue("mode", arguments->mode);
-        cfg.lookupValue("websocket", arguments->websocket);
-        cfg.lookupValue("password", arguments->password);
-        cfg.lookupValue("debug", arguments->debug);
-        cfg.lookupValue("restart", arguments->restartInterval);
-
-        cfg.lookupValue("dhcp", arguments->dhcp);
-
-        cfg.lookupValue("tun", arguments->tun);
-        cfg.lookupValue("stun", arguments->stun);
-        cfg.lookupValue("name", arguments->name);
-        cfg.lookupValue("discovery", arguments->discoveryInterval);
-        cfg.lookupValue("route", arguments->routeCost);
-        cfg.lookupValue("port", arguments->udpPort);
-        cfg.lookupValue("localhost", arguments->localhost);
-    } catch (const libconfig::FileIOException &fioex) {
-        spdlog::critical("i/o error while reading configuration file");
-        exit(1);
-    } catch (const libconfig::ParseException &pex) {
-        spdlog::critical("parse error at {} : {} - {}", pex.getFile(), pex.getLine(), pex.getError());
+        auto trimStr = [](std::string str) { return str.substr(1, str.length() - 2); };
+        auto config = parseConfig(cfgFile);
+        for (auto item : config) {
+            if (item.first == "mode")
+                arguments->mode = trimStr(item.second);
+            else if (item.first == "websocket")
+                arguments->websocket = trimStr(item.second);
+            else if (item.first == "password")
+                arguments->password = trimStr(item.second);
+            else if (item.first == "debug")
+                arguments->debug = (item.second == "true");
+            else if (item.first == "restart")
+                arguments->restartInterval = std::stoi(item.second);
+            else if (item.first == "dhcp")
+                arguments->dhcp = trimStr(item.second);
+            else if (item.first == "tun")
+                arguments->tun = trimStr(item.second);
+            else if (item.first == "stun")
+                arguments->stun = trimStr(item.second);
+            else if (item.first == "name")
+                arguments->name = trimStr(item.second);
+            else if (item.first == "discovery")
+                arguments->discoveryInterval = std::stoi(item.second);
+            else if (item.first == "route")
+                arguments->routeCost = std::stoi(item.second);
+            else if (item.first == "port")
+                arguments->udpPort = std::stoi(item.second);
+            else if (item.first == "localhost")
+                arguments->localhost = trimStr(item.second);
+            else
+                spdlog::warn("unknown config: {}={}", item.first, item.second);
+        }
+    } catch (std::exception &e) {
+        spdlog::error("parse config file failed: {}", e.what());
         exit(1);
     }
 }
@@ -174,7 +207,7 @@ int parseOption(int key, char *arg, struct argp_state *state) {
         arguments->localhost = arg;
         break;
     case 'c':
-        parseConfigFile(arguments, arg);
+        parseConfig(arguments, arg);
         break;
     case 'v':
         showVersion();
