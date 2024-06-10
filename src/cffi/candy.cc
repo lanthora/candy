@@ -65,7 +65,10 @@ int candy_client_set_route_cost(void *candy, int cost) {
 
 int candy_client_set_address_update_callback(void *candy, void (*callback)(const char *, const char *)) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setAddressUpdateCallback([=](const std::string &address) { callback(c->getName().c_str(), address.c_str()); });
+    return c->setAddressUpdateCallback([=](const std::string &address) {
+        callback(c->getName().c_str(), address.c_str());
+        return 0;
+    });
 }
 
 int candy_client_set_udp_bind_port(void *candy, int port) {
