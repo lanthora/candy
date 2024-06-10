@@ -68,6 +68,10 @@ int Client::setExpectedAddress(const std::string &cidr) {
 }
 
 int Client::setVirtualMac(const std::string &vmac) {
+    if (vmac.length() != 16) {
+        Candy::shutdown(this);
+        return -1;
+    }
     this->virtualMac = vmac;
     return 0;
 }
@@ -93,7 +97,7 @@ int Client::setRouteCost(int cost) {
     return 0;
 }
 
-int Client::setAddressUpdateCallback(std::function<void(const std::string &)> callback) {
+int Client::setAddressUpdateCallback(std::function<int(const std::string &)> callback) {
     this->addressUpdateCallback = callback;
     return 0;
 }
@@ -651,7 +655,11 @@ int Client::startTunThread() {
     sendAuthMessage();
 
     if (addressUpdateCallback) {
-        addressUpdateCallback(this->realAddress);
+        int error = addressUpdateCallback(this->realAddress);
+        if (error) {
+            spdlog::critical("address update callback failed: {}", error);
+            Candy::shutdown(this);
+        }
     }
 
     return 0;

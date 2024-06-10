@@ -239,15 +239,20 @@ std::string storageDirectory = "/var/lib/candy/";
 #endif
 
 int saveLatestAddress(const std::string &name, const std::string &cidr) {
-    std::string cache = storageDirectory + "address/";
-    cache += name.empty() ? "__noname__" : name;
-    std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
-    std::ofstream ofs(cache);
-    if (ofs.is_open()) {
-        ofs << cidr;
-        ofs.close();
+    try {
+        std::string cache = storageDirectory + "address/";
+        cache += name.empty() ? "__noname__" : name;
+        std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
+        std::ofstream ofs(cache);
+        if (ofs.is_open()) {
+            ofs << cidr;
+            ofs.close();
+        }
+        return 0;
+    } catch (std::exception &e) {
+        spdlog::critical("save latest address failed: {}", e.what());
+        return -1;
     }
-    return 0;
 }
 
 std::string getLastestAddress(const std::string &name) {
@@ -263,32 +268,37 @@ std::string getLastestAddress(const std::string &name) {
     return "";
 }
 
-std::string getVirtualMac(const std::string &name) {
-    std::string cache = storageDirectory + "vmac/";
-    cache += name.empty() ? "__noname__" : name;
-    std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
+std::string virtualMac(const std::string &name) {
+    try {
+        std::string cache = storageDirectory + "vmac/";
+        cache += name.empty() ? "__noname__" : name;
+        std::filesystem::create_directories(std::filesystem::path(cache).parent_path());
 
-    char buffer[16];
-    std::stringstream ss;
+        char buffer[16];
+        std::stringstream ss;
 
-    std::ifstream ifs(cache);
-    if (ifs.is_open()) {
-        ifs.read(buffer, sizeof(buffer));
-        if (ifs) {
-            for (int i = 0; i < (int)sizeof(buffer); i++) {
-                ss << std::hex << buffer[i];
+        std::ifstream ifs(cache);
+        if (ifs.is_open()) {
+            ifs.read(buffer, sizeof(buffer));
+            if (ifs) {
+                for (int i = 0; i < (int)sizeof(buffer); i++) {
+                    ss << std::hex << buffer[i];
+                }
+            }
+            ifs.close();
+        } else {
+            ss << Candy::randomHexString(sizeof(buffer));
+            std::ofstream ofs(cache);
+            if (ofs.is_open()) {
+                ofs << ss.str();
+                ofs.close();
             }
         }
-        ifs.close();
-    } else {
-        ss << Candy::randomHexString(sizeof(buffer));
-        std::ofstream ofs(cache);
-        if (ofs.is_open()) {
-            ofs << ss.str();
-            ofs.close();
-        }
+        return ss.str();
+    } catch (std::exception &e) {
+        spdlog::critical("vmac failed: {}", e.what());
+        return "";
     }
-    return ss.str();
 }
 
 bool checkStorageDirectory(const struct arguments &arguments) {
@@ -350,7 +360,7 @@ int serve(const struct arguments &arguments) {
     }
 
     if (arguments.mode == "client") {
-        client.setAddressUpdateCallback([&](const std::string &cidr) { saveLatestAddress(arguments.name, cidr); });
+        client.setAddressUpdateCallback([&](const std::string &cidr) { return saveLatestAddress(arguments.name, cidr); });
         client.setDiscoveryInterval(arguments.discoveryInterval);
         client.setRouteCost(arguments.routeCost);
         client.setUdpBindPort(arguments.udpPort);
@@ -360,7 +370,7 @@ int serve(const struct arguments &arguments) {
         client.setStun(arguments.stun);
         client.setTunAddress(arguments.tun);
         client.setExpectedAddress(getLastestAddress(arguments.name));
-        client.setVirtualMac(getVirtualMac(arguments.name));
+        client.setVirtualMac(virtualMac(arguments.name));
         client.setName(arguments.name);
         client.run();
     }

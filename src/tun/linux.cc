@@ -71,7 +71,7 @@ public:
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
-            spdlog::critical("set tun interface failed: fd {} name {}", this->tunFd, this->name);
+            spdlog::critical("set tun interface failed: {}", strerror(errno));
             return -1;
         }
 
