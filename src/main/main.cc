@@ -10,6 +10,7 @@
 #include <bit>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <signal.h>
@@ -131,37 +132,35 @@ std::map<std::string, std::string> parseConfig(const std::string &filename) {
 
 void parseConfig(struct arguments *arguments, std::string cfgFile) {
     try {
-        auto trimStr = [](std::string str) { return str.substr(1, str.length() - 2); };
-        auto config = parseConfig(cfgFile);
-        for (auto item : config) {
-            if (item.first == "mode")
-                arguments->mode = trimStr(item.second);
-            else if (item.first == "websocket")
-                arguments->websocket = trimStr(item.second);
-            else if (item.first == "password")
-                arguments->password = trimStr(item.second);
-            else if (item.first == "debug")
-                arguments->debug = (item.second == "true");
-            else if (item.first == "restart")
-                arguments->restartInterval = std::stoi(item.second);
-            else if (item.first == "dhcp")
-                arguments->dhcp = trimStr(item.second);
-            else if (item.first == "tun")
-                arguments->tun = trimStr(item.second);
-            else if (item.first == "stun")
-                arguments->stun = trimStr(item.second);
-            else if (item.first == "name")
-                arguments->name = trimStr(item.second);
-            else if (item.first == "discovery")
-                arguments->discoveryInterval = std::stoi(item.second);
-            else if (item.first == "route")
-                arguments->routeCost = std::stoi(item.second);
-            else if (item.first == "port")
-                arguments->udpPort = std::stoi(item.second);
-            else if (item.first == "localhost")
-                arguments->localhost = trimStr(item.second);
-            else
-                spdlog::warn("unknown config: {}={}", item.first, item.second);
+        std::map<std::string, std::function<void(const std::string &)>> cfgHandlers = {
+            {"mode", [&](const std::string &value) { arguments->mode = value; }},
+            {"websocket", [&](const std::string &value) { arguments->websocket = value; }},
+            {"password", [&](const std::string &value) { arguments->password = value; }},
+            {"debug", [&](const std::string &value) { arguments->debug = (value == "true"); }},
+            {"restart", [&](const std::string &value) { arguments->restartInterval = std::stoi(value); }},
+            {"dhcp", [&](const std::string &value) { arguments->dhcp = value; }},
+            {"tun", [&](const std::string &value) { arguments->tun = value; }},
+            {"stun", [&](const std::string &value) { arguments->stun = value; }},
+            {"name", [&](const std::string &value) { arguments->name = value; }},
+            {"discovery", [&](const std::string &value) { arguments->discoveryInterval = std::stoi(value); }},
+            {"route", [&](const std::string &value) { arguments->routeCost = std::stoi(value); }},
+            {"port", [&](const std::string &value) { arguments->udpPort = std::stoi(value); }},
+            {"localhost", [&](const std::string &value) { arguments->localhost = value; }},
+        };
+        auto trim = [](std::string str) {
+            if (str.length() >= 2 && str.front() == '\"' && str.back() == '\"') {
+                return str.substr(1, str.length() - 2);
+            }
+            return str;
+        };
+        auto configs = parseConfig(cfgFile);
+        for (auto cfg : configs) {
+            auto handler = cfgHandlers.find(cfg.first);
+            if (handler != cfgHandlers.end()) {
+                handler->second(trim(cfg.second));
+            } else {
+                spdlog::warn("unknown config: {}={}", cfg.first, cfg.second);
+            }
         }
     } catch (std::exception &e) {
         spdlog::error("parse config file failed: {}", e.what());
