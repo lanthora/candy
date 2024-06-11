@@ -1,7 +1,9 @@
 name: standalone
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+  release:
+    types: [ published ]
 
 jobs:
   build:
@@ -29,8 +31,22 @@ jobs:
           CANDY_ARCH: ${{ matrix.arch }}
           CANDY_STRIP: "1"
           CANDY_UPX: "1"
+          CANDY_TGZ: "1"
       - name: upload
         uses: actions/upload-artifact@v4
         with:
           name: candy-${{ matrix.os }}-${{ matrix.arch }}
           path: ${{ env.WORKSPACE }}/output/${{ matrix.os }}-${{ matrix.arch }}
+      - name: prepare package
+        shell: bash
+        if: github.event_name == 'release'
+        run: |
+          GIT_TAG=${{ github.event.release.tag_name }}
+          PKG_PATH=${{ env.WORKSPACE }}/output/candy_${GIT_TAG#v}+${{ matrix.os }}_${{ matrix.arch }}.tar.gz
+          mv ${{ env.WORKSPACE }}/output/candy-${{ matrix.os }}-${{ matrix.arch }}.tar.gz $PKG_PATH
+          echo "PKG_PATH=$PKG_PATH" >> $GITHUB_ENV
+      - name: release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+        with:
+          files: ${{ env.PKG_PATH }}
