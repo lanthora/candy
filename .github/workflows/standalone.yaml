@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [aarch64,arm,mips,mipsel,x86_64]
+        arch: [aarch64,arm,loongarch64,mips,mipsel,riscv64,x86_64]
         os: [linux]
     runs-on: ubuntu-latest
     env:
