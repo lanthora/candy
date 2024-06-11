@@ -8,11 +8,11 @@ if [[ -z $TARGET || -z $TARGET_OPENSSL ]];then
     echo "CANDY_ARCH: $CANDY_ARCH"
     echo "CANDY_OS: $CANDY_OS"
     if [[ "$CANDY_OS" == "linux" ]]; then
-        if [[ "$CANDY_ARCH" == "aarch64" ]]; then TARGET="aarch64-linux-musl";TARGET_OPENSSL="linux-aarch64"
-        elif [[ "$CANDY_ARCH" == "arm" ]]; then TARGET="arm-linux-musleabi";TARGET_OPENSSL="linux-armv4"
-        elif [[ "$CANDY_ARCH" == "mips" ]]; then TARGET="mips-linux-musl";TARGET_OPENSSL="linux-mips32"
-        elif [[ "$CANDY_ARCH" == "mipsel" ]]; then TARGET="mipsel-linux-musl";TARGET_OPENSSL="linux-mips32"
-        elif [[ "$CANDY_ARCH" == "x86_64" ]]; then TARGET="x86_64-linux-musl";TARGET_OPENSSL="linux-x86_64"
+        if [[ "$CANDY_ARCH" == "aarch64" ]]; then TARGET="aarch64-linux-musl";TARGET_OPENSSL="linux-aarch64";UPX=1
+        elif [[ "$CANDY_ARCH" == "arm" ]]; then TARGET="arm-linux-musleabi";TARGET_OPENSSL="linux-armv4";UPX=0
+        elif [[ "$CANDY_ARCH" == "mips" ]]; then TARGET="mips-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=0
+        elif [[ "$CANDY_ARCH" == "mipsel" ]]; then TARGET="mipsel-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=0
+        elif [[ "$CANDY_ARCH" == "x86_64" ]]; then TARGET="x86_64-linux-musl";TARGET_OPENSSL="linux-x86_64";UPX=1
         else echo "Unknown CANDY_ARCH: $CANDY_ARCH";exit 1;fi
     elif [[ "$CANDY_OS" == "macos" ]]; then
         echo "macos is not supported yet";exit 1
@@ -58,6 +58,10 @@ SOURCE_DIR="$(dirname $(readlink -f "$0"))/../"
 cmake -G "$GENERATOR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCANDY_STATIC=1 -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$OUTPUT_DIR -DTARGET_OPENSSL=$TARGET_OPENSSL $SOURCE_DIR
 cmake --build $BUILD_DIR --parallel $(nproc)
 
-if [ $CANDY_STRIP ];then
+if [[ $CANDY_STRIP && $CANDY_STRIP -eq 1 ]];then
     $STRIP $OUTPUT_DIR/candy
+fi
+
+if [[ $CANDY_UPX && $CANDY_UPX -eq 1 && $UPX -eq 1 ]];then
+    upx $OUTPUT_DIR/candy
 fi

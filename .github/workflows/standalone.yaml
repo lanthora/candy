@@ -16,6 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          install-only: true
       - name: Cross compile
         run: |
           ./scripts/build-standalone.sh
@@ -24,6 +28,7 @@ jobs:
           CANDY_OS: ${{ matrix.os }}
           CANDY_ARCH: ${{ matrix.arch }}
           CANDY_STRIP: "1"
+          CANDY_UPX: "1"
       - name: upload
         uses: actions/upload-artifact@v4
         with:

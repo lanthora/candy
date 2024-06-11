@@ -78,7 +78,6 @@ cmake --install build
 
 ```bash
 export CANDY_WORKSPACE=/tmp/candy
-export CANDY_STRIP=1
 export CANDY_ARCH=x86_64
 export CANDY_OS=linux
 ```
