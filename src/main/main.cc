@@ -2,10 +2,10 @@
 #include "core/client.h"
 #include "core/common.h"
 #include "core/server.h"
+#include "utility/argparse.h"
 #include "utility/random.h"
 #include "utility/time.h"
 #include <Poco/String.h>
-#include <argp.h>
 #include <atomic>
 #include <bit>
 #include <filesystem>
@@ -25,7 +25,7 @@ struct arguments {
     std::string mode;
     std::string websocket;
     std::string password;
-    int restartInterval = 0;
+    int restart = 0;
     bool noTimestamp = false;
     bool debug = false;
 
@@ -38,47 +38,8 @@ struct arguments {
     std::string stun;
     std::string localhost;
     int udpPort = 0;
-    int discoveryInterval = 0;
+    int discovery = 0;
     int routeCost = 0;
-};
-
-const int OPT_NO_TIMESTAMP = 1;
-const int OPT_LOG_LEVEL_DEBUG = 2;
-const int OPT_RESTART = 3;
-const int OPT_DISCOVERY_INTERVAL = 4;
-const int OPT_UDP_BIND_PORT = 5;
-const int OPT_UDP_P2P_IP = 6;
-
-const int GROUP_CLIENT_AND_SERVER = 1;
-const int GROUP_SERVER_ONLY = 2;
-const int GROUP_CLIENT_ONLY = 3;
-const int GROUP_OTHERS = 4;
-
-struct argp_option options[] = {
-    {0, 0, 0, 0, "Client and Server:", GROUP_CLIENT_AND_SERVER},
-    {"mode", 'm', "TEXT", 0, "Working mode", GROUP_CLIENT_AND_SERVER},
-    {"websocket", 'w', "URI", 0, "Websocket address", GROUP_CLIENT_AND_SERVER},
-    {"password", 'p', "TEXT", 0, "Authorization password", GROUP_CLIENT_AND_SERVER},
-    {"restart", OPT_RESTART, "SECONDS", 0, "Restart interval", GROUP_CLIENT_AND_SERVER},
-
-    {0, 0, 0, 0, "Server:", GROUP_SERVER_ONLY},
-    {"dhcp", 'd', "CIDR", 0, "Automatically assigned address range", GROUP_SERVER_ONLY},
-
-    {0, 0, 0, 0, "Client:", GROUP_CLIENT_ONLY},
-    {"name", 'n', "TEXT", 0, "Network interface name", GROUP_CLIENT_ONLY},
-    {"tun", 't', "CIDR", 0, "Static configured IP address", GROUP_CLIENT_ONLY},
-    {"stun", 's', "URI", 0, "STUN service address", GROUP_CLIENT_ONLY},
-    {"port", OPT_UDP_BIND_PORT, "PORT", 0, "Bind udp port", GROUP_CLIENT_ONLY},
-    {"route", 'r', "COST", 0, "Cost of routing", GROUP_CLIENT_ONLY},
-    {"discovery", OPT_DISCOVERY_INTERVAL, "SECONDS", 0, "Active discovery broadcast interval", GROUP_CLIENT_ONLY},
-    {"localhost", OPT_UDP_P2P_IP, "IP", 0, "Local P2P IP", GROUP_CLIENT_ONLY},
-
-    {0, 0, 0, 0, "Others:", GROUP_OTHERS},
-    {"config", 'c', "PATH", 0, "Configuration file path", GROUP_OTHERS},
-    {"no-timestamp", OPT_NO_TIMESTAMP, 0, 0, "Log does not show time", GROUP_OTHERS},
-    {"debug", OPT_LOG_LEVEL_DEBUG, 0, 0, "Show debug level logs", GROUP_OTHERS},
-    {"version", 'v', 0, 0, "Show version", GROUP_OTHERS},
-    {},
 };
 
 int disableLogTimestamp() {
@@ -90,24 +51,6 @@ int setLogLevelDebug() {
     spdlog::set_level(spdlog::level::debug);
     spdlog::debug("set log level: debug");
     return 0;
-}
-
-void showVersion() {
-    std::cout << CANDY_VERSION << std::endl;
-    exit(0);
-}
-
-bool needShowUsage(struct arguments *arguments, struct argp_state *state) {
-    if (state->arg_num > 0)
-        return true;
-
-    if (arguments->mode != "client" && arguments->mode != "server")
-        return true;
-
-    if (arguments->websocket.empty())
-        return true;
-
-    return false;
 }
 
 std::map<std::string, std::string> parseConfig(const std::string &filename) {
@@ -130,22 +73,22 @@ std::map<std::string, std::string> parseConfig(const std::string &filename) {
     return config;
 }
 
-void parseConfig(struct arguments *arguments, std::string cfgFile) {
+void parseConfig(std::string cfgFile, arguments &args) {
     try {
         std::map<std::string, std::function<void(const std::string &)>> cfgHandlers = {
-            {"mode", [&](const std::string &value) { arguments->mode = value; }},
-            {"websocket", [&](const std::string &value) { arguments->websocket = value; }},
-            {"password", [&](const std::string &value) { arguments->password = value; }},
-            {"debug", [&](const std::string &value) { arguments->debug = (value == "true"); }},
-            {"restart", [&](const std::string &value) { arguments->restartInterval = std::stoi(value); }},
-            {"dhcp", [&](const std::string &value) { arguments->dhcp = value; }},
-            {"tun", [&](const std::string &value) { arguments->tun = value; }},
-            {"stun", [&](const std::string &value) { arguments->stun = value; }},
-            {"name", [&](const std::string &value) { arguments->name = value; }},
-            {"discovery", [&](const std::string &value) { arguments->discoveryInterval = std::stoi(value); }},
-            {"route", [&](const std::string &value) { arguments->routeCost = std::stoi(value); }},
-            {"port", [&](const std::string &value) { arguments->udpPort = std::stoi(value); }},
-            {"localhost", [&](const std::string &value) { arguments->localhost = value; }},
+            {"mode", [&](const std::string &value) { args.mode = value; }},
+            {"websocket", [&](const std::string &value) { args.websocket = value; }},
+            {"password", [&](const std::string &value) { args.password = value; }},
+            {"debug", [&](const std::string &value) { args.debug = (value == "true"); }},
+            {"restart", [&](const std::string &value) { args.restart = std::stoi(value); }},
+            {"dhcp", [&](const std::string &value) { args.dhcp = value; }},
+            {"tun", [&](const std::string &value) { args.tun = value; }},
+            {"stun", [&](const std::string &value) { args.stun = value; }},
+            {"name", [&](const std::string &value) { args.name = value; }},
+            {"discovery", [&](const std::string &value) { args.discovery = std::stoi(value); }},
+            {"route", [&](const std::string &value) { args.routeCost = std::stoi(value); }},
+            {"port", [&](const std::string &value) { args.udpPort = std::stoi(value); }},
+            {"localhost", [&](const std::string &value) { args.localhost = value; }},
         };
         auto trim = [](std::string str) {
             if (str.length() >= 2 && str.front() == '\"' && str.back() == '\"') {
@@ -166,81 +109,6 @@ void parseConfig(struct arguments *arguments, std::string cfgFile) {
         spdlog::error("parse config file failed: {}", e.what());
         exit(1);
     }
-}
-
-int parseOption(int key, char *arg, struct argp_state *state) {
-    struct arguments *arguments = (struct arguments *)state->input;
-
-    switch (key) {
-    case 'm':
-        arguments->mode = arg;
-        break;
-    case 'w':
-        arguments->websocket = arg;
-        break;
-    case 't':
-        arguments->tun = arg;
-        break;
-    case 'd':
-        arguments->dhcp = arg;
-        break;
-    case 'p':
-        arguments->password = arg;
-        break;
-    case 'n':
-        arguments->name = arg;
-        break;
-    case 's':
-        arguments->stun = arg;
-        break;
-    case OPT_UDP_BIND_PORT:
-        arguments->udpPort = atoi(arg);
-        break;
-    case OPT_DISCOVERY_INTERVAL:
-        arguments->discoveryInterval = atoi(arg);
-        break;
-    case 'r':
-        arguments->routeCost = atoi(arg);
-        break;
-    case OPT_UDP_P2P_IP:
-        arguments->localhost = arg;
-        break;
-    case 'c':
-        parseConfig(arguments, arg);
-        break;
-    case 'v':
-        showVersion();
-        break;
-    case OPT_NO_TIMESTAMP:
-        arguments->noTimestamp = true;
-        break;
-    case OPT_LOG_LEVEL_DEBUG:
-        arguments->debug = true;
-        break;
-    case OPT_RESTART:
-        arguments->restartInterval = atoi(arg);
-        break;
-    case ARGP_KEY_END:
-        if (needShowUsage(arguments, state)) {
-            argp_usage(state);
-            break;
-        }
-        if (arguments->noTimestamp) {
-            disableLogTimestamp();
-        }
-        if (arguments->debug) {
-            setLogLevelDebug();
-        }
-        break;
-    }
-    return 0;
-}
-
-extern "C" {
-struct argp config = {
-    .options = options,
-    .parser = parseOption,
-};
 }
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -333,17 +201,17 @@ std::string virtualMac(const std::string &name) {
     }
 }
 
-bool checkStorageDirectory(const struct arguments &arguments) {
-    if (arguments.mode != "client") {
+bool checkStorageDirectory(const arguments &args) {
+    if (args.mode != "client") {
         return true;
     }
     if (!std::filesystem::exists(storageDirectory + "lost")) {
         return true;
     }
-    if (arguments.websocket.starts_with("wss://canets.org/")) {
+    if (args.websocket.starts_with("wss://canets.org/")) {
         return false;
     }
-    if (!arguments.tun.empty()) {
+    if (!args.tun.empty()) {
         return true;
     }
     return false;
@@ -377,33 +245,33 @@ void signalHandler(int signal) {
     running.notify_one();
 }
 
-int serve(const struct arguments &arguments) {
+int serve(const arguments &args) {
 
     netStartup();
 
     Candy::Server server;
     Candy::Client client;
 
-    if (arguments.mode == "server") {
-        server.setPassword(arguments.password);
-        server.setWebSocketServer(arguments.websocket);
-        server.setDynamicAddressRange(arguments.dhcp);
+    if (args.mode == "server") {
+        server.setPassword(args.password);
+        server.setWebSocketServer(args.websocket);
+        server.setDynamicAddressRange(args.dhcp);
         server.run();
     }
 
-    if (arguments.mode == "client") {
-        client.setAddressUpdateCallback([&](const std::string &cidr) { return saveLatestAddress(arguments.name, cidr); });
-        client.setDiscoveryInterval(arguments.discoveryInterval);
-        client.setRouteCost(arguments.routeCost);
-        client.setUdpBindPort(arguments.udpPort);
-        client.setLocalhost(arguments.localhost);
-        client.setPassword(arguments.password);
-        client.setWebSocketServer(arguments.websocket);
-        client.setStun(arguments.stun);
-        client.setTunAddress(arguments.tun);
-        client.setExpectedAddress(getLastestAddress(arguments.name));
-        client.setVirtualMac(virtualMac(arguments.name));
-        client.setName(arguments.name);
+    if (args.mode == "client") {
+        client.setAddressUpdateCallback([&](const std::string &cidr) { return saveLatestAddress(args.name, cidr); });
+        client.setDiscoveryInterval(args.discovery);
+        client.setRouteCost(args.routeCost);
+        client.setUdpBindPort(args.udpPort);
+        client.setLocalhost(args.localhost);
+        client.setPassword(args.password);
+        client.setWebSocketServer(args.websocket);
+        client.setStun(args.stun);
+        client.setTunAddress(args.tun);
+        client.setExpectedAddress(getLastestAddress(args.name));
+        client.setVirtualMac(virtualMac(args.name));
+        client.setName(args.name);
         client.run();
     }
 
@@ -423,23 +291,90 @@ int serve(const struct arguments &arguments) {
 }
 } // namespace
 
+int parseConfig(int argc, char *argv[], arguments &args) {
+    argparse::ArgumentParser program("candy", CANDY_VERSION);
+
+    program.add_argument("-m", "--mode").help("working mode").metavar("TEXT");
+    program.add_argument("-w", "--websocket").help("websocket address").metavar("URI");
+    program.add_argument("-p", "--password").help("authorization password").metavar("TEXT");
+    program.add_argument("--restart").help("restart interval").scan<'i', int>().metavar("SECONDS");
+    program.add_argument("-d", "--dhcp").help("dhcp address range").metavar("CIDR");
+    program.add_argument("-n", "--name").help("network interface name").metavar("TEXT");
+    program.add_argument("-t", "--tun").help("static address").metavar("CIDR");
+    program.add_argument("-s", "--stun").help("stun address").metavar("URI");
+    program.add_argument("-s", "--port").help("udp port").scan<'i', int>().metavar("NUMBER");
+    program.add_argument("-r", "--route").help("routing cost").scan<'i', int>().metavar("COST");
+    program.add_argument("--discovery").help("discovery interval").scan<'i', int>().metavar("SECONDS");
+    program.add_argument("--localhost").help("local ip").metavar("IP");
+    program.add_argument("-c", "--config").help("config file path").metavar("PATH");
+    program.add_argument("--no-timestamp").implicit_value(true).help("disable log time");
+    program.add_argument("--debug").implicit_value(true).help("show debug log");
+
+    try {
+        program.parse_args(argc, argv);
+        if (program.is_used("--config")) {
+            parseConfig(program.get<std::string>("--config"), args);
+        }
+
+        args.mode = program.is_used("--mode") ? program.get<std::string>("--mode") : args.mode;
+        args.websocket = program.is_used("--websocket") ? program.get<std::string>("--websocket") : args.websocket;
+        args.password = program.is_used("--password") ? program.get<std::string>("--password") : args.password;
+        args.restart = program.is_used("--restart") ? program.get<int>("--restart") : args.restart;
+        args.noTimestamp = program.is_used("--no-timestamp") ? program.get<bool>("--no-timestamp") : args.noTimestamp;
+        args.debug = program.is_used("--debug") ? program.get<bool>("--debug") : args.debug;
+        args.dhcp = program.is_used("--dhcp") ? program.get<std::string>("--dhcp") : args.dhcp;
+        args.name = program.is_used("--name") ? program.get<std::string>("--name") : args.name;
+        args.tun = program.is_used("--tun") ? program.get<std::string>("--tun") : args.tun;
+        args.stun = program.is_used("--stun") ? program.get<std::string>("--stun") : args.stun;
+        args.localhost = program.is_used("--localhost") ? program.get<std::string>("--localhost") : args.localhost;
+        args.udpPort = program.is_used("--port") ? program.get<int>("--port") : args.udpPort;
+        args.discovery = program.is_used("--discovery") ? program.get<int>("--discovery") : args.discovery;
+        args.routeCost = program.is_used("--route") ? program.get<int>("--route") : args.routeCost;
+
+        bool needShowUsage = [&]() {
+            if (args.mode != "client" && args.mode != "server")
+                return true;
+            if (args.websocket.empty())
+                return true;
+
+            return false;
+        }();
+
+        if (needShowUsage) {
+            std::cout << program.usage() << std::endl;
+            exit(1);
+        }
+
+        if (args.noTimestamp) {
+            disableLogTimestamp();
+        }
+        if (args.debug) {
+            setLogLevelDebug();
+        }
+        return 0;
+    } catch (const std::exception &e) {
+        std::cout << program.usage() << std::endl;
+        exit(1);
+    }
+}
+
 int main(int argc, char *argv[]) {
-    struct arguments arguments;
-    argp_parse(&config, argc, argv, 0, 0, &arguments);
+    arguments args;
+    parseConfig(argc, argv, args);
 
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    if (!checkStorageDirectory(arguments)) {
+    if (!checkStorageDirectory(args)) {
         spdlog::critical("the container needs to add a storage volume: {}", storageDirectory);
         running = false;
     }
 
-    while (running && serve(arguments) && arguments.restartInterval) {
+    while (running && serve(args) && args.restart) {
         running = true;
         Candy::Time::useSystemTime = false;
-        spdlog::info("service will restart in {} seconds", arguments.restartInterval);
-        std::this_thread::sleep_for(std::chrono::seconds(arguments.restartInterval));
+        spdlog::info("service will restart in {} seconds", args.restart);
+        std::this_thread::sleep_for(std::chrono::seconds(args.restart));
     }
 
     return exitCode;
