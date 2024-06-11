@@ -3,29 +3,6 @@ add_executable(${CANDY_EXECUTE_NAME} ${DIR_SRCS})
 
 set_target_properties(${CANDY_EXECUTE_NAME} PROPERTIES CXX_STANDARD 20)
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows" OR ${CANDY_STATIC})
-    include(FetchContent)
-
-    FetchContent_Declare(
-        argp-standalone
-        GIT_REPOSITORY https://github.com/lanthora/argp-standalone.git
-        GIT_TAG        416f73e0badd0089dc759892f6e982dc39fb6fc6
-    )
-
-    FetchContent_GetProperties(argp-standalone)
-    if(NOT argp-standalone_POPULATED)
-        FetchContent_Populate(argp-standalone)
-        add_subdirectory(${argp-standalone_SOURCE_DIR} ${argp-standalone_BINARY_DIR} EXCLUDE_FROM_ALL)
-    endif()
-
-    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE argp-standalone)  
-else()
-    find_library(ARGP_LIB argp)
-    if(ARGP_LIB)
-        target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${ARGP_LIB})
-    endif()
-endif()
-
 if (${CANDY_STATIC})
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE spdlog::spdlog)
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
