@@ -12,7 +12,9 @@ if [[ -z $TARGET || -z $TARGET_OPENSSL ]];then
         elif [[ "$CANDY_ARCH" == "arm" ]]; then TARGET="arm-unknown-linux-musleabi";TARGET_OPENSSL="linux-armv4";UPX=1
         elif [[ "$CANDY_ARCH" == "loongarch64" ]]; then TARGET="loongarch64-unknown-linux-musl";TARGET_OPENSSL="linux64-loongarch64";UPX=0
         elif [[ "$CANDY_ARCH" == "mips" ]]; then TARGET="mips-unknown-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=1
+        elif [[ "$CANDY_ARCH" == "mipssf" ]]; then TARGET="mips-unknown-linux-muslsf";TARGET_OPENSSL="linux-mips32";UPX=1
         elif [[ "$CANDY_ARCH" == "mipsel" ]]; then TARGET="mipsel-unknown-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=1
+        elif [[ "$CANDY_ARCH" == "mipselsf" ]]; then TARGET="mipsel-unknown-linux-muslsf";TARGET_OPENSSL="linux-mips32";UPX=1
         elif [[ "$CANDY_ARCH" == "riscv64" ]]; then TARGET="riscv64-unknown-linux-musl";TARGET_OPENSSL="linux64-riscv64";UPX=0
         elif [[ "$CANDY_ARCH" == "x86_64" ]]; then TARGET="x86_64-multilib-linux-musl";TARGET_OPENSSL="linux-x86_64";UPX=1
         else echo "Unknown CANDY_ARCH: $CANDY_ARCH";exit 1;fi
