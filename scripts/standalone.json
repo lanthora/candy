@@ -10,6 +10,10 @@
         },
         {
             "os": "linux",
+            "arch": "armhf"
+        },
+        {
+            "os": "linux",
             "arch": "loongarch64"
         },
         {
@@ -27,6 +31,18 @@
         {
             "os": "linux",
             "arch": "mipselsf"
+        },
+        {
+            "os": "linux",
+            "arch": "mips64"
+        },
+        {
+            "os": "linux",
+            "arch": "mips64el"
+        },
+        {
+            "os": "linux",
+            "arch": "riscv32"
         },
         {
             "os": "linux",
