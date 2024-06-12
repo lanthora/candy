@@ -8,6 +8,8 @@
 
 ### Linux
 
+针对 Linux 环境差异,提供多种安装方式.请选择适合自己的方式安装.
+
 #### Docker
 
 建议使用 Docker 镜像,已上传到 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy).
@@ -23,9 +25,9 @@ docker run --rm --privileged=true --net=host docker.io/lanthora/candy:latest --h
 使用 [AUR](https://aur.archlinux.org/packages/candy) 或者 [archlinuxcn](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy) 仓库
 
 ```bash
-# 安装 AUR 版本,由于依赖可能会升级,需要先完整更新系统
-paru -Syu candy
-# 安装 archlinuxcn 版本
+# AUR
+paru candy
+# archlinuxcn
 pacman -S candy
 ```
 
@@ -50,17 +52,31 @@ zypper refresh && zypper install candy
 
 #### Debian/Ubuntu
 
-在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供 deb 安装包.
+下载 [DEB](https://github.com/lanthora/candy/releases/latest) 安装包后通过以下命令安装
+
+```bash
+apt install –-fix-broken ./xxx.deb
+```
+
+#### 单文件可执行程序
+
+当上述所有方式都不适用时,尝试[单文件可执行程序](https://github.com/lanthora/candy/releases/latest).
+
+该程序由[交叉编译脚本](scripts/build-standalone.sh)构建.
 
 ### macOS
 
-请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 仓库中提供的方法安装.
+请参考 [Homebrew](https://github.com/lanthora/homebrew-repo) 中提供的方法安装.
 
 ### Windows
 
-[Cake](https://github.com/lanthora/cake) 是将本项目作为依赖库构建的 GUI 版本,其 [Release](https://github.com/lanthora/cake/releases/latest) 中提供安装包.
+#### 图形用户界面
 
-在 [Release](https://github.com/lanthora/candy/releases/latest) 中提供了由 CI 构建的命令行版本.用户可以在此基础上自行定制.
+以本项目作为依赖构建 [Cake](https://github.com/lanthora/cake) 提供[图形用户界面](https://github.com/lanthora/cake/releases/latest).
+
+#### 命令行
+
+本项目仅提供[命令行版本](https://github.com/lanthora/candy/releases/latest),用户可以在此基础上自行定制.
 
 ### 从源码构建
 
@@ -76,13 +92,18 @@ cmake --install build
 
 #### 交叉编译 Linux 单文件可执行程序
 
+根据实际情况设置以下环境变量,查看[受支持的系统和架构](scripts/standalone.json).
+
 ```bash
-export CANDY_WORKSPACE=/tmp/candy
-export CANDY_ARCH=x86_64
+# 下载和编译所用目录的绝对路径
+export CANDY_WORKSPACE=$HOME/workspace
+# 操作系统
 export CANDY_OS=linux
+# 目标文件的架构
+export CANDY_ARCH=x86_64
 ```
 
-在[构建脚本](scripts/build-standalone.sh)中查看受支持的系统和架构.
+执行构建脚本.构建时将下载编译工具链及依赖库,请确保网络通畅.
 
 ```bash
 scripts/build-standalone.sh
