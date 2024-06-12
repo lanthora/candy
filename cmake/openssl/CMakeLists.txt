@@ -5,7 +5,7 @@ project(openssl)
 include(ExternalProject)
 ExternalProject_Add(
     openssl
-    PREFIX                      ${CMAKE_BINARY_DIR}/openssl
+    PREFIX                      ${CMAKE_CURRENT_BINARY_DIR}/openssl
     URL                         https://www.openssl.org/source/openssl-3.3.1.tar.gz
     LOG_BUILD                   ON
     BUILD_IN_SOURCE             YES
