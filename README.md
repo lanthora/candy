@@ -215,6 +215,7 @@ localhost = "127.0.0.1"
 
 ## 相关项目
 
+- [Cucurbita](https://hub.docker.com/r/lanthora/cucurbita): Candy Server with Web Control Interface
 - [EasyTier](https://github.com/EasyTier/EasyTier): A simple, decentralized mesh VPN with WireGuard support
 
 ## 交流群
