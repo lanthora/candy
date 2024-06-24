@@ -233,13 +233,13 @@ int64_t Time::unixTime() {
     sysTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
     if (std::abs(netTime - sysTime) < 3) {
         useSystemTime = true;
-        spdlog::debug("system time is accurate, network time is no longer used");
+        spdlog::debug("system time is accurate");
     }
     if (netTime) {
         return netTime;
     }
 
-    spdlog::warn("unable to get the time from the network, please make sure the local time is accurate");
+    spdlog::warn("request network time failed");
     return sysTime;
 }
 

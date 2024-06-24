@@ -8,16 +8,16 @@
 namespace Candy {
 
 struct IPv4Header {
-    unsigned char version_ihl; // 版本号和首部长度
-    unsigned char tos;         // 服务类型
-    unsigned short tot_len;    // 总长度
-    unsigned short id;         // 标识
-    unsigned short frag_off;   // 分片偏移
-    unsigned char ttl;         // 生存时间
-    unsigned char protocol;    // 协议类型
-    unsigned short check;      // 校验和
-    unsigned int saddr;        // 源地址
-    unsigned int daddr;        // 目的地址
+    uint8_t version_ihl; // 版本号和首部长度
+    uint8_t tos;         // 服务类型
+    uint16_t tot_len;    // 总长度
+    uint16_t id;         // 标识
+    uint16_t frag_off;   // 分片偏移
+    uint8_t ttl;         // 生存时间
+    uint8_t protocol;    // 协议类型
+    uint16_t check;      // 校验和
+    uint32_t saddr;      // 源地址
+    uint32_t daddr;      // 目的地址
 };
 
 class Address {

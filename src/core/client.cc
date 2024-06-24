@@ -253,6 +253,11 @@ void Client::handleWebSocketMessage() {
                 handleDiscoveryMessage(message);
                 break;
 
+            // 路由表
+            case MessageType::ROUTE:
+                handleSysRtMessage(message);
+                break;
+
             // 通用报文
             case MessageType::GENERAL:
                 handleGeneralMessage(message);
@@ -318,9 +323,9 @@ void Client::handleUdpMessage() {
             }
             continue;
         }
-        if (isRouteMessage(message)) {
+        if (isCandyRtMessage(message)) {
             if (routeCost) {
-                handleRouteMessage(message);
+                handleCandyRtMessage(message);
             }
             continue;
         }
@@ -452,9 +457,13 @@ void Client::handleForwardMessage(WebSocketMessage &message) {
 
     const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
     const size_t len = message.buffer.length() - sizeof(ForwardHeader::type);
-    this->tun.write(std::string(src, len));
 
     const IPv4Header *header = (const IPv4Header *)src;
+    if (header->protocol == 0x04) {
+        this->tun.write(std::string(src + sizeof(IPv4Header), len - sizeof(IPv4Header)));
+    } else {
+        this->tun.write(std::string(src, len));
+    }
 
     tryDirectConnection(Address::netToHost(header->saddr));
 }
@@ -556,6 +565,25 @@ void Client::handleDiscoveryMessage(WebSocketMessage &message) {
 
     // 接收方收到广播或发送方收到回包,同时尝试开始直连
     tryDirectConnection(src);
+}
+
+void Client::handleSysRtMessage(WebSocketMessage &message) {
+    if (message.buffer.size() < sizeof(SysRouteMessage)) {
+        spdlog::warn("invalid system route message: {:n}", spdlog::to_hex(message.buffer));
+        return;
+    }
+    SysRouteMessage *header = (SysRouteMessage *)message.buffer.c_str();
+    SysRouteItem *rt = header->rtTable;
+    std::unique_lock lock(this->sysRtTableMutex);
+    this->sysRtTable.clear();
+    for (int idx = 0; idx < header->size; ++idx) {
+        SysRouteEntry entry;
+        entry.dst = Address::netToHost(rt[idx].dest);
+        entry.mask = Address::netToHost(rt[idx].mask);
+        entry.next = Address::netToHost(rt[idx].nexthop);
+        this->tun.setSysRtTable(entry.dst, entry.mask, entry.next);
+        sysRtTable.push_back(entry);
+    }
 }
 
 void Client::handleGeneralMessage(WebSocketMessage &message) {
@@ -689,9 +717,23 @@ void Client::handleTunMessage() {
         if ((header->version_ihl >> 4) != 4) {
             continue;
         }
-        // 发包地址必须与登录地址相同
-        if (Address::netToHost(header->saddr) != this->tun.getIP()) {
-            continue;
+        // 存在路由表项时封装成简单的 IPIP 协议
+        uint32_t nextHop = [&]() {
+            uint32_t daddr = Address::netToHost(header->daddr);
+            std::shared_lock lock(this->sysRtTableMutex);
+            for (auto const &rt : sysRtTable) {
+                if ((daddr & rt.mask) == rt.dst) {
+                    return rt.next;
+                }
+            }
+            return uint32_t(0);
+        }();
+        if (nextHop) {
+            buffer = std::string(sizeof(IPv4Header), 0) + buffer;
+            header = (IPv4Header *)buffer.data();
+            header->protocol = 0x04;
+            header->saddr = Address::hostToNet(this->tun.getIP());
+            header->daddr = Address::hostToNet(nextHop);
         }
         // 目的地址是本机,直接回写,在 macos 中遇到了这种情况
         if (Address::netToHost(header->daddr) == this->tun.getIP()) {
@@ -796,7 +838,7 @@ void Client::tick() {
             if (peer.count > 3) {
                 peer.updateState(PeerState::INIT);
                 if (routeCost) {
-                    updateRouteTable(RouteEntry(peer.getTun(), peer.getTun(), DELAY_LIMIT));
+                    updateCandyRtTable(CandyRouteEntry(peer.getTun(), peer.getTun(), DELAY_LIMIT));
                 }
             } else {
                 sendHeartbeatMessage(peer);
@@ -1028,15 +1070,15 @@ int Client::sendHeartbeatMessage(const PeerInfo &peer) {
 
 int Client::sendPeerForwardMessage(const std::string &buffer) {
     std::shared_lock ipPeerLock(this->ipPeerMutex);
-    std::shared_lock rtTableLock(this->rtTableMutex);
+    std::shared_lock rtTableLock(this->candyRtTableMutex);
 
     IPv4Header *header = (IPv4Header *)buffer.data();
     uint32_t dst = Address::netToHost(header->daddr);
 
     // 优先尝试最快的路由转发
     if (routeCost) {
-        auto route = this->rtTable.find(dst);
-        if (route != this->rtTable.end()) {
+        auto route = this->candyRtTable.find(dst);
+        if (route != this->candyRtTable.end()) {
             if (!sendPeerForwardMessage(buffer, route->second.next)) {
                 return 0;
             }
@@ -1200,7 +1242,11 @@ int Client::handlePeerForwardMessage(const UdpMessage &message) {
     if (Address::netToHost(ipv4Message->iph.daddr) == this->tun.getIP()) {
         const char *src = message.buffer.c_str() + sizeof(ForwardHeader::type);
         const size_t len = message.buffer.length() - sizeof(ForwardHeader::type);
-        this->tun.write(std::string(src, len));
+        if (ipv4Message->iph.protocol == 0x04) {
+            this->tun.write(std::string(src + sizeof(IPv4Header), len - sizeof(IPv4Header)));
+        } else {
+            this->tun.write(std::string(src, len));
+        }
 
         // 可能是转发来的,尝试跟源地址建立直连
         tryDirectConnection(Address::netToHost(ipv4Message->iph.saddr));
@@ -1208,9 +1254,9 @@ int Client::handlePeerForwardMessage(const UdpMessage &message) {
     }
 
     std::shared_lock ipPeerLock(this->ipPeerMutex);
-    std::shared_lock rtTableLock(this->rtTableMutex);
-    auto route = this->rtTable.find(Address::netToHost(ipv4Message->iph.daddr));
-    if (route == this->rtTable.end()) {
+    std::shared_lock rtTableLock(this->candyRtTableMutex);
+    auto route = this->candyRtTable.find(Address::netToHost(ipv4Message->iph.daddr));
+    if (route == this->candyRtTable.end()) {
         return 0;
     }
 
@@ -1244,30 +1290,30 @@ bool Client::isLocalIp(uint32_t ip) {
 }
 
 // Route
-void Client::showRouteChange(const RouteEntry &entry) {
+void Client::showCandyRtChange(const CandyRouteEntry &entry) {
     std::string dstStr = Address::ipToStr(entry.dst);
     std::string nextStr = Address::ipToStr(entry.next);
     std::string delayStr = (entry.delay == DELAY_LIMIT) ? "[deleted]" : std::to_string(entry.delay);
-    spdlog::debug("route: dst={} next={} delay={}", dstStr, nextStr, delayStr);
+    spdlog::debug("candy route: dst={} next={} delay={}", dstStr, nextStr, delayStr);
 }
 
-int Client::updateRouteTable(RouteEntry entry) {
+int Client::updateCandyRtTable(CandyRouteEntry entry) {
     bool isDirect = (entry.dst == entry.next);
     bool isDelete = (entry.delay < 0 || entry.delay > 1000);
 
-    std::unique_lock lock(this->rtTableMutex);
+    std::unique_lock lock(this->candyRtTableMutex);
 
     // 到达此目的地址的历史路由,下一跳可能不同
-    auto oldEntry = this->rtTable.find(entry.dst);
+    auto oldEntry = this->candyRtTable.find(entry.dst);
 
     // 本机检测到连接断开,删除所有以断联设备作为下一跳的路由并广播
     if (isDirect && isDelete) {
-        for (auto it = this->rtTable.begin(); it != this->rtTable.end();) {
+        for (auto it = this->candyRtTable.begin(); it != this->candyRtTable.end();) {
             if (it->second.next == entry.next) {
                 it->second.delay = DELAY_LIMIT;
-                sendRouteMessage(it->second.dst, it->second.delay);
-                showRouteChange(it->second);
-                it = this->rtTable.erase(it);
+                sendCandyRtMessage(it->second.dst, it->second.delay);
+                showCandyRtChange(it->second);
+                it = this->candyRtTable.erase(it);
                 continue;
             }
             ++it;
@@ -1277,37 +1323,37 @@ int Client::updateRouteTable(RouteEntry entry) {
 
     // 本机检测到直连设备时延有更新,下一跳相同或者延迟更低时更新并广播
     if (isDirect && !isDelete) {
-        if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > entry.delay) {
-            this->rtTable[entry.dst] = entry;
-            sendRouteMessage(entry.dst, entry.delay);
-            showRouteChange(entry);
+        if (oldEntry == this->candyRtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > entry.delay) {
+            this->candyRtTable[entry.dst] = entry;
+            sendCandyRtMessage(entry.dst, entry.delay);
+            showCandyRtChange(entry);
         }
         return 0;
     }
 
     // 收到设备断连广播,删除本机相同的路由并广播
     if (!isDirect && isDelete) {
-        if (oldEntry != this->rtTable.end() && oldEntry->second.next == entry.next) {
+        if (oldEntry != this->candyRtTable.end() && oldEntry->second.next == entry.next) {
             oldEntry->second.delay = DELAY_LIMIT;
-            sendRouteMessage(oldEntry->second.dst, oldEntry->second.delay);
-            showRouteChange(oldEntry->second);
-            this->rtTable.erase(oldEntry);
+            sendCandyRtMessage(oldEntry->second.dst, oldEntry->second.delay);
+            showCandyRtChange(oldEntry->second);
+            this->candyRtTable.erase(oldEntry);
         }
         return 0;
     }
 
     // 收到设备时延更新广播,更新本机相同路由并广播
     if (!isDirect && !isDelete) {
-        auto directEntry = this->rtTable.find(entry.next);
-        if (directEntry == this->rtTable.end()) {
+        auto directEntry = this->candyRtTable.find(entry.next);
+        if (directEntry == this->candyRtTable.end()) {
             return 0;
         }
         int32_t nowDelay = directEntry->second.delay + entry.delay;
-        if (oldEntry == this->rtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
+        if (oldEntry == this->candyRtTable.end() || oldEntry->second.next == entry.next || oldEntry->second.delay > nowDelay) {
             entry.delay = nowDelay;
-            this->rtTable[entry.dst] = entry;
-            sendRouteMessage(entry.dst, entry.delay);
-            showRouteChange(entry);
+            this->candyRtTable[entry.dst] = entry;
+            sendCandyRtMessage(entry.dst, entry.delay);
+            showCandyRtChange(entry);
             return 0;
         }
         return 0;
@@ -1333,7 +1379,7 @@ int Client::sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay
     return 0;
 }
 
-int Client::sendRouteMessage(uint32_t dst, int32_t delay) {
+int Client::sendCandyRtMessage(uint32_t dst, int32_t delay) {
     PeerRouteMessage routeMessage;
     routeMessage.type = PeerMessageType::ROUTE;
     routeMessage.dst = Address::hostToNet(dst);
@@ -1357,7 +1403,7 @@ bool Client::isDelayMessage(const UdpMessage &message) {
     return message.buffer.front() == PeerMessageType::DELAY;
 }
 
-bool Client::isRouteMessage(const UdpMessage &message) {
+bool Client::isCandyRtMessage(const UdpMessage &message) {
     return message.buffer.front() == PeerMessageType::ROUTE;
 }
 
@@ -1379,7 +1425,7 @@ int Client::handleDelayMessage(const UdpMessage &message) {
         if (it != this->ipPeerMap.end()) {
             int32_t delay = Time::bootTime() - timestamp;
             it->second.delay = delay;
-            updateRouteTable(RouteEntry(dst, dst, delay));
+            updateCandyRtTable(CandyRouteEntry(dst, dst, delay));
         }
         return 0;
     }
@@ -1395,7 +1441,7 @@ int Client::handleDelayMessage(const UdpMessage &message) {
     return 0;
 }
 
-int Client::handleRouteMessage(const UdpMessage &message) {
+int Client::handleCandyRtMessage(const UdpMessage &message) {
     if (message.buffer.length() < sizeof(PeerRouteMessage)) {
         spdlog::debug("invalid route message length: {}", message.buffer.length());
         return -1;
@@ -1407,7 +1453,7 @@ int Client::handleRouteMessage(const UdpMessage &message) {
     int32_t delay = Time::netToHost(routeMessage->delay);
 
     if (dst != this->tun.getIP()) {
-        updateRouteTable(RouteEntry(dst, next, delay));
+        updateCandyRtTable(CandyRouteEntry(dst, next, delay));
     }
 
     return 0;
