@@ -340,7 +340,7 @@ void Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
     std::string dstStr = Address::ipToStr(dst);
     std::string maskStr = Address::ipToStr(mask);
     std::string nextStr = Address::ipToStr(nexthop);
-    spdlog::info("system route: dst={} next={} delay={}", dstStr, maskStr, nextStr);
+    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
 }
 
 } // namespace Candy

@@ -726,6 +726,9 @@ void Client::handleTunMessage() {
                     return rt.next;
                 }
             }
+            if (Address::netToHost(header->saddr) != this->tun.getIP()) {
+                return daddr;
+            }
             return uint32_t(0);
         }();
         if (nextHop) {
