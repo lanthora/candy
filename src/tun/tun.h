@@ -36,6 +36,9 @@ public:
     int read(std::string &buffer);
     int write(const std::string &buffer);
 
+    // 设置系统路由表
+    void setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop);
+
 private:
     std::any impl;
 };

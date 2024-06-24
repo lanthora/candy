@@ -19,6 +19,7 @@ constexpr uint8_t EXPECTED = 2;
 constexpr uint8_t PEER = 3;
 constexpr uint8_t VMAC = 4;
 constexpr uint8_t DISCOVERY = 5;
+constexpr uint8_t ROUTE = 6;
 constexpr uint8_t GENERAL = 255;
 
 } // namespace MessageType
@@ -79,6 +80,19 @@ struct DiscoveryMessage {
     uint32_t dst;
 
     DiscoveryMessage();
+} __attribute__((packed));
+
+struct SysRouteItem {
+    uint32_t dest;
+    uint32_t mask;
+    uint32_t nexthop;
+} __attribute__((packed));
+
+struct SysRouteMessage {
+    uint8_t type;
+    uint8_t size;
+    uint16_t reserved;
+    SysRouteItem rtTable[0];
 } __attribute__((packed));
 
 struct GeneralHeader {

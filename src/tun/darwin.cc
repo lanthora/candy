@@ -335,6 +335,14 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
+void Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+    // TODO(macos): 设置系统路由表
+    std::string dstStr = Address::ipToStr(dst);
+    std::string maskStr = Address::ipToStr(mask);
+    std::string nextStr = Address::ipToStr(nexthop);
+    spdlog::info("system route: dst={} next={} delay={}", dstStr, maskStr, nextStr);
+}
+
 } // namespace Candy
 
 #endif

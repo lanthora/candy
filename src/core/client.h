@@ -8,6 +8,7 @@
 #include "utility/random.h"
 #include "websocket/client.h"
 #include <functional>
+#include <list>
 #include <map>
 #include <shared_mutex>
 #include <string>
@@ -21,12 +22,20 @@ struct StunCache {
     std::string uri;
 };
 
-struct RouteEntry {
+struct CandyRouteEntry {
     uint32_t dst;
     uint32_t next;
     int32_t delay;
 
-    RouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_LIMIT) : dst(dst), next(next), delay(delay) {}
+    CandyRouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_LIMIT) : dst(dst), next(next), delay(delay) {}
+};
+
+struct SysRouteEntry {
+    uint32_t dst;
+    uint32_t mask;
+    uint32_t next;
+
+    SysRouteEntry(uint32_t dst = 0, uint32_t mask = 0, uint32_t next = 0) : dst(dst), mask(mask), next(next) {}
 };
 
 class Client {
@@ -93,6 +102,7 @@ private:
     void handleExpectedAddressMessage(WebSocketMessage &message);
     void handlePeerConnMessage(WebSocketMessage &message);
     void handleDiscoveryMessage(WebSocketMessage &message);
+    void handleSysRtMessage(WebSocketMessage &message);
     void handleGeneralMessage(WebSocketMessage &message);
     void handleLocalPeerConnMessage(WebSocketMessage &message);
     void tryDirectConnection(uint32_t ip);
@@ -145,18 +155,20 @@ private:
     std::mutex cryptMutex;
 
     // Route
-    void showRouteChange(const RouteEntry &entry);
-    int updateRouteTable(RouteEntry entry);
+    void showCandyRtChange(const CandyRouteEntry &entry);
+    int updateCandyRtTable(CandyRouteEntry entry);
     int sendDelayMessage(const PeerInfo &peer);
     int sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay);
-    int sendRouteMessage(uint32_t dst, int32_t delay);
+    int sendCandyRtMessage(uint32_t dst, int32_t delay);
     bool isDelayMessage(const UdpMessage &message);
-    bool isRouteMessage(const UdpMessage &message);
+    bool isCandyRtMessage(const UdpMessage &message);
     int handleDelayMessage(const UdpMessage &message);
-    int handleRouteMessage(const UdpMessage &message);
+    int handleCandyRtMessage(const UdpMessage &message);
 
-    std::shared_mutex rtTableMutex;
-    std::map<uint32_t, RouteEntry> rtTable;
+    std::shared_mutex sysRtTableMutex;
+    std::list<SysRouteEntry> sysRtTable;
+    std::shared_mutex candyRtTableMutex;
+    std::map<uint32_t, CandyRouteEntry> candyRtTable;
     int32_t routeCost;
 };
 
