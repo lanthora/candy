@@ -91,7 +91,6 @@ public:
             return -1;
         }
 
-        char ifname[IFNAMSIZ] = {0};
         socklen_t ifname_len = sizeof(ifname);
         if (getsockopt(this->tunFd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, ifname, &ifname_len) == -1) {
             spdlog::critical("get interface name failed: {}", strerror(errno));
@@ -159,40 +158,9 @@ public:
         close(sockfd);
 
         // 设置路由
-        struct {
-            struct rt_msghdr msghdr;
-            struct sockaddr_in addr[3];
-        } msg;
-
-        memset(&msg, 0, sizeof(msg));
-        msg.msghdr.rtm_msglen = sizeof(msg);
-        msg.msghdr.rtm_version = RTM_VERSION;
-        msg.msghdr.rtm_type = RTM_ADD;
-        msg.msghdr.rtm_index = if_nametoindex(ifname);
-        msg.msghdr.rtm_pid = 0;
-        msg.msghdr.rtm_addrs = RTA_DST | RTA_GATEWAY | RTA_NETMASK;
-        msg.msghdr.rtm_seq = 1;
-        msg.msghdr.rtm_errno = 0;
-        msg.msghdr.rtm_flags = RTF_UP | RTA_GATEWAY;
-        for (int idx = 0; idx < (int)(sizeof(msg.addr) / sizeof(msg.addr[0])); ++idx) {
-            msg.addr[idx].sin_len = sizeof(msg.addr[0]);
-            msg.addr[idx].sin_family = AF_INET;
-        }
-        msg.addr[0].sin_addr.s_addr = Candy::Address::hostToNet(this->ip & this->mask);
-        msg.addr[1].sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
-        msg.addr[2].sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
-
-        int routefd = socket(AF_ROUTE, SOCK_RAW, 0);
-        if (routefd < 0) {
-            spdlog::critical("create route fd failed: {}", strerror(routefd));
+        if (setSysRtTable(this->ip & this->mask, this->mask, this->ip)) {
             return -1;
         }
-        if (::write(routefd, &msg, sizeof(msg)) == -1) {
-            spdlog::critical("add route failed: {}", strerror(errno));
-            close(routefd);
-            return -1;
-        }
-        close(routefd);
         return 0;
     }
 
@@ -239,8 +207,43 @@ public:
         return ::writev(this->tunFd, iov, sizeof(iov) / sizeof(iov[0])) - sizeof(sizeof(this->packetinfo));
     }
 
+    int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+        struct {
+            struct rt_msghdr msghdr;
+            struct sockaddr_in addr[3];
+        } msg;
+
+        memset(&msg, 0, sizeof(msg));
+        msg.msghdr.rtm_msglen = sizeof(msg);
+        msg.msghdr.rtm_version = RTM_VERSION;
+        msg.msghdr.rtm_type = RTM_ADD;
+        msg.msghdr.rtm_addrs = RTA_DST | RTA_GATEWAY | RTA_NETMASK;
+        msg.msghdr.rtm_flags = RTF_UP | RTA_GATEWAY;
+        for (int idx = 0; idx < (int)(sizeof(msg.addr) / sizeof(msg.addr[0])); ++idx) {
+            msg.addr[idx].sin_len = sizeof(msg.addr[0]);
+            msg.addr[idx].sin_family = AF_INET;
+        }
+        msg.addr[0].sin_addr.s_addr = Candy::Address::hostToNet(dst);
+        msg.addr[1].sin_addr.s_addr = Candy::Address::hostToNet(nexthop);
+        msg.addr[2].sin_addr.s_addr = Candy::Address::hostToNet(mask);
+
+        int routefd = socket(AF_ROUTE, SOCK_RAW, 0);
+        if (routefd < 0) {
+            spdlog::critical("create route fd failed: {}", strerror(routefd));
+            return -1;
+        }
+        if (::write(routefd, &msg, sizeof(msg)) == -1) {
+            spdlog::critical("add route failed: {}", strerror(errno));
+            close(routefd);
+            return -1;
+        }
+        close(routefd);
+        return 0;
+    }
+
 private:
     std::string name;
+    char ifname[IFNAMSIZ] = {0};
     uint32_t ip;
     uint32_t mask;
     int mtu;
@@ -335,12 +338,16 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
-void Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
     // TODO(macos): 设置系统路由表
     std::string dstStr = Address::ipToStr(dst);
     std::string maskStr = Address::ipToStr(mask);
     std::string nextStr = Address::ipToStr(nexthop);
     spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
+
+    std::shared_ptr<DarwinTun> tun;
+    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    return tun->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace Candy
