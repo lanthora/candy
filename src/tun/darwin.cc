@@ -229,11 +229,11 @@ public:
 
         int routefd = socket(AF_ROUTE, SOCK_RAW, 0);
         if (routefd < 0) {
-            spdlog::critical("create route fd failed: {}", strerror(routefd));
+            spdlog::error("create route fd failed: {}", strerror(routefd));
             return -1;
         }
         if (::write(routefd, &msg, sizeof(msg)) == -1) {
-            spdlog::critical("add route failed: {}", strerror(errno));
+            spdlog::error("add route failed: {}", strerror(errno));
             close(routefd);
             return -1;
         }
@@ -339,12 +339,6 @@ int Tun::write(const std::string &buffer) {
 }
 
 int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-    // TODO(macos): 设置系统路由表
-    std::string dstStr = Address::ipToStr(dst);
-    std::string maskStr = Address::ipToStr(mask);
-    std::string nextStr = Address::ipToStr(nexthop);
-    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
-
     std::shared_ptr<DarwinTun> tun;
     tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
     return tun->setSysRtTable(dst, mask, nexthop);

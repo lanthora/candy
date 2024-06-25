@@ -581,6 +581,12 @@ void Client::handleSysRtMessage(WebSocketMessage &message) {
         entry.dst = Address::netToHost(rt[idx].dest);
         entry.mask = Address::netToHost(rt[idx].mask);
         entry.next = Address::netToHost(rt[idx].nexthop);
+
+        std::string dstStr = Address::ipToStr(entry.dst);
+        std::string maskStr = Address::ipToStr(entry.mask);
+        std::string nextStr = Address::ipToStr(entry.next);
+        spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
+
         this->tun.setSysRtTable(entry.dst, entry.mask, entry.next);
         sysRtTable.push_back(entry);
     }

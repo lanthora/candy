@@ -310,11 +310,6 @@ int Tun::write(const std::string &buffer) {
 }
 
 int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-    std::string dstStr = Address::ipToStr(dst);
-    std::string maskStr = Address::ipToStr(mask);
-    std::string nextStr = Address::ipToStr(nexthop);
-    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
-
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     return tun->setSysRtTable(dst, mask, nexthop);

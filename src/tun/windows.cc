@@ -156,6 +156,7 @@ public:
             spdlog::critical("get ip interface entry failed: {}", Error);
             return -1;
         }
+        this->ifindex = Interface.InterfaceIndex;
         Interface.SitePrefixLength = 0;
         Interface.NlMtu = this->mtu;
         Error = SetIpInterfaceEntry(&Interface);
@@ -214,12 +215,38 @@ public:
         return -1;
     }
 
+    int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+        MIB_IPFORWARDROW route;
+
+        route.dwForwardDest = Candy::Address::hostToNet(dst);
+        route.dwForwardMask = Candy::Address::hostToNet(mask);
+        route.dwForwardNextHop = Candy::Address::hostToNet(nexthop);
+        route.dwForwardIfIndex = this->ifindex;
+
+        route.dwForwardProto = MIB_IPPROTO_NETMGMT;
+        route.dwForwardNextHopAS = 0;
+        route.dwForwardAge = INFINITE;
+        route.dwForwardType = MIB_IPROUTE_TYPE_INDIRECT;
+        route.dwForwardMetric1 = route.dwForwardType + 1;
+        route.dwForwardMetric2 = MIB_IPROUTE_METRIC_UNUSED;
+        route.dwForwardMetric3 = MIB_IPROUTE_METRIC_UNUSED;
+        route.dwForwardMetric4 = MIB_IPROUTE_METRIC_UNUSED;
+        route.dwForwardMetric5 = MIB_IPROUTE_METRIC_UNUSED;
+
+        DWORD result = CreateIpForwardEntry(&route);
+        if (result != NO_ERROR) {
+            spdlog::error("add route failed: {}", result);
+        }
+        return 0;
+    }
+
 private:
     std::string name;
     uint32_t ip;
     uint32_t prefix;
     int mtu;
     int timeout;
+    NET_IFINDEX ifindex;
 
     WINTUN_ADAPTER_HANDLE adapter = NULL;
     WINTUN_SESSION_HANDLE session = NULL;
@@ -311,11 +338,9 @@ int Tun::write(const std::string &buffer) {
 }
 
 int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-    // TODO(windows): 设置系统路由表
-    std::string dstStr = Address::ipToStr(dst);
-    std::string maskStr = Address::ipToStr(mask);
-    std::string nextStr = Address::ipToStr(nexthop);
-    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
+    std::shared_ptr<WindowsTun> tun;
+    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
+    return tun->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace Candy
