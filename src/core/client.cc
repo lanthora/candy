@@ -576,7 +576,7 @@ void Client::handleSysRtMessage(WebSocketMessage &message) {
     SysRouteItem *rt = header->rtTable;
     std::unique_lock lock(this->sysRtTableMutex);
     this->sysRtTable.clear();
-    for (int idx = 0; idx < header->size; ++idx) {
+    for (uint8_t idx = 0; idx < header->size; ++idx) {
         SysRouteEntry entry;
         entry.dst = Address::netToHost(rt[idx].dest);
         entry.mask = Address::netToHost(rt[idx].mask);

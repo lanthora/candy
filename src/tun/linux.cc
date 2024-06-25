@@ -178,14 +178,14 @@ public:
         return ::write(this->tunFd, buffer.c_str(), buffer.size());
     }
 
-    void setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+    int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
         if (nexthop == this->ip) {
-            return;
+            return 0;
         }
         int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd == -1) {
             spdlog::error("set route failed: create socket failed");
-            return;
+            return -1;
         }
 
         struct sockaddr_in *addr;
@@ -208,10 +208,11 @@ public:
         if (ioctl(sockfd, SIOCADDRT, &route) == -1) {
             spdlog::error("set route failed: ioctl failed");
             close(sockfd);
-            return;
+            return -1;
         }
 
         close(sockfd);
+        return 0;
     }
 
 private:
@@ -308,15 +309,15 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
-void Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-    // TODO(linux): 设置系统路由表
+int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
     std::string dstStr = Address::ipToStr(dst);
     std::string maskStr = Address::ipToStr(mask);
     std::string nextStr = Address::ipToStr(nexthop);
+    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
+
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    tun->setSysRtTable(dst, mask, nexthop);
-    spdlog::info("system route: dst={} mask={} next={}", dstStr, maskStr, nextStr);
+    return tun->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace Candy
