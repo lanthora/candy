@@ -1,6 +1,6 @@
 # 多局域网互联
 
-![Untitled](%E5%A4%9A%E5%B1%80%E5%9F%9F%E7%BD%91%E4%BA%92%E8%81%94%200596fe107e154d96be403da468afc440/Untitled.png)
+![muti-lan-demo](images/muti-lan-demo.png)
 
 # 实现&&效果
 
