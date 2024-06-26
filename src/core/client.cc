@@ -858,11 +858,9 @@ void Client::tick() {
             break;
 
         case PeerState::WAITING:
-            // 指数退避算法
+            // 达到等待时长,重新进入初始状态
             if (peer.count > peer.retry) {
-                uint32_t next = std::min(peer.retry * 2, 3600U);
                 peer.updateState(PeerState::INIT);
-                peer.retry = next;
             }
             break;
 

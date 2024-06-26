@@ -48,8 +48,12 @@ void PeerInfo::updateState(PeerState state) {
         this->real.ip = 0;
         this->real.port = 0;
         this->ack = 0;
-        this->retry = RETRY_MIN;
         this->delay = DELAY_LIMIT;
+    }
+    if (this->state == PeerState::WAITING && state == PeerState::INIT) {
+        this->retry = std::min(this->retry * 2, RETRY_MAX);
+    } else if (state == PeerState::INIT || state == PeerState::FAILED) {
+        this->retry = RETRY_MIN;
     }
     this->state = state;
 }

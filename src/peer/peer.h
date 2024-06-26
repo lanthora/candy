@@ -20,7 +20,8 @@ enum class PeerState {
 };
 
 constexpr int32_t DELAY_LIMIT = INT32_MAX;
-constexpr uint32_t RETRY_MIN = 30;
+constexpr uint32_t RETRY_MIN = 30U;
+constexpr uint32_t RETRY_MAX = 3600U;
 
 class PeerInfo {
 public:
