@@ -8,6 +8,7 @@
 #include <openssl/sha.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+#include <stack>
 #include <string>
 // clang-format off
 #include <winsock2.h>
@@ -174,6 +175,11 @@ public:
     }
 
     int down() {
+        while (!routes.empty()) {
+            DeleteIpForwardEntry(&routes.top());
+            routes.pop();
+        }
+
         if (this->session) {
             WintunEndSession(this->session);
             this->session = NULL;
@@ -234,9 +240,12 @@ public:
         route.dwForwardMetric5 = MIB_IPROUTE_METRIC_UNUSED;
 
         DWORD result = CreateIpForwardEntry(&route);
-        if (result != NO_ERROR) {
+        if (result == NO_ERROR) {
+            routes.push(route);
+        } else {
             spdlog::error("add route failed: {}", result);
         }
+
         return 0;
     }
 
@@ -247,6 +256,7 @@ private:
     int mtu;
     int timeout;
     NET_IFINDEX ifindex;
+    std::stack<MIB_IPFORWARDROW> routes;
 
     WINTUN_ADAPTER_HANDLE adapter = NULL;
     WINTUN_SESSION_HANDLE session = NULL;

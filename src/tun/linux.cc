@@ -179,9 +179,6 @@ public:
     }
 
     int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-        if (nexthop == this->ip) {
-            return 0;
-        }
         int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd == -1) {
             spdlog::error("set route failed: create socket failed");
