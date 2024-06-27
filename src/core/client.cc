@@ -582,6 +582,10 @@ void Client::handleSysRtMessage(WebSocketMessage &message) {
         entry.mask = Address::netToHost(rt[idx].mask);
         entry.next = Address::netToHost(rt[idx].nexthop);
 
+        if (entry.next == this->tun.getIP()) {
+            continue;
+        }
+
         std::string dstStr = Address::ipToStr(entry.dst);
         std::string maskStr = Address::ipToStr(entry.mask);
         std::string nextStr = Address::ipToStr(entry.next);
