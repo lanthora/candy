@@ -7,6 +7,7 @@
 #include "tun/tun.h"
 #include "utility/random.h"
 #include "websocket/client.h"
+#include <atomic>
 #include <functional>
 #include <list>
 #include <map>
@@ -153,6 +154,7 @@ private:
     uint64_t tickTick = randomUint32();
     uint32_t discoveryInterval;
     std::mutex cryptMutex;
+    std::atomic<bool> localP2PDisabled;
 
     // Route
     void showCandyRtChange(const CandyRouteEntry &entry);
