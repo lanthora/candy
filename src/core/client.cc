@@ -124,6 +124,7 @@ int Client::setLocalhost(std::string ip) {
 int Client::run() {
     std::lock_guard lock(this->runningMutex);
     this->running = true;
+    this->localP2PDisabled = false;
 
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
@@ -432,6 +433,10 @@ void Client::sendDiscoveryMessage(uint32_t dst) {
 }
 
 void Client::sendLocalPeerConnMessage(const PeerInfo &peer) {
+    if (this->localP2PDisabled) {
+        return;
+    }
+
     LocalPeerConnMessage header;
     header.ge.subtype = GeSubType::LOCAL_PEER_CONN;
     header.ge.extra = 0;
@@ -572,6 +577,7 @@ void Client::handleSysRtMessage(WebSocketMessage &message) {
         spdlog::warn("invalid system route message: {:n}", spdlog::to_hex(message.buffer));
         return;
     }
+    this->localP2PDisabled = true;
     SysRouteMessage *header = (SysRouteMessage *)message.buffer.c_str();
     SysRouteItem *rt = header->rtTable;
     std::unique_lock lock(this->sysRtTableMutex);
@@ -610,6 +616,9 @@ void Client::handleGeneralMessage(WebSocketMessage &message) {
 }
 
 void Client::handleLocalPeerConnMessage(WebSocketMessage &message) {
+    if (this->localP2PDisabled) {
+        return;
+    }
     if (message.buffer.size() < sizeof(LocalPeerConnMessage)) {
         spdlog::warn("invalid local peer conn message: {:n}", spdlog::to_hex(message.buffer));
         return;
@@ -1067,7 +1076,7 @@ int Client::sendHeartbeatMessage(const PeerInfo &peer) {
 
     if ((peer.getState() == PeerState::PREPARING || peer.getState() == PeerState::SYNCHRONIZING ||
          peer.getState() == PeerState::CONNECTING) &&
-        (peer.local.ip && peer.local.port)) {
+        (!this->localP2PDisabled && peer.local.ip && peer.local.port)) {
         heartbeat.ip = Address::hostToNet(this->selfInfo.local.ip);
         heartbeat.port = Address::hostToNet(this->selfInfo.local.port);
         message.ip = peer.local.ip;
@@ -1211,12 +1220,14 @@ int Client::handleHeartbeatMessage(const UdpMessage &message) {
         return -1;
     }
 
-    if (isLocalIp(message.ip)) {
+    if (!isLocalIp(message.ip)) {
+        peer.wide.ip = message.ip;
+        peer.wide.port = message.port;
+    } else if (!this->localP2PDisabled) {
         peer.local.ip = message.ip;
         peer.local.port = message.port;
     } else {
-        peer.wide.ip = message.ip;
-        peer.wide.port = message.port;
+        return 0;
     }
 
     if (isLocalIp(message.ip) || !isLocalIp(peer.real.ip)) {
