@@ -55,7 +55,7 @@ zypper refresh && zypper install candy
 下载 [DEB](https://github.com/lanthora/candy/releases/latest) 安装包后通过以下命令安装
 
 ```bash
-apt install –-fix-broken ./xxx.deb
+apt install --fix-broken ./xxx.deb
 ```
 
 #### 单文件可执行程序
