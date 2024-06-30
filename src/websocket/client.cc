@@ -5,6 +5,7 @@
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPSClientSession.h>
+#include <Poco/Net/NetException.h>
 #include <Poco/Timespan.h>
 #include <Poco/URI.h>
 #include <memory>
@@ -22,11 +23,17 @@ int WebSocketClient::connect(const std::string &address) {
     }
 
     try {
+        this->pollSet = std::make_shared<Poco::Net::PollSet>();
+    } catch (Poco::Net::ServiceNotFoundException &e) {
+        spdlog::critical("create poll set failed: {}: {}", e.what(), e.message());
+        return -1;
+    }
+
+    try {
         const std::string path = uri->getPath().empty() ? "/" : uri->getPath();
         Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, path, Poco::Net::HTTPMessage::HTTP_1_1);
         Poco::Net::HTTPResponse response;
         if (uri->getScheme() == "wss") {
-            // FIXME: MSYS2 下编译的 Windows 版本会因为找不到证书而导致无法连接,暂时关闭证书校验.
             using Poco::Net::Context;
             Context::Ptr context = new Context(Context::TLS_CLIENT_USE, "", "", "", Context::VERIFY_NONE);
             Poco::Net::HTTPSClientSession cs(uri->getHost(), uri->getPort(), context);
@@ -38,7 +45,6 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
-        this->pollSet = std::make_shared<Poco::Net::PollSet>();
         this->pollSet->add(*this->ws.get(), Poco::Net::PollSet::POLL_READ);
         this->timestamp = Time::bootTime();
         return 0;
