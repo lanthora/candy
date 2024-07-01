@@ -60,7 +60,7 @@ jobs:
         key: ${{ hashFiles('CMakeLists.txt') }}
     - name: build
       shell: msys2 {0}
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCANDY_STATIC_POCO=1 && cmake --build build
 
   linux:
     strategy:

@@ -7,7 +7,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries(utility PRIVATE ws2_32)
 endif()
 
-if (${CANDY_STATIC})
+if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(utility PRIVATE spdlog::spdlog)
 else()
     find_package(PkgConfig REQUIRED)

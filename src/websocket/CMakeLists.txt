@@ -3,16 +3,23 @@ add_library(websocket STATIC ${DIR_LIB_SRCS})
 
 set_target_properties(websocket PROPERTIES CXX_STANDARD 20)
 
-if (${CANDY_STATIC})
+if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(websocket PRIVATE spdlog::spdlog)
-    target_link_libraries(websocket PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
 else()
-    find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
-    target_link_libraries(websocket PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
-
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DEPS REQUIRED spdlog)
     add_definitions(${DEPS_CFLAGS})
     include_directories(${DEPS_INCLUDEDIR})
     target_link_libraries(websocket PRIVATE ${DEPS_LIBRARIES})
+endif()
+
+if (${CANDY_STATIC_OPENSSL})
+    target_link_libraries(websocket PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
+endif()
+
+if (${CANDY_STATIC_POCO})
+    target_link_libraries(websocket PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
+else()
+    find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
+    target_link_libraries(websocket PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
 endif()
