@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/client.h"
 #include "utility/time.h"
+#include <Poco/Exception.h>
 #include <Poco/Net/HTTPMessage.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPSClientSession.h>
-#include <Poco/Net/NetException.h>
 #include <Poco/Timespan.h>
 #include <Poco/URI.h>
 #include <memory>
@@ -19,13 +19,6 @@ int WebSocketClient::connect(const std::string &address) {
         uri = std::make_shared<Poco::URI>(address);
     } catch (std::exception &e) {
         spdlog::critical("invalid websocket server: {}: {}", address, e.what());
-        return -1;
-    }
-
-    try {
-        this->pollSet = std::make_shared<Poco::Net::PollSet>();
-    } catch (Poco::Net::ServiceNotFoundException &e) {
-        spdlog::critical("create poll set failed: {}: {}", e.what(), e.message());
         return -1;
     }
 
@@ -45,7 +38,6 @@ int WebSocketClient::connect(const std::string &address) {
             spdlog::critical("invalid websocket scheme: {}", address);
             return -1;
         }
-        this->pollSet->add(*this->ws.get(), Poco::Net::PollSet::POLL_READ);
         this->timestamp = Time::bootTime();
         return 0;
     } catch (std::exception &e) {
@@ -56,10 +48,6 @@ int WebSocketClient::connect(const std::string &address) {
 
 int WebSocketClient::disconnect() {
     try {
-        if (this->pollSet) {
-            this->pollSet->clear();
-            this->pollSet.reset();
-        }
         if (this->ws) {
             this->ws->shutdown();
             this->ws->close();
@@ -83,8 +71,7 @@ int WebSocketClient::read(WebSocketMessage &message) {
     }
 
     try {
-        Poco::Net::PollSet::SocketModeMap socketModeMap = this->pollSet->poll(Poco::Timespan(this->timeout, 0));
-        if (socketModeMap.empty()) {
+        if (!this->ws->poll(Poco::Timespan(this->timeout, 0), Poco::Net::Socket::SELECT_READ)) {
             if (Time::bootTime() - this->timestamp > 30000) {
                 message.type = WebSocketMessageType::Error;
                 message.buffer = "websocket pong timeout";

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18.4)
 
-project(candy LANGUAGES C CXX VERSION 5.9.2)
+project(candy LANGUAGES C CXX VERSION 5.9.3)
 
 option(CANDY_NOEXE  "Don't build executable")
 option(CANDY_DEVEL  "Build development library")
@@ -105,14 +105,10 @@ if (${CANDY_STATIC_POCO})
     set(ENABLE_ZIP OFF CACHE BOOL "" FORCE)
     set(ENABLE_JWT OFF CACHE BOOL "" FORCE)
     include(FetchContent)
-
-    set(CANDY_POCO_REPOSITORY "https://github.com/pocoproject/poco.git" CACHE STRING "")
-    set(CANDY_POCO_TAG "poco-1.13.3-release" CACHE STRING "")
-
     FetchContent_Declare(
         poco
-        GIT_REPOSITORY ${CANDY_POCO_REPOSITORY}
-        GIT_TAG        ${CANDY_POCO_TAG}
+        GIT_REPOSITORY "https://github.com/pocoproject/poco.git"
+        GIT_TAG        "poco-1.13.3-release"
     )
     FetchContent_GetProperties(poco)
     if(NOT poco_POPULATED)
