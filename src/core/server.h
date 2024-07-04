@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 namespace Candy {
 
@@ -52,7 +53,7 @@ private:
     Address dynamic;
     bool dynamicAddrEnabled = false;
 
-    std::map<uint32_t, WebSocketConn> ipWsMap;
+    std::unordered_map<uint32_t, WebSocketConn> ipWsMap;
     std::map<WebSocketConn, uint32_t> wsIpMap;
     std::map<WebSocketConn, std::string> wsMacMap;
     std::list<SysRoute> routes;
