@@ -7,6 +7,7 @@
 #include <Poco/URI.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+#include <sstream>
 
 namespace Candy {
 
@@ -44,6 +45,34 @@ int Server::setDynamicAddressRange(const std::string &cidr) {
         return -1;
     }
     this->dynamicAddrEnabled = true;
+    return 0;
+}
+
+int Server::setSdwan(const std::string &sdwan) {
+    if (sdwan.empty()) {
+        return 0;
+    }
+    std::string route;
+    std::stringstream stream(sdwan);
+    while (std::getline(stream, route, ';')) {
+        std::string addr;
+        SysRoute rt;
+        std::stringstream ss(route);
+        if (!std::getline(ss, addr, ',') || rt.dev.cidrUpdate(addr) || rt.dev.getIp() != rt.dev.getNet()) {
+            spdlog::critical("invalid route device: {}", route);
+            return -1;
+        }
+        if (!std::getline(ss, addr, ',') || rt.dst.cidrUpdate(addr) || rt.dst.getIp() != rt.dst.getNet()) {
+            spdlog::critical("invalid route dest: {}", route);
+            return -1;
+        }
+        if (!std::getline(ss, addr, ',') || rt.next.ipStrUpdate(addr)) {
+            spdlog::critical("invalid route nexthop: {}", route);
+            return -1;
+        }
+        spdlog::info("route: dev={} dst={} next={}", rt.dev.getCidr(), rt.dst.getCidr(), rt.next.getIpStr());
+        this->routes.push_back(rt);
+    }
     return 0;
 }
 
@@ -180,6 +209,7 @@ void Server::handleAuthMessage(WebSocketMessage &message) {
 
     this->ipWsMap[address.getIp()] = message.conn;
     this->wsIpMap[message.conn] = address.getIp();
+    updateClientRoute(message, address.getIp());
 }
 
 void Server::handleForwardMessage(WebSocketMessage &message) {
@@ -466,6 +496,28 @@ void Server::handleCloseMessage(WebSocketMessage &message) {
         this->wsIpMap.erase(it);
     }
     this->wsMacMap.erase(message.conn);
+}
+
+void Server::updateClientRoute(WebSocketMessage &message, uint32_t client) {
+    message.buffer.resize(sizeof(SysRouteMessage));
+    SysRouteMessage *header = (SysRouteMessage *)message.buffer.data();
+    memset(header, 0, sizeof(SysRouteMessage));
+    header->type = MessageType::ROUTE;
+
+    for (auto rt : this->routes) {
+        if ((rt.dev.getMask() & client) == rt.dev.getIp()) {
+            SysRouteItem item;
+            item.dest = Address::hostToNet(rt.dst.getNet());
+            item.mask = Address::hostToNet(rt.dst.getMask());
+            item.nexthop = Address::hostToNet(rt.next.getIp());
+            message.buffer.append((char *)(&item), sizeof(item));
+            header->size += 1;
+        }
+    }
+
+    if (header->size > 0) {
+        this->ws.write(message);
+    }
 }
 
 } // namespace Candy

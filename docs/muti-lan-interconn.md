@@ -8,7 +8,7 @@
 
 此处假设你已经:
 
-- 成功部署 Web 版本[服务端](https://hub.docker.com/r/lanthora/cucurbita)
+- 成功部署服务端
 - 在网关 (Gateway) 上部署 Candy 并分配了虚拟地址
 
 以 LAN A 为例解释表格含义.

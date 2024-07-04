@@ -31,6 +31,7 @@ struct arguments {
 
     // 服务端配置
     std::string dhcp;
+    std::string sdwan;
 
     // 客户端配置
     std::string name;
@@ -82,6 +83,7 @@ void parseConfig(std::string cfgFile, arguments &args) {
             {"debug", [&](const std::string &value) { args.debug = (value == "true"); }},
             {"restart", [&](const std::string &value) { args.restart = std::stoi(value); }},
             {"dhcp", [&](const std::string &value) { args.dhcp = value; }},
+            {"sdwan", [&](const std::string &value) { args.sdwan = value; }},
             {"tun", [&](const std::string &value) { args.tun = value; }},
             {"stun", [&](const std::string &value) { args.stun = value; }},
             {"name", [&](const std::string &value) { args.name = value; }},
@@ -256,6 +258,7 @@ int serve(const arguments &args) {
         server.setPassword(args.password);
         server.setWebSocketServer(args.websocket);
         server.setDynamicAddressRange(args.dhcp);
+        server.setSdwan(args.sdwan);
         server.run();
     }
 
@@ -299,6 +302,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
     program.add_argument("-p", "--password").help("authorization password").metavar("TEXT");
     program.add_argument("--restart").help("restart interval").scan<'i', int>().metavar("SECONDS");
     program.add_argument("-d", "--dhcp").help("dhcp address range").metavar("CIDR");
+    program.add_argument("--sdwan").help("software-defined wide area network").metavar("ROUTES");
     program.add_argument("-n", "--name").help("network interface name").metavar("TEXT");
     program.add_argument("-t", "--tun").help("static address").metavar("CIDR");
     program.add_argument("-s", "--stun").help("stun address").metavar("URI");
@@ -323,6 +327,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
         args.noTimestamp = program.is_used("--no-timestamp") ? program.get<bool>("--no-timestamp") : args.noTimestamp;
         args.debug = program.is_used("--debug") ? program.get<bool>("--debug") : args.debug;
         args.dhcp = program.is_used("--dhcp") ? program.get<std::string>("--dhcp") : args.dhcp;
+        args.sdwan = program.is_used("--sdwan") ? program.get<std::string>("--sdwan") : args.sdwan;
         args.name = program.is_used("--name") ? program.get<std::string>("--name") : args.name;
         args.tun = program.is_used("--tun") ? program.get<std::string>("--tun") : args.tun;
         args.stun = program.is_used("--stun") ? program.get<std::string>("--stun") : args.stun;

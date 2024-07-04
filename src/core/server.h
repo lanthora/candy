@@ -4,17 +4,25 @@
 
 #include "utility/address.h"
 #include "websocket/server.h"
+#include <list>
 #include <map>
 #include <string>
 #include <thread>
 
 namespace Candy {
 
+struct SysRoute {
+    Address dev;
+    Address dst;
+    Address next;
+};
+
 class Server {
 public:
     int setWebSocketServer(const std::string &uri);
     int setPassword(const std::string &password);
     int setDynamicAddressRange(const std::string &cidr);
+    int setSdwan(const std::string &sdwan);
 
     int run();
     int shutdown();
@@ -32,6 +40,8 @@ private:
     void handleGeneralMessage(WebSocketMessage &message);
     void handleCloseMessage(WebSocketMessage &message);
 
+    void updateClientRoute(WebSocketMessage &message, uint32_t client);
+
     bool running = false;
     uint16_t port;
     std::string host;
@@ -45,6 +55,7 @@ private:
     std::map<uint32_t, WebSocketConn> ipWsMap;
     std::map<WebSocketConn, uint32_t> wsIpMap;
     std::map<WebSocketConn, std::string> wsMacMap;
+    std::list<SysRoute> routes;
 };
 
 } // namespace Candy
