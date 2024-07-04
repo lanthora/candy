@@ -10,10 +10,10 @@
 #include <atomic>
 #include <functional>
 #include <list>
-#include <map>
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 namespace Candy {
 
@@ -148,7 +148,7 @@ private:
     StunCache stun;
     PeerInfo selfInfo;
     std::shared_mutex ipPeerMutex;
-    std::map<uint32_t, PeerInfo> ipPeerMap;
+    std::unordered_map<uint32_t, PeerInfo> ipPeerMap;
     std::thread udpThread;
     std::thread tickThread;
     uint64_t tickTick = randomUint32();
@@ -170,7 +170,7 @@ private:
     std::shared_mutex sysRtTableMutex;
     std::list<SysRouteEntry> sysRtTable;
     std::shared_mutex candyRtTableMutex;
-    std::map<uint32_t, CandyRouteEntry> candyRtTable;
+    std::unordered_map<uint32_t, CandyRouteEntry> candyRtTable;
     int32_t routeCost;
 };
 
