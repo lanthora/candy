@@ -8,8 +8,10 @@
 #include "utility/random.h"
 #include "websocket/client.h"
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <list>
+#include <queue>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -44,6 +46,9 @@ public:
     // 设置客户端名称,用于设置 TUN 设备的名称,格式为 candy-name, 如果 name 为空将被命名为 candy.
     int setName(const std::string &name);
     std::string getName() const;
+
+    // 客户端工作线程数量
+    int setWorkers(int number);
 
     // 连接 websocket 服务端时身份认证的口令
     int setPassword(const std::string &password);
@@ -84,8 +89,8 @@ public:
 
 private:
     // Common
-    std::string password;
     bool running = false;
+    std::string password;
     std::mutex runningMutex;
     std::function<int(const std::string &)> addressUpdateCallback;
 
@@ -127,11 +132,16 @@ private:
 
     // P2P
     int startUdpThread();
+    int startWorkerThreads();
+    int stopWorkerThreads();
     int startTickThread();
-    void handleUdpMessage();
+    void recvUdpMessage();
+    void handleUdpMessage(UdpMessage message);
     void tick();
     std::string encrypt(const std::string &key, const std::string &plaintext);
     std::string decrypt(const std::string &key, const std::string &ciphertext);
+    std::string encryptHelper(const std::string &key, const std::string &plaintext);
+    std::string decryptHelper(const std::string &key, const std::string &ciphertext);
     int sendStunRequest();
     int sendHeartbeatMessage(const PeerInfo &peer);
     int sendPeerForwardMessage(const std::string &buffer);
@@ -155,6 +165,11 @@ private:
     uint32_t discoveryInterval;
     std::mutex cryptMutex;
     std::atomic<bool> localP2PDisabled;
+    int udpMsgWorkers = 0;
+    std::vector<std::thread> udpMsgWorkerThreads;
+    std::mutex udpMsgQueueMutex;
+    std::queue<UdpMessage> udpMsgQueue;
+    std::condition_variable udpMsgQueueCondition;
 
     // Route
     void showCandyRtChange(const CandyRouteEntry &entry);

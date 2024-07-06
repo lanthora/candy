@@ -4,6 +4,7 @@
 #include "core/message.h"
 #include "utility/address.h"
 #include "utility/time.h"
+#include <Poco/Environment.h>
 #include <Poco/URI.h>
 #include <algorithm>
 #include <bit>
@@ -34,6 +35,14 @@ int Client::setName(const std::string &name) {
 
 std::string Client::getName() const {
     return this->tunName;
+}
+
+int Client::setWorkers(int number) {
+    number = std::min(number, int(Poco::Environment::processorCount()));
+    number = std::max(number, 0);
+    this->udpMsgWorkers = number;
+    spdlog::debug("workers: {}", this->udpMsgWorkers);
+    return 0;
 }
 
 int Client::setPassword(const std::string &password) {
@@ -285,11 +294,11 @@ void Client::handleWebSocketMessage() {
     return;
 }
 
-void Client::handleUdpMessage() {
+void Client::recvUdpMessage() {
     int error;
-    UdpMessage message;
 
     while (this->running) {
+        UdpMessage message;
         error = this->udpHolder.read(message);
         if (error == 0) {
             continue;
@@ -299,41 +308,53 @@ void Client::handleUdpMessage() {
             Candy::shutdown(this);
             break;
         }
-        if (isStunResponse(message)) {
-            handleStunResponse(message.buffer);
+        if (!this->udpMsgWorkers) {
+            handleUdpMessage(std::move(message));
             continue;
         }
-
-        message.buffer = decrypt(selfInfo.getKey(), message.buffer);
-        if (message.buffer.empty()) {
-            spdlog::debug("invalid peer message: ip {} port {}", Address::ipToStr(message.ip), message.port);
-            continue;
+        {
+            std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
+            this->udpMsgQueue.emplace(std::move(message));
         }
-
-        if (isHeartbeatMessage(message)) {
-            handleHeartbeatMessage(message);
-            continue;
-        }
-        if (isPeerForwardMessage(message)) {
-            handlePeerForwardMessage(message);
-            continue;
-        }
-        if (isDelayMessage(message)) {
-            if (routeCost) {
-                handleDelayMessage(message);
-            }
-            continue;
-        }
-        if (isCandyRtMessage(message)) {
-            if (routeCost) {
-                handleCandyRtMessage(message);
-            }
-            continue;
-        }
-        spdlog::debug("unknown peer message: type {}", int(message.buffer.front()));
+        this->udpMsgQueueCondition.notify_one();
     }
 
     this->udpHolder.reset();
+}
+
+void Client::handleUdpMessage(UdpMessage message) {
+    if (isStunResponse(message)) {
+        handleStunResponse(message.buffer);
+        return;
+    }
+
+    message.buffer = decrypt(selfInfo.getKey(), message.buffer);
+    if (message.buffer.empty()) {
+        spdlog::debug("invalid peer message: ip {} port {}", Address::ipToStr(message.ip), message.port);
+        return;
+    }
+
+    if (isHeartbeatMessage(message)) {
+        handleHeartbeatMessage(message);
+        return;
+    }
+    if (isPeerForwardMessage(message)) {
+        handlePeerForwardMessage(message);
+        return;
+    }
+    if (isDelayMessage(message)) {
+        if (routeCost) {
+            handleDelayMessage(message);
+        }
+        return;
+    }
+    if (isCandyRtMessage(message)) {
+        if (routeCost) {
+            handleCandyRtMessage(message);
+        }
+        return;
+    }
+    spdlog::debug("unknown peer message: type {}", int(message.buffer.front()));
 }
 
 void Client::sendForwardMessage(const std::string &buffer) {
@@ -792,9 +813,42 @@ int Client::startUdpThread() {
     this->selfInfo.local.port = udpHolder.Port();
     spdlog::debug("localhost: {}", Address::ipToStr(this->selfInfo.local.ip));
     this->udpThread = std::thread([&] {
-        this->handleUdpMessage();
+        startWorkerThreads();
+        recvUdpMessage();
+        stopWorkerThreads();
         spdlog::debug("udp thread exit");
     });
+    return 0;
+}
+
+int Client::startWorkerThreads() {
+    for (size_t i = 0; i < this->udpMsgWorkers; ++i) {
+        this->udpMsgWorkerThreads.emplace_back([&] {
+            while (this->running) {
+                UdpMessage message;
+                {
+                    std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
+                    auto timeout = std::chrono::seconds(1);
+                    if (!this->udpMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->udpMsgQueue.empty(); })) {
+                        continue;
+                    }
+                    message = std::move(this->udpMsgQueue.front());
+                    this->udpMsgQueue.pop();
+                }
+                handleUdpMessage(std::move(message));
+            }
+        });
+    }
+    return 0;
+}
+
+int Client::stopWorkerThreads() {
+    for (std::thread &t : this->udpMsgWorkerThreads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+    this->udpMsgWorkerThreads.clear();
     return 0;
 }
 
@@ -891,14 +945,23 @@ void Client::tick() {
 }
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
+    using lock = std::unique_lock<std::mutex>;
+    auto guard = this->udpMsgWorkers ? lock() : lock(cryptMutex);
+    return encryptHelper(key, plaintext);
+}
+std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
+    using lock = std::unique_lock<std::mutex>;
+    auto guard = this->udpMsgWorkers ? lock() : lock(cryptMutex);
+    return decryptHelper(key, ciphertext);
+}
+
+std::string Client::encryptHelper(const std::string &key, const std::string &plaintext) {
     int len = 0;
     int ciphertextLen = 0;
     EVP_CIPHER_CTX *ctx = NULL;
     unsigned char ciphertext[1500] = {0};
     unsigned char iv[AES_256_GCM_IV_LEN] = {0};
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
-
-    std::lock_guard lock(cryptMutex);
 
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key size: {}", key.size());
@@ -950,7 +1013,7 @@ std::string Client::encrypt(const std::string &key, const std::string &plaintext
     return result;
 }
 
-std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
+std::string Client::decryptHelper(const std::string &key, const std::string &ciphertext) {
     int len = 0;
     int plaintextLen = 0;
     unsigned char *enc = NULL;
@@ -958,8 +1021,6 @@ std::string Client::decrypt(const std::string &key, const std::string &ciphertex
     unsigned char plaintext[1500] = {0};
     unsigned char iv[AES_256_GCM_IV_LEN] = {0};
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
-
-    std::lock_guard lock(cryptMutex);
 
     if (key.size() != AES_256_GCM_KEY_LEN) {
         spdlog::debug("invalid key length: {}", key.size());

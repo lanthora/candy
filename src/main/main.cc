@@ -38,6 +38,7 @@ struct arguments {
     std::string tun;
     std::string stun;
     std::string localhost;
+    int workers = 0;
     int udpPort = 0;
     int discovery = 0;
     int routeCost = 0;
@@ -87,6 +88,7 @@ void parseConfig(std::string cfgFile, arguments &args) {
             {"tun", [&](const std::string &value) { args.tun = value; }},
             {"stun", [&](const std::string &value) { args.stun = value; }},
             {"name", [&](const std::string &value) { args.name = value; }},
+            {"workers", [&](const std::string &value) { args.workers = std::stoi(value); }},
             {"discovery", [&](const std::string &value) { args.discovery = std::stoi(value); }},
             {"route", [&](const std::string &value) { args.routeCost = std::stoi(value); }},
             {"port", [&](const std::string &value) { args.udpPort = std::stoi(value); }},
@@ -274,6 +276,7 @@ int serve(const arguments &args) {
         client.setTunAddress(args.tun);
         client.setExpectedAddress(getLastestAddress(args.name));
         client.setVirtualMac(virtualMac(args.name));
+        client.setWorkers(args.workers);
         client.setName(args.name);
         client.run();
     }
@@ -304,6 +307,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
     program.add_argument("-d", "--dhcp").help("dhcp address range").metavar("CIDR");
     program.add_argument("--sdwan").help("software-defined wide area network").metavar("ROUTES");
     program.add_argument("-n", "--name").help("network interface name").metavar("TEXT");
+    program.add_argument("--workers").help("workers number").scan<'i', int>().metavar("NUM");
     program.add_argument("-t", "--tun").help("static address").metavar("CIDR");
     program.add_argument("-s", "--stun").help("stun address").metavar("URI");
     program.add_argument("-s", "--port").help("udp port").scan<'i', int>().metavar("NUMBER");
@@ -329,6 +333,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
         args.dhcp = program.is_used("--dhcp") ? program.get<std::string>("--dhcp") : args.dhcp;
         args.sdwan = program.is_used("--sdwan") ? program.get<std::string>("--sdwan") : args.sdwan;
         args.name = program.is_used("--name") ? program.get<std::string>("--name") : args.name;
+        args.workers = program.is_used("--workers") ? program.get<int>("--workers") : args.workers;
         args.tun = program.is_used("--tun") ? program.get<std::string>("--tun") : args.tun;
         args.stun = program.is_used("--stun") ? program.get<std::string>("--stun") : args.stun;
         args.localhost = program.is_used("--localhost") ? program.get<std::string>("--localhost") : args.localhost;
