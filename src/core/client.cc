@@ -41,7 +41,9 @@ int Client::setWorkers(int number) {
     number = std::min(number, int(Poco::Environment::processorCount()));
     number = std::max(number, 0);
     this->workers = number;
-    spdlog::debug("workers: {}", this->workers);
+    if (this->workers) {
+        spdlog::debug("workers: {}", this->workers);
+    }
     return 0;
 }
 
@@ -183,13 +185,13 @@ int Client::shutdown() {
 
 // Common
 int Client::startWorkerThreads() {
-    for (size_t i = 0; i < this->workers; ++i) {
+    for (int i = 0; i < this->workers; ++i) {
         this->udpMsgWorkerThreads.emplace_back([&] {
             while (this->running) {
                 UdpMessage message;
                 {
+                    static const auto timeout = std::chrono::seconds(1);
                     std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
-                    auto timeout = std::chrono::seconds(1);
                     if (!this->udpMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->udpMsgQueue.empty(); })) {
                         continue;
                     }
@@ -204,7 +206,7 @@ int Client::startWorkerThreads() {
             while (this->running) {
                 std::string message;
                 {
-                    auto timeout = std::chrono::seconds(1);
+                    static const auto timeout = std::chrono::seconds(1);
                     std::unique_lock<std::mutex> lock(this->tunMsgQueueMutex);
                     if (!this->tunMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->tunMsgQueue.empty(); })) {
                         continue;
@@ -225,12 +227,25 @@ int Client::stopWorkerThreads() {
             t.join();
         }
     }
+    {
+        std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
+        while (!this->udpMsgQueue.empty()) {
+            this->udpMsgQueue.pop();
+        }
+    }
+    this->udpMsgWorkerThreads.clear();
+
     for (std::thread &t : this->tunMsgWorkerThreads) {
         if (t.joinable()) {
             t.join();
         }
     }
-    this->udpMsgWorkerThreads.clear();
+    {
+        std::unique_lock<std::mutex> lock(this->tunMsgQueueMutex);
+        while (!this->tunMsgQueue.empty()) {
+            this->tunMsgQueue.pop();
+        }
+    }
     this->tunMsgWorkerThreads.clear();
     return 0;
 }
@@ -355,11 +370,9 @@ void Client::handleWebSocketMessage() {
 }
 
 void Client::recvUdpMessage() {
-    int error;
-
     while (this->running) {
         UdpMessage message;
-        error = this->udpHolder.read(message);
+        int error = this->udpHolder.read(message);
         if (error == 0) {
             continue;
         }
