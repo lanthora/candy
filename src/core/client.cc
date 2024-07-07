@@ -40,8 +40,8 @@ std::string Client::getName() const {
 int Client::setWorkers(int number) {
     number = std::min(number, int(Poco::Environment::processorCount()));
     number = std::max(number, 0);
-    this->udpMsgWorkers = number;
-    spdlog::debug("workers: {}", this->udpMsgWorkers);
+    this->workers = number;
+    spdlog::debug("workers: {}", this->workers);
     return 0;
 }
 
@@ -145,6 +145,11 @@ int Client::run() {
         Candy::shutdown(this);
         return -1;
     }
+    if (startWorkerThreads()) {
+        spdlog::critical("start worker threads failed");
+        Candy::shutdown(this);
+        return -1;
+    }
     return 0;
 }
 
@@ -169,9 +174,64 @@ int Client::shutdown() {
     if (this->tickThread.joinable()) {
         this->tickThread.join();
     }
+    stopWorkerThreads();
 
     this->tun.down();
     this->ws.disconnect();
+    return 0;
+}
+
+// Common
+int Client::startWorkerThreads() {
+    for (size_t i = 0; i < this->workers; ++i) {
+        this->udpMsgWorkerThreads.emplace_back([&] {
+            while (this->running) {
+                UdpMessage message;
+                {
+                    std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
+                    auto timeout = std::chrono::seconds(1);
+                    if (!this->udpMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->udpMsgQueue.empty(); })) {
+                        continue;
+                    }
+                    message = std::move(this->udpMsgQueue.front());
+                    this->udpMsgQueue.pop();
+                }
+                handleUdpMessage(std::move(message));
+            }
+        });
+
+        this->tunMsgWorkerThreads.emplace_back([&] {
+            while (this->running) {
+                std::string message;
+                {
+                    auto timeout = std::chrono::seconds(1);
+                    std::unique_lock<std::mutex> lock(this->tunMsgQueueMutex);
+                    if (!this->tunMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->tunMsgQueue.empty(); })) {
+                        continue;
+                    }
+                    message = std::move(this->tunMsgQueue.front());
+                    this->tunMsgQueue.pop();
+                }
+                handleTunMessage(std::move(message));
+            }
+        });
+    }
+    return 0;
+}
+
+int Client::stopWorkerThreads() {
+    for (std::thread &t : this->udpMsgWorkerThreads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+    for (std::thread &t : this->tunMsgWorkerThreads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+    this->udpMsgWorkerThreads.clear();
+    this->tunMsgWorkerThreads.clear();
     return 0;
 }
 
@@ -308,7 +368,7 @@ void Client::recvUdpMessage() {
             Candy::shutdown(this);
             break;
         }
-        if (!this->udpMsgWorkers) {
+        if (!this->workers) {
             handleUdpMessage(std::move(message));
             continue;
         }
@@ -716,7 +776,7 @@ int Client::startTunThread() {
     }
 
     this->tunThread = std::thread([&] {
-        this->handleTunMessage();
+        this->recvTunMessage();
         spdlog::debug("tun thread exit");
     });
 
@@ -733,13 +793,10 @@ int Client::startTunThread() {
     return 0;
 }
 
-void Client::handleTunMessage() {
-    int error;
-    std::string buffer;
-    IPv4Header *header;
-
+void Client::recvTunMessage() {
     while (this->running) {
-        error = this->tun.read(buffer);
+        std::string buffer;
+        int error = this->tun.read(buffer);
         if (error == 0) {
             continue;
         }
@@ -748,51 +805,63 @@ void Client::handleTunMessage() {
             Candy::shutdown(this);
             break;
         }
-        if (buffer.length() < sizeof(IPv4Header)) {
+        if (!this->workers) {
+            handleTunMessage(std::move(buffer));
             continue;
         }
-
-        // 仅处理 IPv4
-        header = (IPv4Header *)buffer.data();
-        if ((header->version_ihl >> 4) != 4) {
-            continue;
+        {
+            std::unique_lock<std::mutex> lock(this->tunMsgQueueMutex);
+            this->tunMsgQueue.emplace(std::move(buffer));
         }
-        // 存在路由表项时封装成简单的 IPIP 协议
-        uint32_t nextHop = [&]() {
-            uint32_t daddr = Address::netToHost(header->daddr);
-            std::shared_lock lock(this->sysRtTableMutex);
-            for (auto const &rt : sysRtTable) {
-                if ((daddr & rt.mask) == rt.dst) {
-                    return rt.next;
-                }
-            }
-            if (Address::netToHost(header->saddr) != this->tun.getIP()) {
-                return daddr;
-            }
-            return uint32_t(0);
-        }();
-        if (nextHop) {
-            buffer = std::string(sizeof(IPv4Header), 0) + buffer;
-            header = (IPv4Header *)buffer.data();
-            header->protocol = 0x04;
-            header->saddr = Address::hostToNet(this->tun.getIP());
-            header->daddr = Address::hostToNet(nextHop);
-        }
-        // 目的地址是本机,直接回写,在 macos 中遇到了这种情况
-        if (Address::netToHost(header->daddr) == this->tun.getIP()) {
-            this->tun.write(buffer);
-            continue;
-        }
-
-        // 尝试通过路由或直连发送
-        if (!sendPeerForwardMessage(buffer)) {
-            continue;
-        }
-
-        // 通过 WebSocket 转发
-        sendForwardMessage(buffer);
+        this->tunMsgQueueCondition.notify_one();
     }
     return;
+}
+
+void Client::handleTunMessage(std::string buffer) {
+    if (buffer.length() < sizeof(IPv4Header)) {
+        return;
+    }
+
+    // 仅处理 IPv4
+    IPv4Header *header = (IPv4Header *)buffer.data();
+    if ((header->version_ihl >> 4) != 4) {
+        return;
+    }
+    // 存在路由表项时封装成简单的 IPIP 协议
+    uint32_t nextHop = [&]() {
+        uint32_t daddr = Address::netToHost(header->daddr);
+        std::shared_lock lock(this->sysRtTableMutex);
+        for (auto const &rt : sysRtTable) {
+            if ((daddr & rt.mask) == rt.dst) {
+                return rt.next;
+            }
+        }
+        if (Address::netToHost(header->saddr) != this->tun.getIP()) {
+            return daddr;
+        }
+        return uint32_t(0);
+    }();
+    if (nextHop) {
+        buffer = std::string(sizeof(IPv4Header), 0) + buffer;
+        header = (IPv4Header *)buffer.data();
+        header->protocol = 0x04;
+        header->saddr = Address::hostToNet(this->tun.getIP());
+        header->daddr = Address::hostToNet(nextHop);
+    }
+    // 目的地址是本机,直接回写,在 macos 中遇到了这种情况
+    if (Address::netToHost(header->daddr) == this->tun.getIP()) {
+        this->tun.write(buffer);
+        return;
+    }
+
+    // 尝试通过路由或直连发送
+    if (!sendPeerForwardMessage(buffer)) {
+        return;
+    }
+
+    // 通过 WebSocket 转发
+    sendForwardMessage(buffer);
 }
 
 // P2P
@@ -813,42 +882,9 @@ int Client::startUdpThread() {
     this->selfInfo.local.port = udpHolder.Port();
     spdlog::debug("localhost: {}", Address::ipToStr(this->selfInfo.local.ip));
     this->udpThread = std::thread([&] {
-        startWorkerThreads();
         recvUdpMessage();
-        stopWorkerThreads();
         spdlog::debug("udp thread exit");
     });
-    return 0;
-}
-
-int Client::startWorkerThreads() {
-    for (size_t i = 0; i < this->udpMsgWorkers; ++i) {
-        this->udpMsgWorkerThreads.emplace_back([&] {
-            while (this->running) {
-                UdpMessage message;
-                {
-                    std::unique_lock<std::mutex> lock(this->udpMsgQueueMutex);
-                    auto timeout = std::chrono::seconds(1);
-                    if (!this->udpMsgQueueCondition.wait_for(lock, timeout, [this] { return !this->udpMsgQueue.empty(); })) {
-                        continue;
-                    }
-                    message = std::move(this->udpMsgQueue.front());
-                    this->udpMsgQueue.pop();
-                }
-                handleUdpMessage(std::move(message));
-            }
-        });
-    }
-    return 0;
-}
-
-int Client::stopWorkerThreads() {
-    for (std::thread &t : this->udpMsgWorkerThreads) {
-        if (t.joinable()) {
-            t.join();
-        }
-    }
-    this->udpMsgWorkerThreads.clear();
     return 0;
 }
 
@@ -946,12 +982,12 @@ void Client::tick() {
 
 std::string Client::encrypt(const std::string &key, const std::string &plaintext) {
     using lock = std::unique_lock<std::mutex>;
-    auto guard = this->udpMsgWorkers ? lock() : lock(cryptMutex);
+    auto guard = this->workers ? lock() : lock(cryptMutex);
     return encryptHelper(key, plaintext);
 }
 std::string Client::decrypt(const std::string &key, const std::string &ciphertext) {
     using lock = std::unique_lock<std::mutex>;
-    auto guard = this->udpMsgWorkers ? lock() : lock(cryptMutex);
+    auto guard = this->workers ? lock() : lock(cryptMutex);
     return decryptHelper(key, ciphertext);
 }
 

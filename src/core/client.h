@@ -89,10 +89,13 @@ public:
 
 private:
     // Common
+    int workers = 0;
     bool running = false;
     std::string password;
     std::mutex runningMutex;
     std::function<int(const std::string &)> addressUpdateCallback;
+    int startWorkerThreads();
+    int stopWorkerThreads();
 
     // WebSocket
     int startWsThread();
@@ -120,7 +123,8 @@ private:
 
     // TUN
     int startTunThread();
-    void handleTunMessage();
+    void recvTunMessage();
+    void handleTunMessage(std::string message);
 
     Tun tun;
     std::string tunName;
@@ -129,11 +133,13 @@ private:
     std::string realAddress;
     std::string virtualMac;
     std::thread tunThread;
+    std::vector<std::thread> tunMsgWorkerThreads;
+    std::mutex tunMsgQueueMutex;
+    std::queue<std::string> tunMsgQueue;
+    std::condition_variable tunMsgQueueCondition;
 
     // P2P
     int startUdpThread();
-    int startWorkerThreads();
-    int stopWorkerThreads();
     int startTickThread();
     void recvUdpMessage();
     void handleUdpMessage(UdpMessage message);
@@ -165,7 +171,6 @@ private:
     uint32_t discoveryInterval;
     std::mutex cryptMutex;
     std::atomic<bool> localP2PDisabled;
-    int udpMsgWorkers = 0;
     std::vector<std::thread> udpMsgWorkerThreads;
     std::mutex udpMsgQueueMutex;
     std::queue<UdpMessage> udpMsgQueue;
