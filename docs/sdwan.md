@@ -76,3 +76,57 @@ iptables -A FORWARD -i candy-gw -o ethX -m state --state RELATED,ESTABLISHED -j 
 
 在 `192.168.1.x` 用 ping 命令发包, `192.168.2.x` 上抓包预期可以看到对应数据包.
 如果要看到 ping 命令的回包.需要按照上述操作完成回程的配置.
+
+## 常见问题
+
+### 无法访问 NAT 虚拟机
+
+在宿主机上通过虚拟机 IP 可以直接访问,但是其他机器通过宿主机的虚拟 IP 转发就不能访问.
+这大概率是防火墙的问题,以 libvirt 为例,如果虚拟机使用的是 NAT 网络,那么 libvirt 会添加只允许宿主机 IP 访问的防火墙规则.
+
+可以通过以下命令查看宿主机规则.
+
+```bash
+nft list ruleset
+```
+
+其中可以看到已经有 reject 命中.
+
+```txt
+table ip libvirt_network {
+    chain guest_output {
+        ip saddr 192.168.100.0/24 iif "virbr0" counter packets 3568 bytes 541261 accept
+        iif "virbr0" counter packets 0 bytes 0 reject
+    }
+
+    chain guest_input {
+        oif "virbr0" ip daddr 192.168.100.0/24 ct state established,related counter packets 3237 bytes 290974 accept
+        oif "virbr0" counter packets 8 bytes 844 reject
+    }
+}
+```
+
+现在只需要解决防火墙问题,我选择的方式是添加两条优先级更高的规则,不再让 reject 命中.
+
+```bash
+nft insert rule ip libvirt_network guest_output iif "virbr0" accept
+nft insert rule ip libvirt_network guest_input oif "virbr0" accept
+```
+
+再次查看规则会在开始位置多出两个 accpet, 此时不出意外网络应该能够正常访问.
+
+```txt
+table ip libvirt_network {
+    chain guest_output {
+        iif "virbr0" accept
+        ip saddr 192.168.100.0/24 iif "virbr0" counter packets 3568 bytes 541261 accept
+        iif "virbr0" counter packets 0 bytes 0 reject
+    }
+
+    chain guest_input {
+        oif "virbr0" accept
+        oif "virbr0" ip daddr 192.168.100.0/24 ct state established,related counter packets 3237 bytes 290974 accept
+        oif "virbr0" counter packets 8 bytes 844 reject
+    }
+}
+```
