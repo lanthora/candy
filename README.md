@@ -113,7 +113,7 @@ scripts/build-standalone.sh
 
 ## 如何使用
 
-详细用法请参考[配置文件](candy.cfg).
+详细用法请参考[配置文件](candy.cfg)和[文档](https://docs.canets.org).
 
 ### 接入测试网络
 
