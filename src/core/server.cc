@@ -98,6 +98,7 @@ int Server::shutdown() {
     }
 
     this->ws.stop();
+    this->routes.clear();
     return 0;
 }
 
