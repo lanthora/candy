@@ -76,6 +76,6 @@ if [[ $CANDY_UPX && $CANDY_UPX -eq 1 && $UPX -eq 1 ]];then
 fi
 
 if [[ $CANDY_TGZ && $CANDY_TGZ -eq 1 && $CANDY_OS && $CANDY_ARCH ]];then
-    cp $SOURCE_DIR/candy.cfg $OUTPUT_DIR/candy.cfg
-    tar zcvf $CANDY_WORKSPACE/output/candy-$CANDY_OS-$CANDY_ARCH.tar.gz -C $OUTPUT_DIR candy candy.cfg
+    cp $SOURCE_DIR/{candy.cfg,candy.service,candy@.service,candy.initd} $OUTPUT_DIR
+    tar zcvf $CANDY_WORKSPACE/output/candy-$CANDY_OS-$CANDY_ARCH.tar.gz -C $OUTPUT_DIR .
 fi
