@@ -17,31 +17,6 @@ if (${CANDY_STATIC})
     set(CANDY_STATIC_POCO 1)
 endif()
 
-macro(Fetch NAME GIT_REPOSITORY GIT_TAG)
-    include(FetchContent)
-    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.28")
-        FetchContent_Declare(
-            ${NAME}
-            GIT_REPOSITORY ${GIT_REPOSITORY}
-            GIT_TAG        ${GIT_TAG}
-            EXCLUDE_FROM_ALL
-        )
-        FetchContent_MakeAvailable(${NAME})
-    else()
-        FetchContent_Declare(
-            ${NAME}
-            GIT_REPOSITORY ${GIT_REPOSITORY}
-            GIT_TAG        ${GIT_TAG}
-        )
-        FetchContent_GetProperties(${NAME})
-        if(NOT ${NAME}_POPULATED)
-            FetchContent_Populate(${NAME})
-            add_subdirectory(${${NAME}_SOURCE_DIR} ${${NAME}_BINARY_DIR} EXCLUDE_FROM_ALL)
-        endif()
-    endif()
-endmacro()
-
-
 if (${CANDY_STATIC_OPENSSL})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/openssl
@@ -86,10 +61,12 @@ if (${CANDY_STATIC_OPENSSL})
 endif()
 
 if (${CANDY_STATIC_FMT})
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(fmt "https://github.com/fmtlib/fmt.git" "10.2.1")
 endif()
 
 if (${CANDY_STATIC_SPDLOG})
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(spdlog "https://github.com/gabime/spdlog.git" "v1.14.1")
 endif()
 
@@ -109,6 +86,7 @@ if (${CANDY_STATIC_POCO})
     set(ENABLE_ACTIVERECORD_COMPILER OFF CACHE BOOL "" FORCE)
     set(ENABLE_ZIP OFF CACHE BOOL "" FORCE)
     set(ENABLE_JWT OFF CACHE BOOL "" FORCE)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(poco "https://github.com/pocoproject/poco.git" "poco-1.13.3-release")
 endif()
 
