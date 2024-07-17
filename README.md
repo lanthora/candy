@@ -200,8 +200,10 @@ stun = "stun://stun.canets.org"
 
 ## 相关项目
 
-- [Cucurbita](https://hub.docker.com/r/lanthora/cucurbita): Candy Server with Web Control Interface
+- [Cacao](https://github.com/lanthora/cacao): Candy Server with WebUI
+- [Cake](https://github.com/lanthora/cake): Candy GUI desktop application implemented by Qt
 - [EasyTier](https://github.com/EasyTier/EasyTier): A simple, decentralized mesh VPN with WireGuard support
+- [Vnt](https://github.com/vnt-dev/vnt): A virtual network tool (VPN)
 
 ## 交流群
 
