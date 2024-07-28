@@ -1,8 +1,8 @@
 # 文档索引
 
-## 功能介绍
-
-- [介绍](introduce.md)
+- [简介](introduce.md)
+- [安装](install.md)
+- [引导](guide.md)
 
 ## 实现原理
 
@@ -14,7 +14,7 @@
 
 - [协议规范](specification.md)
 
-## 用户案例
+## 案例
 
 - [多局域网组网](sdwan.md)
 
