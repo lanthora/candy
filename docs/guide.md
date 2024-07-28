@@ -2,9 +2,9 @@
 
 详细用法请参考[配置文件](https://github.com/lanthora/candy/blob/master/candy.cfg).
 
-## 接入测试网络
+## 接入官方网络
 
-使用默认配置启动即可接入测试网络.客户端会缓存服务端分配的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.
+使用默认配置启动即可接入官方网络.客户端会缓存服务端分配的地址,并在下次启动时优先申请使用这个地址,地址保存在 `/var/lib/candy` 目录下,启动容器服务前需要在 Host 创建一个目录用于映射,否则容器重启丢失数据将导致重新分配地址.
 
 创建与容器内相同的目录以方便理解.
 
@@ -12,13 +12,13 @@
 mkdir -p /var/lib/candy
 ```
 
-以容器的方式接入测试网络
+以容器的方式接入官方网络
 
 ```bash
 docker run --detach --restart=always --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy docker.io/lanthora/candy:latest
 ```
 
-以 Linux 发行版 [Service](candy.service) 的方式接入测试网络
+以 Linux 发行版 [Service](candy.service) 的方式接入官方网络
 
 ```bash
 systemctl enable --now candy
