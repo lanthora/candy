@@ -56,6 +56,8 @@ sdwan = "10.0.0.1/32,192.168.2.0/24,10.0.0.2"
   
 ### 允许网关转发流量
 
+#### Linux
+
 如果你的网关是路由器,应该能够轻易的配置出允许转发.否则需要手动添加转发相关的配置.
 
 开启内核流量转发功能
@@ -70,6 +72,20 @@ sysctl -w net.ipv4.ip_forward=1
 iptables -t nat -A POSTROUTING -o candy-gw -j MASQUERADE
 iptables -A FORWARD -i ethX -o candy-gw -j ACCEPT
 iptables -A FORWARD -i candy-gw -o ethX -m state --state RELATED,ESTABLISHED -j ACCEPT
+```
+
+#### Windows
+
+查看的网卡名,应该与配置文件中写的名称相同,对于 GUI 版本客户端的默认配置网卡名应该为 `candy`
+
+```ps
+Get-NetAdapter
+```
+
+允许转发,注意要把网卡名替换成上一步查出来的网卡名
+
+```ps
+Set-NetIPInterface -ifAlias 'candy' -Forwarding Enabled
 ```
 
 ### 测试
