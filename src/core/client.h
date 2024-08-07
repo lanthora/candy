@@ -83,6 +83,9 @@ public:
     // 用于局域网连接的地址
     int setLocalhost(std::string ip);
 
+    // 设置最大传输单元
+    int setMtu(int mtu);
+
     // 启停客户端用于处理任务的线程
     int run();
     int shutdown();
@@ -90,6 +93,7 @@ public:
 private:
     // Common
     int workers = 0;
+    int mtu = 1400;
     bool running = false;
     std::string password;
     std::mutex runningMutex;

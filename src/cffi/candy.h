@@ -17,6 +17,7 @@ int candy_client_set_virtual_mac(void *candy, const char *vmac);
 int candy_client_set_stun(void *candy, const char *stun);
 int candy_client_set_discovery_interval(void *candy, int interval);
 int candy_client_set_route_cost(void *candy, int cost);
+int candy_client_set_mtu(void *candy, int mtu);
 int candy_client_set_udp_bind_port(void *candy, int port);
 int candy_client_set_localhost(void *candy, const char *ip);
 int candy_client_set_address_update_callback(void *candy, void (*callback)(const char *, const char *));

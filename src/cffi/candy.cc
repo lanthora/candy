@@ -63,6 +63,11 @@ int candy_client_set_route_cost(void *candy, int cost) {
     return c->setRouteCost(cost);
 }
 
+int candy_client_set_mtu(void *candy, int mtu) {
+    Candy::Client *c = static_cast<Candy::Client *>(candy);
+    return c->setMtu(mtu);
+}
+
 int candy_client_set_address_update_callback(void *candy, void (*callback)(const char *, const char *)) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
     return c->setAddressUpdateCallback([=](const std::string &address) {
