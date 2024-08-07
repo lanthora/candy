@@ -42,6 +42,7 @@ struct arguments {
     int udpPort = 0;
     int discovery = 0;
     int routeCost = 0;
+    int mtu = 1400;
 };
 
 int disableLogTimestamp() {
@@ -92,6 +93,7 @@ void parseConfig(std::string cfgFile, arguments &args) {
             {"discovery", [&](const std::string &value) { args.discovery = std::stoi(value); }},
             {"route", [&](const std::string &value) { args.routeCost = std::stoi(value); }},
             {"port", [&](const std::string &value) { args.udpPort = std::stoi(value); }},
+            {"mtu", [&](const std::string &value) { args.mtu = std::stoi(value); }},
             {"localhost", [&](const std::string &value) { args.localhost = value; }},
         };
         auto trim = [](std::string str) {
@@ -276,6 +278,7 @@ int serve(const arguments &args) {
         client.setTunAddress(args.tun);
         client.setExpectedAddress(getLastestAddress(args.name));
         client.setVirtualMac(virtualMac(args.name));
+        client.setMtu(args.mtu);
         client.setWorkers(args.workers);
         client.setName(args.name);
         client.run();
@@ -311,6 +314,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
     program.add_argument("-t", "--tun").help("static address").metavar("CIDR");
     program.add_argument("-s", "--stun").help("stun address").metavar("URI");
     program.add_argument("-s", "--port").help("udp port").scan<'i', int>().metavar("NUMBER");
+    program.add_argument("--mtu").help("maximum transmission unit").scan<'i', int>().metavar("NUMBER");
     program.add_argument("-r", "--route").help("routing cost").scan<'i', int>().metavar("COST");
     program.add_argument("--discovery").help("discovery interval").scan<'i', int>().metavar("SECONDS");
     program.add_argument("--localhost").help("local ip").metavar("IP");
@@ -338,6 +342,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
         args.stun = program.is_used("--stun") ? program.get<std::string>("--stun") : args.stun;
         args.localhost = program.is_used("--localhost") ? program.get<std::string>("--localhost") : args.localhost;
         args.udpPort = program.is_used("--port") ? program.get<int>("--port") : args.udpPort;
+        args.mtu = program.is_used("--mtu") ? program.get<int>("--mtu") : args.mtu;
         args.discovery = program.is_used("--discovery") ? program.get<int>("--discovery") : args.discovery;
         args.routeCost = program.is_used("--route") ? program.get<int>("--route") : args.routeCost;
 

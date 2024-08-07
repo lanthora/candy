@@ -132,6 +132,11 @@ int Client::setLocalhost(std::string ip) {
     return 0;
 }
 
+int Client::setMtu(int mtu) {
+    this->mtu = mtu;
+    return 0;
+}
+
 int Client::run() {
     std::lock_guard lock(this->runningMutex);
     this->running = true;
@@ -778,7 +783,7 @@ int Client::startTunThread() {
     if (this->tun.setAddress(this->realAddress)) {
         return -1;
     }
-    if (this->tun.setMTU(1400)) {
+    if (this->tun.setMTU(this->mtu)) {
         return -1;
     }
     if (this->tun.setTimeout(1)) {
