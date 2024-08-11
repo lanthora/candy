@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 #include "utility/address.h"
 #include "utility/byteswap.h"
+#include <Poco/Platform.h>
 #include <spdlog/spdlog.h>
 
-#if defined(__linux__) || defined(__linux)
+#if defined(POCO_OS_FAMILY_UNIX)
 #include <arpa/inet.h>
-#elif defined(__APPLE__) || defined(__MACH__)
-#include <arpa/inet.h>
-#elif defined(_WIN32) || defined(_WIN64)
+#include <sys/socket.h>
+#elif defined(POCO_OS_FAMILY_WINDOWS)
 #include <ws2tcpip.h>
 #endif
 

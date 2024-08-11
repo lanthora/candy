@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-#if defined(__linux__) || defined(__linux)
+#include <Poco/Platform.h>
+#if POCO_OS == POCO_OS_LINUX
 
 #include "tun/tun.h"
 #include "utility/address.h"
