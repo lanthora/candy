@@ -5,6 +5,7 @@
 #include "utility/argparse.h"
 #include "utility/random.h"
 #include "utility/time.h"
+#include <Poco/Platform.h>
 #include <Poco/String.h>
 #include <atomic>
 #include <bit>
@@ -117,7 +118,7 @@ void parseConfig(std::string cfgFile, arguments &args) {
     }
 }
 
-#if defined(_WIN32) || defined(_WIN64)
+#if POCO_OS == POCO_OS_WINDOWS_NT
 
 bool netStartup() {
     WSADATA data;

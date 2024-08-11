@@ -2,20 +2,23 @@
 #ifndef CANDY_CORE_COMMON_H
 #define CANDY_CORE_COMMON_H
 
-#if defined(__linux__) || defined(__linux)
+#include <Poco/Platform.h>
+
+#if POCO_OS == POCO_OS_LINUX
 #include <netdb.h>
 #define CANDY_SYSTEM "linux"
-#endif
-
-#if defined(__APPLE__) || defined(__MACH__)
+#elif POCO_OS == POCO_OS_MAC_OS_X
 #include <netdb.h>
 #define CANDY_SYSTEM "macos"
-#endif
-
-#if defined(_WIN32) || defined(_WIN64)
+#elif POCO_OS == POCO_OS_ANDROID
+#include <netdb.h>
+#define CANDY_SYSTEM "android"
+#elif POCO_OS == POCO_OS_WINDOWS_NT
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #define CANDY_SYSTEM "windows"
+#else
+#define CANDY_SYSTEM "unknown"
 #endif
 
 #ifndef CANDY_VERSION

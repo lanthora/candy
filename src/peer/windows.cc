@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-#if defined(_WIN32) || defined(_WIN64)
+#include <Poco/Platform.h>
+
+#if POCO_OS == POCO_OS_WINDOWS_NT
 
 #include "peer/peer.h"
 #include "utility/address.h"

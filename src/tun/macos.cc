@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-#if defined(__APPLE__) || defined(__MACH__)
+#include <Poco/Platform.h>
+#if POCO_OS == POCO_OS_MAC_OS_X
 
 #include "tun/tun.h"
 #include "utility/address.h"
@@ -22,7 +23,7 @@
 #include <unistd.h>
 
 namespace {
-class DarwinTun {
+class MacTun {
 public:
     int setName(const std::string &name) {
         this->name = name.empty() ? "candy" : "candy-" + name;
@@ -257,7 +258,7 @@ private:
 namespace Candy {
 
 Tun::Tun() {
-    this->impl = std::make_shared<DarwinTun>();
+    this->impl = std::make_shared<MacTun>();
 }
 
 Tun::~Tun() {
@@ -265,22 +266,22 @@ Tun::~Tun() {
 }
 
 int Tun::setName(const std::string &name) {
-    std::shared_ptr<DarwinTun> tun;
+    std::shared_ptr<MacTun> tun;
 
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     tun->setName(name);
     return 0;
 }
 
 int Tun::setAddress(const std::string &cidr) {
-    std::shared_ptr<DarwinTun> tun;
+    std::shared_ptr<MacTun> tun;
     Address address;
 
     if (address.cidrUpdate(cidr)) {
         return -1;
     }
     spdlog::info("client address: {}", address.getCidr());
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     if (tun->setIP(address.getIp())) {
         return -1;
     }
@@ -291,14 +292,14 @@ int Tun::setAddress(const std::string &cidr) {
 }
 
 uint32_t Tun::getIP() {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->getIP();
 }
 
 int Tun::setMTU(int mtu) {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     if (tun->setMTU(mtu)) {
         return -1;
     }
@@ -306,8 +307,8 @@ int Tun::setMTU(int mtu) {
 }
 
 int Tun::setTimeout(int timeout) {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     if (tun->setTimeout(timeout)) {
         return -1;
     }
@@ -315,32 +316,32 @@ int Tun::setTimeout(int timeout) {
 }
 
 int Tun::up() {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->up();
 }
 
 int Tun::down() {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->down();
 }
 
 int Tun::read(std::string &buffer) {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->read(buffer);
 }
 
 int Tun::write(const std::string &buffer) {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->write(buffer);
 }
 
 int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
-    std::shared_ptr<DarwinTun> tun;
-    tun = std::any_cast<std::shared_ptr<DarwinTun>>(this->impl);
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->setSysRtTable(dst, mask, nexthop);
 }
 

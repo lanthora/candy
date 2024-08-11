@@ -2,6 +2,7 @@
 #include "utility/time.h"
 #include "utility/address.h"
 #include "utility/byteswap.h"
+#include <Poco/Platform.h>
 #include <bit>
 #include <chrono>
 #include <limits>
@@ -37,9 +38,12 @@ struct ntp_packet {
 
 } // namespace
 
-#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
+#if defined(POCO_OS_FAMILY_UNIX)
 #include <netdb.h>
+#include <netinet/in.h>
 #include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 static int64_t ntpTime() {

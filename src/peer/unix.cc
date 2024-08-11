@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-#if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(__MACH__)
+#include <Poco/Platform.h>
+#if defined(POCO_OS_FAMILY_UNIX)
 
 #include "peer/peer.h"
 #include "utility/address.h"
