@@ -1141,7 +1141,7 @@ int Client::sendStunRequest() {
         Poco::URI uri(this->stun.uri);
         std::string strPort = uri.getPort() == 0 ? "3478" : std::to_string(uri.getPort());
         if (getaddrinfo(uri.getHost().c_str(), strPort.c_str(), &hints, &info)) {
-            spdlog::warn("resolve stun server domain name failed: {}:{}", uri.getHost(), uri.getPort());
+            spdlog::warn("resolve stun server domain name failed: {}:{}", uri.getHost(), strPort);
             return -1;
         }
     } catch (std::exception &e) {
