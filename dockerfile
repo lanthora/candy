@@ -1,6 +1,6 @@
 FROM alpine as base
 RUN apk update
-RUN apk add spdlog openssl poco
+RUN apk add spdlog openssl poco iptables
 
 FROM base AS build
 RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev poco-dev linux-headers
