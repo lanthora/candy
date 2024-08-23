@@ -10,16 +10,16 @@
 
 [简体中文](README-zh_CN.md) | [English](README.md)
 
-A reliable, low-latency, and anti-censorship virtual private network.
+一个高可用,低时延,反审查的组网工具.
 
-See [docs](https://docs.canets.org) for more details.
+更多细节请查看[文档](https://docs.canets.org).
 
-## Related Projects
+## 相关项目
 
-- [Cake](https://github.com/lanthora/cake): Candy GUI desktop application implemented by Qt
-- [EasyTier](https://github.com/EasyTier/EasyTier): a simple, safe and decentralized VPN networking solution implemented with the Rust language and Tokio framework
-- [Vnt](https://github.com/vnt-dev/vnt): An efficient VPN
+- [Cake](https://github.com/lanthora/cake): Qt 实现的 Candy GUI 桌面应用程序
+- [EasyTier](https://github.com/EasyTier/EasyTier): 一个简单、安全、去中心化的内网穿透 VPN 组网方案，使用 Rust 语言和 Tokio 框架实现
+- [Vnt](https://github.com/vnt-dev/vnt): 一个简单、高效、能快速组建虚拟局域网的工具
 
-## Contact
+## 交流群
 
-- TG: [Click to Join](https://t.me/CandyUserGroup)
+- QQ: 768305206
