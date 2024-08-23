@@ -29,11 +29,8 @@ pacman -S candy
 
 ### Gentoo
 
-使用 [GURU](https://github.com/gentoo/guru/tree/master/net-vpn/candy) 仓库
-
 ```bash
-eselect repository enable guru
-emerge --sync guru && emerge -av candy
+emerge --sync gentoo && emerge -av candy
 ```
 
 ### openSUSE 
