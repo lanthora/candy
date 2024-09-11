@@ -1,4 +1,4 @@
-FROM alpine as base
+FROM alpine AS base
 RUN apk update
 RUN apk add spdlog openssl poco
 
