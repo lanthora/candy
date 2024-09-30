@@ -51,6 +51,10 @@
         {
             "os": "linux",
             "arch": "x86_64"
+        },
+        {
+            "os": "linux",
+            "arch": "s390x"
         }
     ]
 }
