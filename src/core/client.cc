@@ -20,9 +20,9 @@
 
 namespace {
 
-static constexpr size_t AES_256_GCM_IV_LEN = 12;
-static constexpr size_t AES_256_GCM_TAG_LEN = 16;
-static constexpr size_t AES_256_GCM_KEY_LEN = 32;
+constexpr std::size_t AES_256_GCM_IV_LEN = 12;
+constexpr std::size_t AES_256_GCM_TAG_LEN = 16;
+constexpr std::size_t AES_256_GCM_KEY_LEN = 32;
 
 } // namespace
 
