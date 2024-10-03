@@ -141,6 +141,7 @@ int Client::run() {
     std::lock_guard lock(this->runningMutex);
     this->running = true;
     this->localP2PDisabled = false;
+    this->sysRtTable.clear();
 
     if (startWsThread()) {
         spdlog::critical("start websocket client thread failed");
@@ -680,7 +681,6 @@ void Client::handleSysRtMessage(WebSocketMessage &message) {
     SysRouteMessage *header = (SysRouteMessage *)message.buffer.c_str();
     SysRouteItem *rt = header->rtTable;
     std::unique_lock lock(this->sysRtTableMutex);
-    this->sysRtTable.clear();
     for (uint8_t idx = 0; idx < header->size; ++idx) {
         SysRouteEntry entry;
         entry.dst = Address::netToHost(rt[idx].dest);

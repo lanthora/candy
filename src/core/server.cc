@@ -514,6 +514,12 @@ void Server::updateClientRoute(WebSocketMessage &message, uint32_t client) {
             message.buffer.append((char *)(&item), sizeof(item));
             header->size += 1;
         }
+        // 100 条路由报文大小是 1204 字节,超过 100 条后分批发送
+        if (header->size > 100) {
+            this->ws.write(message);
+            message.buffer.resize(sizeof(SysRouteMessage));
+            header->size = 0;
+        }
     }
 
     if (header->size > 0) {
