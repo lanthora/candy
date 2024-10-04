@@ -2,6 +2,9 @@
 #ifndef CANDY_UTILITY_BYTESWAP_H
 #define CANDY_UTILITY_BYTESWAP_H
 
+#include <cstddef>
+#include <cstdint>
+
 namespace Candy {
 template <typename T> static inline T byteswap(const T &input) {
     T output(0);

@@ -7,7 +7,6 @@
 #include <Poco/Environment.h>
 #include <Poco/URI.h>
 #include <algorithm>
-#include <bit>
 #include <fmt/core.h>
 #include <functional>
 #include <openssl/evp.h>

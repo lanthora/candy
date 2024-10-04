@@ -5,7 +5,6 @@
 #include <Poco/Platform.h>
 #include <bit>
 #include <chrono>
-#include <limits>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 #include <string>
