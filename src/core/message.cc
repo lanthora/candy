@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "core/message.h"
 #include "utility/address.h"
+#include "utility/time.h"
 #include <spdlog/spdlog.h>
 
 namespace Candy {

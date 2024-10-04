@@ -1,8 +1,4 @@
 {
-    "C_Cpp.default.cppStandard": "c++20",
-    "C_Cpp.intelliSenseCacheSize": 0,
-    "C_Cpp.autoAddFileAssociations": false,
-    "C_Cpp.errorSquiggles": "disabled",
     "editor.detectIndentation": false,
     "editor.tabSize": 4,
     "editor.formatOnSave": true,
@@ -10,5 +6,10 @@
     "editor.formatOnSaveMode": "modifications",
     "files.insertFinalNewline": true,
     "json.format.enable": true,
-    "cmake.configureOnOpen": false,
+    "cmake.debugConfig": {
+        "args": [
+            "-c",
+            "candy.cfg"
+        ]
+    }
 }

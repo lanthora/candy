@@ -8,7 +8,6 @@
 #include <Poco/Platform.h>
 #include <Poco/String.h>
 #include <atomic>
-#include <bit>
 #include <filesystem>
 #include <fstream>
 #include <functional>

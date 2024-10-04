@@ -4,6 +4,7 @@
 #include "core/message.h"
 #include "utility/address.h"
 #include "utility/random.h"
+#include "utility/time.h"
 #include <Poco/URI.h>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>

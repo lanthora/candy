@@ -3,7 +3,6 @@
 #define CANDY_CORE_MESSAGE_H
 
 #include "utility/address.h"
-#include "utility/time.h"
 #include <cstdint>
 #include <cstring>
 #include <openssl/sha.h>
