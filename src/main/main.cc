@@ -43,6 +43,36 @@ struct arguments {
     int discovery = 0;
     int routeCost = 0;
     int mtu = 1400;
+
+    void dump(const std::string &key, const std::string &value) {
+        if (!value.empty()) {
+            spdlog::debug("--{}={}", key, value);
+        }
+    }
+    void dump(const std::string &key, int value) {
+        if (value) {
+            spdlog::debug("--{}={}", key, value);
+        }
+    }
+    void dump() {
+        spdlog::debug("================================");
+        dump("mode", this->mode);
+        dump("websocket", this->websocket);
+        dump("password", this->password);
+        dump("restart", this->restart);
+        dump("dhcp", this->dhcp);
+        dump("sdwan", this->sdwan);
+        dump("name", this->name);
+        dump("tun", this->tun);
+        dump("stun", this->stun);
+        dump("localhost", this->localhost);
+        dump("discovery", this->discovery);
+        dump("route", this->routeCost);
+        dump("mtu", this->mtu);
+        dump("workers", this->workers);
+        dump("port", this->udpPort);
+        spdlog::debug("================================");
+    }
 };
 
 int disableLogTimestamp() {
@@ -52,7 +82,6 @@ int disableLogTimestamp() {
 
 int setLogLevelDebug() {
     spdlog::set_level(spdlog::level::debug);
-    spdlog::debug("set log level: debug");
     return 0;
 }
 
@@ -365,6 +394,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
         }
         if (args.debug) {
             setLogLevelDebug();
+            args.dump();
         }
         return 0;
     } catch (const std::exception &e) {

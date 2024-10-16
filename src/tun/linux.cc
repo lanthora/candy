@@ -10,7 +10,6 @@
 #include <memory>
 #include <net/if.h>
 #include <net/route.h>
-#include <queue>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <sys/ioctl.h>
