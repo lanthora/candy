@@ -8,18 +8,34 @@
 <a href="https://github.com/lanthora/candy/pulls"><img src="https://img.shields.io/github/issues-pr-raw/lanthora/candy" /></a>
 </p>
 
-[简体中文](README-zh_CN.md) | [English](README.md)
+一个高可用,低时延,反审查的组网工具.
 
-A reliable, low-latency, and anti-censorship virtual private network.
+## 如何使用
 
-See [docs](https://docs.canets.org) for more details.
+- [使用社区服务器](https://docs.canets.org/use-the-community-server)
+- [安装 Windows 客户端](https://docs.canets.org/install-client-for-windows)
+- [安装 macOS 客户端](https://docs.canets.org/install-client-for-macos)
+- [安装 Linux 客户端](https://docs.canets.org/install-client-for-linux)
+- [部署 Web 服务端](https://docs.canets.org/deploy-web-server)
+- [部署 CLI 服务端](https://docs.canets.org/deploy-cli-server)
+- [软件定义广域网](https://docs.canets.org/software-defined-wide-area-network)
 
-## Related Projects
+## 相关项目
 
-- [Cake](https://github.com/lanthora/cake): Candy GUI desktop application implemented by Qt
-- [EasyTier](https://github.com/EasyTier/EasyTier): a simple, safe and decentralized VPN networking solution implemented with the Rust language and Tokio framework
-- [Vnt](https://github.com/vnt-dev/vnt): An efficient VPN
+- [Cacao](https://github.com/lanthora/cacao): WebUI 版的 Candy 服务器
+- [Cake](https://github.com/lanthora/cake): Qt 实现的 Candy GUI 桌面应用程序
+- [EasyTier](https://github.com/EasyTier/EasyTier): 一个简单、安全、去中心化的内网穿透 VPN 组网方案，使用 Rust 语言和 Tokio 框架实现
 
-## Contact
+## 交流群
 
+- QQ: 768305206
 - TG: [Click to Join](https://t.me/CandyUserGroup)
+
+## 赞助
+
+如果这个产品对您有帮助,请考虑赞助.您的支持将帮助这个项目更好地发展,持续改进和提供更多有价值的功能.感谢您的支持.
+
+<p>
+<img src="https://docs.canets.org/images/alipay.png" width="128px" />
+<img src="https://docs.canets.org/images/wechat.png" width="128px" />
+</p>
