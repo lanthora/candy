@@ -35,7 +35,6 @@
 
 给 172.16.1.0/24 的设备配置路由:
 
-- dst: 192.168.202.0/24; gw: 172.16.1.1
 - dst: 172.16.2.0/24; gw: 172.16.1.1
 - dst: 172.16.3.0/24; gw: 172.16.1.1
 
@@ -53,12 +52,11 @@
 sysctl -w net.ipv4.ip_forward=1
 ```
 
-判断流量进入网关的网口,这里假设是 `ethX`, 并假设 candy 使用的网口名是 `candy-gw`.
+开启动态伪装并接受转发报文.
 
 ```bash
-iptables -t nat -A POSTROUTING -o candy-gw -j MASQUERADE
-iptables -A FORWARD -i ethX -o candy-gw -j ACCEPT
-iptables -A FORWARD -i candy-gw -o ethX -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -t nat -A POSTROUTING -j MASQUERADE
+iptables -A FORWARD -j ACCEPT
 ```
 
 #### Windows
