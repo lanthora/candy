@@ -12,13 +12,13 @@
 
 ## 如何使用
 
-- [使用社区服务器](use-the-community-server)
 - [安装 Windows 客户端](install-client-for-windows)
 - [安装 macOS 客户端](install-client-for-macos)
 - [安装 Linux 客户端](install-client-for-linux)
 - [部署 Web 服务端](deploy-web-server)
 - [部署 CLI 服务端](deploy-cli-server)
-- [软件定义广域网](software-defined-wide-area-network)
+- [使用社区服务器](use-the-community-server)
+- [多局域网组网](software-defined-wide-area-network)
 
 ## 相关项目
 
