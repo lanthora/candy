@@ -87,31 +87,4 @@ std::string PeerInfo::getStateStr(PeerState state) {
     }
 }
 
-void UdpHolder::setPort(uint16_t port) {
-    this->port = port;
-}
-
-void UdpHolder::setIP(uint32_t ip) {
-    this->ip = ip;
-}
-
-uint32_t UdpHolder::IP() {
-    if (!this->ip) {
-        try {
-            for (const auto &iface : Poco::Net::NetworkInterface::list()) {
-                if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint() &&
-                    iface.type() != iface.NI_TYPE_OTHER) {
-                    auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
-                    memcpy(&this->ip, firstAddress.addr(), sizeof(this->ip));
-                    this->ip = ntohl(this->ip);
-                    break;
-                }
-            }
-        } catch (std::exception &e) {
-            spdlog::warn("local ip failed: {}", e.what());
-        }
-    }
-    return this->ip;
-}
-
 } // namespace Candy

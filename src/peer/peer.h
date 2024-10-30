@@ -3,7 +3,6 @@
 #define CANDY_PEER_PEER_H
 
 #include "utility/random.h"
-#include <any>
 #include <cstdint>
 #include <string>
 
@@ -55,29 +54,6 @@ public:
     uint32_t ip;
     uint16_t port;
     std::string buffer;
-};
-
-class UdpHolder {
-public:
-    UdpHolder();
-    ~UdpHolder();
-
-    int init();
-    void reset();
-
-    void setPort(uint16_t port);
-    void setIP(uint32_t ip);
-
-    uint16_t Port();
-    uint32_t IP();
-
-    size_t read(UdpMessage &message);
-    size_t write(const UdpMessage &message);
-
-private:
-    std::any socket;
-    uint16_t port = 0;
-    uint32_t ip = 0;
 };
 
 } // namespace Candy

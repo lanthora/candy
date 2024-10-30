@@ -148,26 +148,9 @@ void parseConfig(std::string cfgFile, arguments &args) {
 
 #if POCO_OS == POCO_OS_WINDOWS_NT
 
-bool netStartup() {
-    WSADATA data;
-    return WSAStartup(MAKEWORD(2, 2), &data) == 0;
-}
-
-bool netCleanup() {
-    return WSACleanup() == 0;
-}
-
 std::string storageDirectory = "C:/ProgramData/Candy/";
 
 #else
-
-bool netStartup() {
-    return true;
-}
-
-bool netCleanup() {
-    return true;
-}
 
 std::string storageDirectory = "/var/lib/candy/";
 
@@ -282,7 +265,7 @@ void signalHandler(int signal) {
 
 int serve(const arguments &args) {
 
-    netStartup();
+    Poco::Net::initializeNetwork();
 
     Candy::Server server;
     Candy::Client client;
@@ -324,7 +307,7 @@ int serve(const arguments &args) {
         spdlog::info("service exit: internal exception");
     }
 
-    netCleanup();
+    Poco::Net::uninitializeNetwork();
     return exitCode;
 }
 } // namespace
