@@ -79,7 +79,7 @@ size_t UdpHolder::read(UdpMessage &message) {
 
         this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ);
     } catch (std::exception &e) {
-        spdlog::warn("udp holder read failed: {}", e.what());
+        spdlog::debug("udp holder read failed: {}", e.what());
     }
     return 0;
 }
@@ -89,7 +89,7 @@ size_t UdpHolder::write(const UdpMessage &message) {
         Poco::Net::SocketAddress address(Address::ipToStr(message.ip), message.port);
         return this->socket.sendTo(message.buffer.data(), message.buffer.size(), address);
     } catch (std::exception &e) {
-        spdlog::warn("udp holder write failed: {}", e.what());
+        spdlog::debug("udp holder write failed: {}", e.what());
     }
     return 0;
 }
