@@ -41,33 +41,38 @@ struct ntp_packet {
 #include <unistd.h>
 
 static int64_t ntpTime() {
-    Poco::Net::DatagramSocket socket;
-    socket.connect(Poco::Net::SocketAddress("pool.ntp.org", 123));
+    try {
+        Poco::Net::DatagramSocket socket;
+        socket.connect(Poco::Net::SocketAddress("pool.ntp.org", 123));
 
-    struct ntp_packet packet = {};
-    socket.sendBytes(&packet, sizeof(packet));
+        struct ntp_packet packet = {};
+        socket.sendBytes(&packet, sizeof(packet));
 
-    socket.setReceiveTimeout(Poco::Timespan(1, 0));
-    int len = socket.receiveBytes(&packet, sizeof(packet));
+        socket.setReceiveTimeout(Poco::Timespan(1, 0));
+        int len = socket.receiveBytes(&packet, sizeof(packet));
 
-    if (len != sizeof(packet) || (packet.li_vn_mode & 0x07) != 4) {
-        spdlog::warn("invalid ntp response");
+        if (len != sizeof(packet) || (packet.li_vn_mode & 0x07) != 4) {
+            spdlog::warn("invalid ntp response");
+            return 0;
+        }
+
+        int64_t retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+        if (retval == 0) {
+            spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
+            return 0;
+        }
+
+        // Fix ntp 2036 problem
+        if (!(retval & 0x80000000)) {
+            retval += UINT32_MAX;
+        }
+
+        retval -= 2208988800U;
+        return retval;
+    } catch (std::exception &e) {
+        spdlog::warn("ntp time failed: {}", e.what());
         return 0;
     }
-
-    int64_t retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
-    if (retval == 0) {
-        spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
-        return 0;
-    }
-
-    // Fix ntp 2036 problem
-    if (!(retval & 0x80000000)) {
-        retval += UINT32_MAX;
-    }
-
-    retval -= 2208988800U;
-    return retval;
 }
 
 namespace Candy {

@@ -9,16 +9,25 @@
 namespace Candy {
 
 int UdpHolder::init() {
-    this->socket = Poco::Net::DatagramSocket(Poco::Net::SocketAddress(0), true, true);
-    this->socket.setBlocking(false);
-    this->address = socket.address();
+    try {
+        this->socket = Poco::Net::DatagramSocket(Poco::Net::SocketAddress(this->port), true, true);
+        this->socket.setBlocking(false);
+        this->address = socket.address();
+    } catch (std::exception &e) {
+        spdlog::critical("udp holder init failed: {}", e.what());
+        return -1;
+    }
     return 0;
 }
 
 void UdpHolder::reset() {
-    this->socket.close();
-    this->port = 0;
-    this->ip = 0;
+    try {
+        this->socket.close();
+        this->port = 0;
+        this->ip = 0;
+    } catch (std::exception &e) {
+        spdlog::warn("udp holder reset failed: {}", e.what());
+    }
 }
 
 void UdpHolder::setPort(uint16_t port) {
@@ -53,27 +62,36 @@ uint32_t UdpHolder::IP() {
 }
 
 size_t UdpHolder::read(UdpMessage &message) {
-    if (this->socket.available()) {
-        std::string buffer(1500, 0);
-        Poco::Net::SocketAddress address;
-        int size = this->socket.receiveFrom(buffer.data(), buffer.size(), address);
-        if (size >= 0) {
-            buffer.resize(size);
-            message.buffer = std::move(buffer);
-            message.port = address.port();
-            memcpy(&message.ip, address.host().addr(), sizeof(message.ip));
-            message.ip = Address::netToHost(message.ip);
-            return size;
+    try {
+        if (this->socket.available()) {
+            std::string buffer(1500, 0);
+            Poco::Net::SocketAddress address;
+            int size = this->socket.receiveFrom(buffer.data(), buffer.size(), address);
+            if (size >= 0) {
+                buffer.resize(size);
+                message.buffer = std::move(buffer);
+                message.port = address.port();
+                memcpy(&message.ip, address.host().addr(), sizeof(message.ip));
+                message.ip = Address::netToHost(message.ip);
+                return size;
+            }
         }
-    }
 
-    this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ);
+        this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ);
+    } catch (std::exception &e) {
+        spdlog::warn("udp holder read failed: {}", e.what());
+    }
     return 0;
 }
 
 size_t UdpHolder::write(const UdpMessage &message) {
-    Poco::Net::SocketAddress address(Address::ipToStr(message.ip), message.port);
-    return this->socket.sendTo(message.buffer.data(), message.buffer.size(), address);
+    try {
+        Poco::Net::SocketAddress address(Address::ipToStr(message.ip), message.port);
+        return this->socket.sendTo(message.buffer.data(), message.buffer.size(), address);
+    } catch (std::exception &e) {
+        spdlog::warn("udp holder write failed: {}", e.what());
+    }
+    return 0;
 }
 
 } // namespace Candy
