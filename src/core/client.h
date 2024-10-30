@@ -3,7 +3,7 @@
 #define CANDY_CORE_CLIENT_H
 
 #include "core/message.h"
-#include "peer/peer.h"
+#include "peer/udp.h"
 #include "tun/tun.h"
 #include "utility/random.h"
 #include "websocket/client.h"
