@@ -9,8 +9,12 @@
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <unistd.h>
 
-namespace {
+namespace Candy {
+
+bool Time::useSystemTime = false;
+std::string Time::ntpServer;
 
 struct ntp_packet {
     uint8_t li_vn_mode = 0x23;
@@ -36,14 +40,10 @@ struct ntp_packet {
     uint32_t txTm_f;
 };
 
-} // namespace
-
-#include <unistd.h>
-
 static int64_t ntpTime() {
     try {
         Poco::Net::DatagramSocket socket;
-        socket.connect(Poco::Net::SocketAddress("pool.ntp.org", 123));
+        socket.connect(Poco::Net::SocketAddress(Time::ntpServer, 123));
 
         struct ntp_packet packet = {};
         socket.sendBytes(&packet, sizeof(packet));
@@ -70,14 +70,10 @@ static int64_t ntpTime() {
         retval -= 2208988800U;
         return retval;
     } catch (std::exception &e) {
-        spdlog::warn("ntp time failed: {}", e.what());
+        spdlog::debug("ntp time failed: {}", e.what());
         return 0;
     }
 }
-
-namespace Candy {
-
-bool Time::useSystemTime = false;
 
 int64_t Time::unixTime() {
     using namespace std::chrono;
@@ -85,7 +81,7 @@ int64_t Time::unixTime() {
     int64_t sysTime;
     int64_t netTime;
 
-    if (useSystemTime) {
+    if (useSystemTime || ntpServer.empty()) {
         sysTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
         return sysTime;
     }

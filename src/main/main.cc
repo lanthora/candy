@@ -25,6 +25,7 @@ struct arguments {
     std::string mode;
     std::string websocket;
     std::string password;
+    std::string ntp;
     int restart = 0;
     bool noTimestamp = false;
     bool debug = false;
@@ -59,6 +60,7 @@ struct arguments {
         dump("mode", this->mode);
         dump("websocket", this->websocket);
         dump("password", this->password);
+        dump("ntp", this->ntp);
         dump("restart", this->restart);
         dump("dhcp", this->dhcp);
         dump("sdwan", this->sdwan);
@@ -111,6 +113,7 @@ void parseConfig(std::string cfgFile, arguments &args) {
             {"mode", [&](const std::string &value) { args.mode = value; }},
             {"websocket", [&](const std::string &value) { args.websocket = value; }},
             {"password", [&](const std::string &value) { args.password = value; }},
+            {"ntp", [&](const std::string &value) { args.ntp = value; }},
             {"debug", [&](const std::string &value) { args.debug = (value == "true"); }},
             {"restart", [&](const std::string &value) { args.restart = std::stoi(value); }},
             {"dhcp", [&](const std::string &value) { args.dhcp = value; }},
@@ -226,7 +229,7 @@ bool checkStorageDirectory(const arguments &args) {
     if (!std::filesystem::exists(storageDirectory + "lost")) {
         return true;
     }
-    if (args.websocket.starts_with("wss://canets.org/")) {
+    if (args.websocket.starts_with("wss://canets.org")) {
         return false;
     }
     if (!args.tun.empty()) {
@@ -318,6 +321,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
     program.add_argument("-m", "--mode").help("working mode").metavar("TEXT");
     program.add_argument("-w", "--websocket").help("websocket address").metavar("URI");
     program.add_argument("-p", "--password").help("authorization password").metavar("TEXT");
+    program.add_argument("--ntp").help("ntp server").metavar("HOST");
     program.add_argument("--restart").help("restart interval").scan<'i', int>().metavar("SECONDS");
     program.add_argument("-d", "--dhcp").help("dhcp address range").metavar("CIDR");
     program.add_argument("--sdwan").help("software-defined wide area network").metavar("ROUTES");
@@ -343,6 +347,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
         args.mode = program.is_used("--mode") ? program.get<std::string>("--mode") : args.mode;
         args.websocket = program.is_used("--websocket") ? program.get<std::string>("--websocket") : args.websocket;
         args.password = program.is_used("--password") ? program.get<std::string>("--password") : args.password;
+        args.ntp = program.is_used("--ntp") ? program.get<std::string>("--ntp") : args.ntp;
         args.restart = program.is_used("--restart") ? program.get<int>("--restart") : args.restart;
         args.noTimestamp = program.is_used("--no-timestamp") ? program.get<bool>("--no-timestamp") : args.noTimestamp;
         args.debug = program.is_used("--debug") ? program.get<bool>("--debug") : args.debug;
@@ -397,6 +402,8 @@ int main(int argc, char *argv[]) {
         spdlog::critical("the container needs to add a storage volume: {}", storageDirectory);
         running = false;
     }
+
+    Candy::Time::ntpServer = args.ntp;
 
     while (running && serve(args) && args.restart) {
         running = true;

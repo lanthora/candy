@@ -3,6 +3,7 @@
 #define CANDY_UTILITY_TIME_H
 
 #include <cstdint>
+#include <string>
 
 namespace Candy {
 
@@ -17,6 +18,7 @@ public:
     static int32_t hostToNet(int32_t host);
     static int32_t netToHost(int32_t net);
     static bool useSystemTime;
+    static std::string ntpServer;
 };
 
 } // namespace Candy
