@@ -329,7 +329,7 @@ int parseConfig(int argc, char *argv[], arguments &args) {
     program.add_argument("--workers").help("workers number").scan<'i', int>().metavar("NUM");
     program.add_argument("-t", "--tun").help("static address").metavar("CIDR");
     program.add_argument("-s", "--stun").help("stun address").metavar("URI");
-    program.add_argument("-s", "--port").help("udp port").scan<'i', int>().metavar("NUMBER");
+    program.add_argument("--port").help("udp port").scan<'i', int>().metavar("NUMBER");
     program.add_argument("--mtu").help("maximum transmission unit").scan<'i', int>().metavar("NUMBER");
     program.add_argument("-r", "--route").help("routing cost").scan<'i', int>().metavar("COST");
     program.add_argument("--discovery").help("discovery interval").scan<'i', int>().metavar("SECONDS");
