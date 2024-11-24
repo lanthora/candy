@@ -18,7 +18,7 @@
 Name:           candy
 Version:        9999
 Release:        0
-Summary:        A reliable, low-latency, and anti-censorship VPN
+Summary:        A simple networking tool
 License:        MIT
 Group:          Productivity/Networking/Security
 URL:            https://github.com/lanthora/candy
@@ -34,7 +34,7 @@ BuildRequires:  systemd-rpm-macros
 Requires:  openssl
 
 %description
-A reliable, low-latency, and anti-censorship virtual private network
+A simple networking tool
 
 %prep
 %setup -q -n candy

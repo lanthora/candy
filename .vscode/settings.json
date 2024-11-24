@@ -6,10 +6,7 @@
     "editor.formatOnSaveMode": "modifications",
     "files.insertFinalNewline": true,
     "json.format.enable": true,
-    "cmake.debugConfig": {
-        "args": [
-            "-c",
-            "candy.cfg"
-        ]
-    }
+    "C_Cpp.default.cppStandard": "c++23",
+    "C_Cpp.autoAddFileAssociations": false,
+    "C_Cpp.errorSquiggles": "disabled"
 }

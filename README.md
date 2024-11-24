@@ -8,7 +8,7 @@
 <a href="https://github.com/lanthora/candy/pulls"><img src="https://img.shields.io/github/issues-pr-raw/lanthora/candy" /></a>
 </p>
 
-一个高可用,低时延,反审查的组网工具.
+一个简单的组网工具.
 
 ## 如何使用
 
@@ -30,12 +30,3 @@
 
 - QQ: 768305206
 - TG: [Click to Join](https://t.me/CandyUserGroup)
-
-## 赞助
-
-如果这个产品对您有帮助,请考虑赞助.您的支持将帮助这个项目更好地发展,持续改进和提供更多有价值的功能.感谢您的支持.
-
-<p>
-<img src="https://docs.canets.org/images/alipay.png" width="128px" />
-<img src="https://docs.canets.org/images/wechat.png" width="128px" />
-</p>

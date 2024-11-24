@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
-#include "utility/time.h"
-#include "utility/address.h"
-#include "utility/byteswap.h"
+#include "utils/time.h"
+#include "core/net.h"
 #include <Poco/Net/DatagramSocket.h>
-#include <Poco/Platform.h>
-#include <bit>
 #include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
+#include <sstream>
 #include <string>
 #include <unistd.h>
 
 namespace Candy {
 
-bool Time::useSystemTime = false;
-std::string Time::ntpServer;
+bool useSystemTime = false;
+std::string ntpServer;
 
 struct ntp_packet {
     uint8_t li_vn_mode = 0x23;
@@ -40,10 +41,10 @@ struct ntp_packet {
     uint32_t txTm_f;
 };
 
-static int64_t ntpTime() {
+int64_t ntpTime() {
     try {
         Poco::Net::DatagramSocket socket;
-        socket.connect(Poco::Net::SocketAddress(Time::ntpServer, 123));
+        socket.connect(Poco::Net::SocketAddress(ntpServer, 123));
 
         struct ntp_packet packet = {};
         socket.sendBytes(&packet, sizeof(packet));
@@ -56,7 +57,7 @@ static int64_t ntpTime() {
             return 0;
         }
 
-        int64_t retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+        int64_t retval = (int64_t)(ntoh(packet.rxTm_s));
         if (retval == 0) {
             spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
             return 0;
@@ -75,7 +76,7 @@ static int64_t ntpTime() {
     }
 }
 
-int64_t Time::unixTime() {
+int64_t unixTime() {
     using namespace std::chrono;
 
     int64_t sysTime;
@@ -97,7 +98,7 @@ int64_t Time::unixTime() {
     sysTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
     if (std::abs(netTime - sysTime) < 3) {
         useSystemTime = true;
-        spdlog::debug("system time is accurate");
+        spdlog::debug("use system time");
     }
     if (netTime) {
         return netTime;
@@ -107,32 +108,31 @@ int64_t Time::unixTime() {
     return sysTime;
 }
 
-int64_t Time::bootTime() {
+int64_t bootTime() {
     using namespace std::chrono;
     auto now = steady_clock::now();
     return duration_cast<milliseconds>(now.time_since_epoch()).count();
 }
 
-int64_t Time::hostToNet(int64_t host) {
-    if (std::endian::native == std::endian::little) {
-        return byteswap(host);
-    }
-    return host;
-}
+std::string getCurrentTimeWithMillis() {
+    // 获取当前时间点（精确到纳秒）
+    auto now = std::chrono::system_clock::now();
 
-int64_t Time::netToHost(int64_t net) {
-    return Time::hostToNet(net);
-}
+    // 将时间点转换为time_point<system_clock, milliseconds>
+    auto ms_tp = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    auto epoch = ms_tp.time_since_epoch();
+    auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
 
-int32_t Time::hostToNet(int32_t host) {
-    if (std::endian::native == std::endian::little) {
-        return byteswap(host);
-    }
-    return host;
-}
+    // 分离秒和毫秒部分
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm *ptm = std::localtime(&now_time_t);
 
-int32_t Time::netToHost(int32_t net) {
-    return Time::hostToNet(net);
+    // 格式化输出时间和毫秒
+    std::ostringstream oss;
+    oss << std::put_time(ptm, "%Y-%m-%d %H:%M:%S");
+    oss << '.' << std::setfill('0') << std::setw(3) << (value % 1000);
+
+    return oss.str();
 }
 
 } // namespace Candy

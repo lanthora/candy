@@ -589,8 +589,8 @@ public:
     }
 
     template <class F, class... Args>
-    auto action(F &&callable, Args &&...bound_args)
-        -> std::enable_if_t<std::is_invocable_v<F, Args..., std::string const>, Argument &> {
+    auto action(F &&callable,
+                Args &&...bound_args) -> std::enable_if_t<std::is_invocable_v<F, Args..., std::string const>, Argument &> {
         using action_type =
             std::conditional_t<std::is_void_v<std::invoke_result_t<F, Args..., std::string const>>, void_action, valued_action>;
         if constexpr (sizeof...(Args) == 0) {
@@ -913,7 +913,6 @@ public:
      */
     void validate() const {
         if (m_is_optional) {
-            // TODO: check if an implicit value was programmed for this argument
             if (!m_is_used && !m_default_value.has_value() && m_is_required) {
                 throw_required_arg_not_used_error();
             }
@@ -2039,6 +2038,12 @@ public:
 
     void set_suppress(bool suppress) {
         m_suppress = suppress;
+    }
+
+    template <typename T> void set_if_used(const std::string key, T &val) {
+        if (is_used(key)) {
+            val = get<T>(key);
+        }
     }
 
 protected:

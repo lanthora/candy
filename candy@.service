@@ -1,5 +1,5 @@
 [Unit]
-Description=A reliable, low-latency, and anti-censorship virtual private network
+Description=A simple networking tool
 StartLimitIntervalSec=0
 
 [Service]
