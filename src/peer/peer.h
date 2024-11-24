@@ -2,11 +2,27 @@
 #ifndef CANDY_PEER_PEER_H
 #define CANDY_PEER_PEER_H
 
-#include "utility/random.h"
+#include "core/net.h"
+#include "utils/random.h"
+#include <Poco/Net/SocketAddress.h>
+#include <chrono>
 #include <cstdint>
+#include <map>
+#include <memory>
+#include <openssl/evp.h>
+#include <optional>
+#include <shared_mutex>
 #include <string>
 
 namespace Candy {
+
+class PeerManager;
+
+constexpr int32_t RTT_LIMIT = INT32_MAX;
+constexpr int32_t RETRY_MIN = 30;
+constexpr int32_t RETRY_MAX = 3600;
+
+using Poco::Net::SocketAddress;
 
 enum class PeerState {
     INIT,
@@ -18,42 +34,49 @@ enum class PeerState {
     FAILED,
 };
 
-constexpr int32_t DELAY_LIMIT = INT32_MAX;
-constexpr uint32_t RETRY_MIN = 30U;
-constexpr uint32_t RETRY_MAX = 3600U;
-
-class PeerInfo {
+class Peer {
 public:
-    struct {
-        uint32_t ip = 0;
-        uint16_t port = 0;
-    } wide, local, real;
-    uint8_t ack = 0;
-    uint32_t count = 0;
-    uint32_t tick = randomUint32();
-    uint32_t retry = RETRY_MIN;
-    int32_t delay = DELAY_LIMIT;
+    Peer(const IP4 &addr, PeerManager *peerManager);
+    ~Peer();
 
-public:
-    int setTun(uint32_t tun, const std::string &password);
-    std::string getKey() const;
-    uint32_t getTun() const;
-    void updateState(PeerState state);
-    PeerState getState() const;
-    std::string getStateStr() const;
+    void tick();
+    void tryConnecct();
+    void handleStunResponse();
+    void handlePubInfo(IP4 ip, uint16_t port, bool local = false);
+
+    void handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbeatAck);
+    int sendEncrypted(const std::string &buffer);
+    std::optional<int32_t> isConnected() const;
+
+    int32_t rtt = RTT_LIMIT;
+    uint32_t tickCount = randomUint32();
 
 private:
-    static std::string getStateStr(PeerState state);
-    PeerState state = PeerState::INIT;
-    uint32_t tun = 0;
-    std::string key;
-};
+    PeerManager &getManager();
+    PeerManager *peerManager;
 
-class UdpMessage {
-public:
-    uint32_t ip;
-    uint16_t port;
-    std::string buffer;
+    std::optional<std::string> encrypt(const std::string &plaintext);
+    std::shared_ptr<EVP_CIPHER_CTX> encryptCtx;
+    std::mutex encryptCtxMutex;
+    std::string key;
+
+    std::string stateString() const;
+    std::string stateString(PeerState state) const;
+    bool updateState(PeerState state);
+    void resetState();
+    bool checkActivityWithin(std::chrono::system_clock::duration duration);
+    PeerState state = PeerState::INIT;
+    uint8_t ack = 0;
+    int32_t retry = RETRY_MIN;
+    std::chrono::system_clock::time_point lastActiveTime;
+
+    int send(const std::string &buffer);
+    void sendHeartbeatMessage();
+    void sendDelayMessage();
+    std::optional<SocketAddress> wide, local, real;
+    std::shared_mutex socketAddressMutex;
+
+    IP4 addr;
 };
 
 } // namespace Candy

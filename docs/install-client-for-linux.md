@@ -50,24 +50,6 @@ pacman -S candy
 emerge --sync gentoo && emerge -av candy
 ```
 
-## openSUSE 
-
-使用 [OBS](https://software.opensuse.org/download/package?package=candy&project=home:lanthora:candy) 仓库
-
-```bash
-# 以 Tumbleweed 为例,更新仓库缓存时选择信任签名
-zypper addrepo https://download.opensuse.org/repositories/home:lanthora:candy/openSUSE_Tumbleweed/home:lanthora:candy.repo
-zypper refresh && zypper install candy
-```
-
-## Debian/Ubuntu
-
-下载 [DEB](https://github.com/lanthora/candy/releases/latest) 安装包后通过以下命令安装
-
-```bash
-apt install --fix-broken /path/to/candy.deb
-```
-
 ## 单文件可执行程序
 
 当上述所有方式都不适用时,尝试[单文件可执行程序](https://github.com/lanthora/candy/releases/latest).
@@ -84,7 +66,7 @@ cp candy.cfg /etc/candy.cfg
 
 然后按照后续进程管理的方式管理进程.
 
-判断 Systemd 的方法: 检查 `ps -p 1` 输出的内容里是否包含 systemd 
+判断 Systemd 的方法: 检查 `ps -p 1 -o comm=` 输出的内容里是否为 systemd 
 
 ## 进程管理
 

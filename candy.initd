@@ -3,7 +3,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 name="candy daemon"
-description="A reliable, low-latency, and anti-censorship virtual private network"
+description="A simple networking tool"
 CANDY_NAME=${SVCNAME##*.}
 if [ -n "${CANDY_NAME}" -a "${SVCNAME}" != "candy" ]; then
 	CANDY_PIDFILE="/run/candy.${CANDY_NAME}.pid"

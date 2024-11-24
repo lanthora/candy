@@ -2,61 +2,27 @@
 #ifndef CANDY_CORE_SERVER_H
 #define CANDY_CORE_SERVER_H
 
-#include "utility/address.h"
 #include "websocket/server.h"
-#include <list>
-#include <map>
 #include <string>
-#include <thread>
-#include <unordered_map>
 
 namespace Candy {
 
-struct SysRoute {
-    Address dev;
-    Address dst;
-    Address next;
-};
-
 class Server {
 public:
-    int setWebSocketServer(const std::string &uri);
-    int setPassword(const std::string &password);
-    int setDynamicAddressRange(const std::string &cidr);
-    int setSdwan(const std::string &sdwan);
+    // 通过配置文件或命令行设置的参数
+    void setWebSocket(const std::string &uri);
+    void setPassword(const std::string &password);
+    void setDHCP(const std::string &cidr);
+    void setSdwan(const std::string &sdwan);
 
-    int run();
-    int shutdown();
+    // 启动服务端,非阻塞
+    void run();
+    // 关闭客户端,阻塞,直到所有子模块退出
+    void shutdown();
 
 private:
-    int startWsThread();
-    void handleWebSocketMessage();
-
-    void handleAuthMessage(WebSocketMessage &message);
-    void handleForwardMessage(WebSocketMessage &message);
-    void handleExpectedAddressMessage(WebSocketMessage &message);
-    void handlePeerConnMessage(WebSocketMessage &message);
-    void handleVirtualMacMessage(WebSocketMessage &message);
-    void handleDiscoveryMessage(WebSocketMessage &message);
-    void handleGeneralMessage(WebSocketMessage &message);
-    void handleCloseMessage(WebSocketMessage &message);
-
-    void updateClientRoute(WebSocketMessage &message, uint32_t client);
-
-    bool running = false;
-    uint16_t port;
-    std::string host;
-    std::string password;
-    std::thread wsThread;
+    // 目前只有一个 WebSocket 服务端的子模块
     WebSocketServer ws;
-
-    Address dynamic;
-    bool dynamicAddrEnabled = false;
-
-    std::unordered_map<uint32_t, WebSocketConn> ipWsMap;
-    std::map<WebSocketConn, uint32_t> wsIpMap;
-    std::map<WebSocketConn, std::string> wsMacMap;
-    std::list<SysRoute> routes;
 };
 
 } // namespace Candy

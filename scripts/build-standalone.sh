@@ -12,7 +12,6 @@ if [[ -z $TARGET || -z $TARGET_OPENSSL ]];then
         elif [[ "$CANDY_ARCH" == "arm" ]]; then TARGET="arm-unknown-linux-musleabi";TARGET_OPENSSL="linux-armv4";UPX=1
         elif [[ "$CANDY_ARCH" == "armhf" ]]; then TARGET="arm-unknown-linux-musleabihf";TARGET_OPENSSL="linux-armv4";UPX=1
         elif [[ "$CANDY_ARCH" == "loongarch64" ]]; then TARGET="loongarch64-unknown-linux-musl";TARGET_OPENSSL="linux64-loongarch64";UPX=0
-        elif [[ "$CANDY_ARCH" == "s390x" ]]; then TARGET="s390x-ibm-linux-musl";TARGET_OPENSSL="linux64-s390x";UPX=0
         elif [[ "$CANDY_ARCH" == "mips" ]]; then TARGET="mips-unknown-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=1
         elif [[ "$CANDY_ARCH" == "mipssf" ]]; then TARGET="mips-unknown-linux-muslsf";TARGET_OPENSSL="linux-mips32";UPX=1
         elif [[ "$CANDY_ARCH" == "mipsel" ]]; then TARGET="mipsel-unknown-linux-musl";TARGET_OPENSSL="linux-mips32";UPX=1
@@ -39,8 +38,7 @@ COMPILER_ROOT="$TOOLCHAINS/$TARGET"
 
 if [ ! -d "$COMPILER_ROOT" ]; then
     mkdir -p $TOOLCHAINS
-    RESPONSE=$(curl -s https://api.github.com/repos/musl-cross/musl-cross/releases/latest)
-    VERSION=$(echo "$RESPONSE" | grep 'tag_name' | cut -d'"' -f4)
+    VERSION=20250206
     wget -c https://github.com/musl-cross/musl-cross/releases/download/$VERSION/$TARGET.tar.xz -P $TOOLCHAINS
     tar xvf $COMPILER_ROOT.tar.xz -C $TOOLCHAINS
 fi

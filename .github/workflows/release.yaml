@@ -35,14 +35,17 @@ jobs:
         echo "IMAGE_TAG=${GIT_TAG#v}" >> $GITHUB_ENV
     - name: build and push
       uses: docker/build-push-action@v5
+      if: github.event_name == 'release'
       with:
         context: .
         provenance: false
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         tags: |
-          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/candy:${{ env.IMAGE_TAG || 'latest' }}
-          ghcr.io/${{ github.actor }}/candy:${{ env.IMAGE_TAG || 'latest' }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/candy:${{ env.IMAGE_TAG }}
+          docker.io/${{ secrets.DOCKERHUB_USERNAME }}/candy:latest
+          ghcr.io/${{ github.actor }}/candy:${{ env.IMAGE_TAG }}
+          ghcr.io/${{ github.actor }}/candy:latest
 
   windows:
     runs-on: windows-latest
@@ -68,7 +71,7 @@ jobs:
     - name: build
       shell: msys2 {0}
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
         mkdir artifact
         cp candy.cfg artifact
         cp build/src/tun/wintun/bin/amd64/wintun.dll artifact
@@ -96,58 +99,3 @@ jobs:
       if: github.event_name == 'release'
       with:
         files: artifact/${{ env.PKGNAME }}.zip
-
-  opensuse:
-    runs-on: ubuntu-latest
-    steps:
-    - name: trigger openSUSE build
-      uses: distributhor/workflow-webhook@v3
-      with:
-        webhook_url: ${{ secrets.WEBHOOK_URL }}
-        webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
-
-  deb:
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-        - "debian:12"
-        - "ubuntu:22.04"
-        - "ubuntu:24.04"
-    runs-on: ubuntu-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v4
-    - name: create ${{ matrix.image }} directory
-      run: |
-        mkdir debian
-        cp -r package/debian/* debian
-        cp README.md debian/candy-docs.docs
-        cp LICENSE debian/copyright
-        git fetch --tags origin
-    - name: setup artifact name
-      run: |
-        IMAGE_NAME=${{ matrix.image }}
-        echo "ARTIFACT_NAME=${IMAGE_NAME//:/}" >> $GITHUB_ENV
-    - name: build ${{ env.ARTIFACT_NAME }} deb
-      uses: jtdor/build-deb-action@v1
-      env:
-        DEB_BUILD_OPTIONS: noautodbgsym
-        EMAIL: yangmame@icloud.com
-        USER: YangMame
-        EDITOR: true
-      with:
-        docker-image: ${{ matrix.image }}
-        buildpackage-opts: --build=binary --no-sign
-        extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag --sort=-creatordate | head -n1 | sed 's/v//g')+${{ env.ARTIFACT_NAME }}" -D stable --create "CI BUILD"
-    - name: upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.ARTIFACT_NAME }}-${{ github.event.release.tag_name || github.sha }}
-        path: debian/artifacts
-    - name: upload release
-      uses: softprops/action-gh-release@v2
-      if: github.event_name == 'release'
-      with:
-        files: debian/artifacts/*.deb

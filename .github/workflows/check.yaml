@@ -14,9 +14,9 @@ jobs:
         uses: jidicula/clang-format-action@v4.11.0
         with:
           check-path: 'src'
-          exclude-regex: 'src/utility/argparse.h'
+          exclude-regex: 'src/utils/argparse.h'
 
-  docker:
+  linux:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -25,17 +25,23 @@ jobs:
       run: docker build .
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
     - name: depends
-      run: brew install spdlog poco
+      run: brew update && brew install fmt poco spdlog
     - name: checkout
       uses: actions/checkout@v4
     - name: build
       run: |
-        export CPATH=/usr/local/include
-        export LIBRARY_PATH=/usr/local/lib
-        cmake -B build -DCANDY_STATIC_POCO=1 -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        if [ "$RUNNER_ARCH" == "ARM64" ]; then
+          export CPATH=/opt/homebrew/include
+          export LIBRARY_PATH=/opt/homebrew/lib
+        else
+          export CPATH=/usr/local/include
+          export LIBRARY_PATH=/usr/local/lib
+        fi
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
 
   windows:
     runs-on: windows-latest
@@ -60,39 +66,4 @@ jobs:
         key: ${{ hashFiles('CMakeLists.txt') }}
     - name: build
       shell: msys2 {0}
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
-
-  linux:
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-        - "debian:12"
-        - "ubuntu:22.04"
-    runs-on: ubuntu-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v4
-    - name: create ${{ matrix.image }} directory
-      run: |
-        mkdir debian
-        cp -r package/debian/* debian
-        cp README.md debian/candy-docs.docs
-        cp LICENSE debian/copyright
-        git fetch --tags origin
-    - name: setup artifact name
-      run: |
-        IMAGE_NAME=${{ matrix.image }}
-        echo "ARTIFACT_NAME=${IMAGE_NAME//:/}" >> $GITHUB_ENV
-    - name: build ${{ env.ARTIFACT_NAME }} deb
-      uses: jtdor/build-deb-action@v1
-      env:
-        DEB_BUILD_OPTIONS: noautodbgsym
-        EMAIL: yangmame@icloud.com
-        USER: YangMame
-        EDITOR: true
-      with:
-        docker-image: ${{ matrix.image }}
-        buildpackage-opts: --build=binary --no-sign
-        extra-build-deps: git-buildpackage
-        before-build-hook: dch --package candy -v "$(git tag --sort=-creatordate | head -n1 | sed 's/v//g')+${{ env.ARTIFACT_NAME }}" -D stable --create "CI BUILD"
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build

@@ -21,4 +21,4 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: A reliable, low-latency, and anti-censorship virtual private network
+Description: A simple networking tool
