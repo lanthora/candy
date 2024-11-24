@@ -18,82 +18,82 @@ void candy_client_release(void *candy) {
     delete c;
 }
 
-int candy_client_set_name(void *candy, const char *name) {
+void candy_client_set_name(void *candy, const char *name) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setName(name);
+    c->setName(name);
 }
 
-int candy_client_set_password(void *candy, const char *password) {
+void candy_client_set_password(void *candy, const char *password) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setPassword(password);
+    c->setPassword(password);
 }
 
-int candy_client_set_websocket_server(void *candy, const char *server) {
+void candy_client_set_websocket(void *candy, const char *server) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setWebSocketServer(server);
+    c->setWebSocket(server);
 }
 
-int candy_client_set_tun_address(void *candy, const char *cidr) {
+void candy_client_set_tun_address(void *candy, const char *cidr) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setTunAddress(cidr);
+    c->setTunAddress(cidr);
 }
 
-int candy_client_set_expected_address(void *candy, const char *cidr) {
+void candy_client_set_expt_tun_address(void *candy, const char *cidr) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setExpectedAddress(cidr);
+    c->setExptTunAddress(cidr);
 }
 
-int candy_client_set_virtual_mac(void *candy, const char *vmac) {
+void candy_client_set_virtual_mac(void *candy, const char *vmac) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setVirtualMac(vmac);
+    c->setVirtualMac(vmac);
 }
 
-int candy_client_set_stun(void *candy, const char *stun) {
+void candy_client_set_stun(void *candy, const char *stun) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setStun(stun);
+    c->setStun(stun);
 }
 
-int candy_client_set_discovery_interval(void *candy, int interval) {
+void candy_client_set_discovery_interval(void *candy, int interval) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setDiscoveryInterval(interval);
+    c->setDiscoveryInterval(interval);
 }
 
-int candy_client_set_route_cost(void *candy, int cost) {
+void candy_client_set_route_cost(void *candy, int cost) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setRouteCost(cost);
+    c->setRouteCost(cost);
 }
 
-int candy_client_set_mtu(void *candy, int mtu) {
+void candy_client_set_mtu(void *candy, int mtu) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setMtu(mtu);
+    c->setMtu(mtu);
 }
 
-int candy_client_set_address_update_callback(void *candy, void (*callback)(const char *, const char *)) {
+void candy_client_set_tun_update_callback(void *candy, void (*callback)(const char *, const char *)) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setAddressUpdateCallback([=](const std::string &address) {
+    return c->setTunUpdateCallback([=](const std::string &address) {
         callback(c->getName().c_str(), address.c_str());
         return 0;
     });
 }
 
-int candy_client_set_udp_bind_port(void *candy, int port) {
+void candy_client_set_port(void *candy, int port) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setUdpBindPort(port);
+    c->setPort(port);
 }
 
-int candy_client_set_localhost(void *candy, const char *ip) {
+void candy_client_set_localhost(void *candy, const char *ip) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->setLocalhost(ip);
+    c->setLocalhost(ip);
 }
 
-int candy_client_run(void *candy) {
+void candy_client_run(void *candy) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->run();
+    c->run();
 }
 
-int candy_client_shutdown(void *candy) {
+void candy_client_shutdown(void *candy) {
     Candy::Client *c = static_cast<Candy::Client *>(candy);
-    return c->shutdown();
+    c->shutdown();
 }
 
 namespace {
@@ -110,13 +110,12 @@ void shutdown(Client *c) {
 }
 } // namespace Candy
 
-int candy_client_set_error_cb(void (*callback)(void *)) {
+void candy_client_set_error_cb(void (*callback)(void *)) {
     client_error_cb = callback;
-    return 0;
 }
 
 void candy_use_system_time() {
-    Candy::Time::useSystemTime = true;
+    Candy::useSystemTime = true;
 }
 
 void candy_set_log_path(const char *path) {
