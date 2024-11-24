@@ -25,17 +25,23 @@ jobs:
       run: docker build .
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
     - name: depends
-      run: brew install spdlog poco
+      run: brew install openssl fmt spdlog
     - name: checkout
       uses: actions/checkout@v4
     - name: build
       run: |
-        export CPATH=/usr/local/include
-        export LIBRARY_PATH=/usr/local/lib
-        cmake -B build -DCANDY_STATIC_POCO=1 -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        if [ "$RUNNER_ARCH" == "ARM64" ]; then
+          export CPATH=/opt/homebrew/include
+          export LIBRARY_PATH=/opt/homebrew/lib
+        else
+          export CPATH=/usr/local/include
+          export LIBRARY_PATH=/usr/local/lib
+        fi
+        cmake -B build -DCANDY_STATIC_POCO=1 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
 
   windows:
     runs-on: windows-latest

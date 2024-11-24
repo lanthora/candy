@@ -2,36 +2,73 @@
 #ifndef CANDY_WEBSOCKET_CLIENT_H
 #define CANDY_WEBSOCKET_CLIENT_H
 
-#include "websocket/common.h"
+#include "core/message.h"
+#include "core/net.h"
 #include <Poco/Net/WebSocket.h>
+#include <functional>
+#include <memory>
 #include <string>
+#include <thread>
 
 namespace Candy {
 
+class Client;
+
 class WebSocketClient {
 public:
-    // 连接或断开与服务端的连接
-    int connect(const std::string &address);
-    int disconnect();
+    int setPassword(const std::string &password);
+    int setWsServerUri(const std::string &uri);
+    int setExptTunAddress(const std::string &cidr);
+    int setAddress(const std::string &cidr);
+    int setVirtualMac(const std::string &vmac);
+    int setTunUpdateCallback(std::function<int(const std::string &)> callback);
 
-    // 设置读超时时间
-    int setTimeout(int timeout);
-
-    // 读操作返回 0 表示超时.由于客户端只与一个服务端通信,事实上只需要操作的 buffer,
-    // 为了和服务端操作的数据结构保持一直,使用了相同的参数.
-    int read(WebSocketMessage &message);
-    int write(const WebSocketMessage &message);
-
-    int setPingMessage(const std::string &message);
-    int sendPingMessage();
+    int run(Client *client);
+    int shutdown();
 
 private:
-    int sendPingMessage(WebSocketMessage &message);
+    void handleWsQueue();
+    void handlePacket(Msg msg);
 
-    int timeout;
+    std::thread msgThread;
+
+    void handleWsConn();
+    void handleWsMsg(std::string buffer);
+    void handleForwardMsg(std::string buffer);
+    void handleExptTunMsg(std::string buffer);
+    void handleDiscoveryMsg(std::string buffer);
+    void handleRouteMsg(std::string buffer);
+    std::thread wsThread;
+
+    void sendFrame(const std::string &buffer, int flags = Poco::Net::WebSocket::FRAME_BINARY);
+    void sendFrame(const void *buffer, int length, int flags = Poco::Net::WebSocket::FRAME_BINARY);
+
+    void sendVirtualMacMsg();
+    void sendExptTunMsg();
+    void sendAuthMsg();
+    void sendDiscoveryMsg(IP4 dst);
+
+    std::function<int(const std::string &)> addressUpdateCallback;
+
+private:
+    std::string hostName();
+    void sendPingMessage();
+
+private:
+    int connect();
+    int disconnect();
+
     std::shared_ptr<Poco::Net::WebSocket> ws;
-    int64_t timestamp;
     std::string pingMessage;
+    int64_t timestamp;
+
+private:
+    std::string wsServerUri;
+    std::string exptTunCidr;
+    std::string tunCidr;
+    std::string vmac;
+    std::string password;
+    Client *client;
 };
 
 } // namespace Candy

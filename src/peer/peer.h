@@ -2,58 +2,52 @@
 #ifndef CANDY_PEER_PEER_H
 #define CANDY_PEER_PEER_H
 
-#include "utility/random.h"
-#include <cstdint>
+#include "core/message.h"
+#include "core/net.h"
+#include "peer/info.h"
+#include <shared_mutex>
 #include <string>
+#include <thread>
+#include <unordered_map>
 
 namespace Candy {
 
-enum class PeerState {
-    INIT,
-    PREPARING,
-    SYNCHRONIZING,
-    CONNECTING,
-    CONNECTED,
-    WAITING,
-    FAILED,
-};
+class Client;
 
-constexpr int32_t DELAY_LIMIT = INT32_MAX;
-constexpr uint32_t RETRY_MIN = 30U;
-constexpr uint32_t RETRY_MAX = 3600U;
-
-class PeerInfo {
+class Peer {
 public:
-    struct {
-        uint32_t ip = 0;
-        uint16_t port = 0;
-    } wide, local, real;
-    uint8_t ack = 0;
-    uint32_t count = 0;
-    uint32_t tick = randomUint32();
-    uint32_t retry = RETRY_MIN;
-    int32_t delay = DELAY_LIMIT;
+    int setPassword(const std::string &password);
+    int setStun(const std::string &stun);
+    int setDiscoveryInterval(int interval);
+    int setForwardCost(int cost);
+    int setPort(int port);
+    int setLocalhost(const std::string &ip);
 
-public:
-    int setTun(uint32_t tun, const std::string &password);
-    std::string getKey() const;
-    uint32_t getTun() const;
-    void updateState(PeerState state);
-    PeerState getState() const;
-    std::string getStateStr() const;
+    int run(Client *client);
+    int shutdown();
 
 private:
-    static std::string getStateStr(PeerState state);
-    PeerState state = PeerState::INIT;
-    uint32_t tun = 0;
-    std::string key;
-};
+    // 处理来自消息队列的数据
+    void handlePeerQueue();
+    void handlePacket(Msg msg);
+    void handleTryP2P(Msg msg);
 
-class UdpMessage {
-public:
-    uint32_t ip;
-    uint16_t port;
-    std::string buffer;
+    std::thread msgThread;
+
+    // 处理 PACKET 报文,并判断目标是否可达
+    int sendTo(IP4 dst, const Msg &msg);
+    // 通过指定的 info 向对端发送 data, 此时的 data 是明文
+    int sendTo(PeerInfo &info, const std::string &data);
+
+private:
+    std::shared_mutex ipPeerMutex;
+    std::unordered_map<IP4, PeerInfo> ipPeerMap;
+
+    std::shared_mutex rtTableMutex;
+    std::unordered_map<IP4, IP4> rtTableMap;
+
+private:
+    Client *client;
 };
 
 } // namespace Candy
