@@ -9,7 +9,7 @@
 ## 一键部署服务端
 
 ```bash
-docker run --rm --volume /var/lib/cacao:/var/lib/cacao -ports 8080:80 docker.io/lanthora/cacao:latest
+docker run --name=cacao --detach --volume /var/lib/cacao:/var/lib/cacao --publish 8080:80 docker.io/lanthora/cacao:latest
 ```
 
 ## 使用
