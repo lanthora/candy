@@ -19,6 +19,7 @@ endif()
 
 if (${CANDY_STATIC_POCO})
     target_link_libraries(utility PRIVATE Poco::Foundation)
+    target_link_libraries(utility PRIVATE Poco::Net)
 else()
     find_package(Poco REQUIRED Net)
     target_link_libraries(utility PRIVATE Poco::Foundation)
