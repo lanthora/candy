@@ -35,7 +35,7 @@ jobs:
       run: |
         export CPATH=/usr/local/include
         export LIBRARY_PATH=/usr/local/lib
-        cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        cmake -B build -DCANDY_STATIC_POCO=1 -DCMAKE_BUILD_TYPE=Release && cmake --build build
 
   windows:
     runs-on: windows-latest
