@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18.4)
 
-project(candy LANGUAGES C CXX VERSION 5.10.5)
+project(candy LANGUAGES C CXX VERSION 5.10.6)
 
 option(CANDY_NOEXE  "Don't build executable")
 option(CANDY_DEVEL  "Build development library")
