@@ -21,7 +21,7 @@ if [[ -z $TARGET || -z $TARGET_OPENSSL ]];then
         elif [[ "$CANDY_ARCH" == "mips64el" ]]; then TARGET="mips64el-unknown-linux-musl";TARGET_OPENSSL="linux64-mips64";UPX=0
         elif [[ "$CANDY_ARCH" == "riscv32" ]]; then TARGET="riscv32-unknown-linux-musl";TARGET_OPENSSL="linux32-riscv32";UPX=0
         elif [[ "$CANDY_ARCH" == "riscv64" ]]; then TARGET="riscv64-unknown-linux-musl";TARGET_OPENSSL="linux64-riscv64";UPX=0
-        elif [[ "$CANDY_ARCH" == "x86_64" ]]; then TARGET="x86_64-multilib-linux-musl";TARGET_OPENSSL="linux-x86_64";UPX=1
+        elif [[ "$CANDY_ARCH" == "x86_64" ]]; then TARGET="x86_64-unknown-linux-musl";TARGET_OPENSSL="linux-x86_64";UPX=1
         else echo "Unknown CANDY_ARCH: $CANDY_ARCH";exit 1;fi
     elif [[ "$CANDY_OS" == "macos" ]]; then
         echo "macos is not supported yet";exit 1
@@ -41,8 +41,8 @@ if [ ! -d "$COMPILER_ROOT" ]; then
     mkdir -p $TOOLCHAINS
     RESPONSE=$(curl -s https://api.github.com/repos/musl-cross/musl-cross/releases/latest)
     VERSION=$(echo "$RESPONSE" | grep 'tag_name' | cut -d'"' -f4)
-    wget -q -c https://github.com/musl-cross/musl-cross/releases/download/$VERSION/$TARGET.tgz -P $TOOLCHAINS
-    tar xf $COMPILER_ROOT.tgz -C $TOOLCHAINS
+    wget -c https://github.com/musl-cross/musl-cross/releases/download/$VERSION/$TARGET.tar.xz -P $TOOLCHAINS
+    tar xvf $COMPILER_ROOT.tar.xz -C $TOOLCHAINS
 fi
 
 export CC="$COMPILER_ROOT/bin/$TARGET-gcc"
