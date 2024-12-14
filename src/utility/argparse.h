@@ -589,8 +589,8 @@ public:
     }
 
     template <class F, class... Args>
-    auto action(F &&callable, Args &&...bound_args)
-        -> std::enable_if_t<std::is_invocable_v<F, Args..., std::string const>, Argument &> {
+    auto action(F &&callable,
+                Args &&...bound_args) -> std::enable_if_t<std::is_invocable_v<F, Args..., std::string const>, Argument &> {
         using action_type =
             std::conditional_t<std::is_void_v<std::invoke_result_t<F, Args..., std::string const>>, void_action, valued_action>;
         if constexpr (sizeof...(Args) == 0) {
