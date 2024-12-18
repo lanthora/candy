@@ -17,3 +17,18 @@
 使用命令行版本请自行解决遇到的任何问题,我们不对 Windows 命令行提供任何技术支持.
 
 Windows 7 用户只能使用[命令行版本](https://github.com/lanthora/candy/releases/latest)
+
+### 添加win7及以下系统的cli运行批处理
+
+参考使用方法，在candy目录下新建`run.bat`并使用文本编辑器输入以下内容
+
+```
+@echo off
+:1
+path = %path%;.\..\bin;
+candy.exe -c candy.cfg --debug
+goto 1
+pause
+```
+
+保存后运行`run.bat`即可，只要bat文件不退出，可对candy进行保活防止意外中断。
