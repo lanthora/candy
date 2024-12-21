@@ -4,7 +4,7 @@
 #include <random>
 #include <sstream>
 
-namespace Candy {
+namespace {
 
 uint32_t randomUint32() {
     std::random_device device;
@@ -19,7 +19,9 @@ int randomHex() {
     std::uniform_int_distribution<int> distrib(0, 15);
     return distrib(engine);
 }
+} // namespace
 
+namespace Candy {
 std::string randomHexString(int length) {
     std::stringstream ss;
     for (int i = 0; i < length; i++) {

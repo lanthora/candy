@@ -2,8 +2,8 @@
 #include <Poco/Platform.h>
 #if POCO_OS == POCO_OS_LINUX
 
+#include "core/net.h"
 #include "tun/tun.h"
-#include "utility/address.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <linux/if_tun.h>
@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 namespace {
+
 class LinuxTun {
 public:
     int setName(const std::string &name) {
@@ -23,27 +24,22 @@ public:
         return 0;
     }
 
-    int setIP(uint32_t ip) {
+    int setIP(Candy::IP4 ip) {
         this->ip = ip;
         return 0;
     }
 
-    int getIP() {
+    Candy::IP4 getIP() {
         return this->ip;
     }
 
-    int setMask(uint32_t mask) {
+    int setMask(Candy::IP4 mask) {
         this->mask = mask;
         return 0;
     }
 
     int setMTU(int mtu) {
         this->mtu = mtu;
-        return 0;
-    }
-
-    int setTimeout(int timeout) {
-        this->timeout = timeout;
         return 0;
     }
 
@@ -86,17 +82,17 @@ public:
         }
 
         // 设置地址
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
+        addr->sin_addr.s_addr = this->ip;
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
-            spdlog::critical("set ip address failed: ip {:08x}", this->ip);
+            spdlog::critical("set ip address failed: ip {}", this->ip.toString());
             close(sockfd);
             return -1;
         }
 
         // 设置掩码
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
+        addr->sin_addr.s_addr = this->mask;
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
-            spdlog::critical("set mask failed: mask {:08x}", this->mask);
+            spdlog::critical("set mask failed: mask {}", this->mask.toString());
             close(sockfd);
             return -1;
         }
@@ -128,11 +124,11 @@ public:
 
         addr = (struct sockaddr_in *)&route.rt_dst;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
+        addr->sin_addr.s_addr = this->ip;
 
         addr = (struct sockaddr_in *)&route.rt_genmask;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
+        addr->sin_addr.s_addr = this->mask;
 
         route.rt_dev = (char *)this->name.c_str();
         route.rt_flags = RTF_UP | RTF_HOST;
@@ -161,7 +157,7 @@ public:
         }
 
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            struct timeval timeout = {.tv_sec = this->timeout};
+            struct timeval timeout = {.tv_sec = 1};
             fd_set set;
 
             FD_ZERO(&set);
@@ -178,7 +174,7 @@ public:
         return ::write(this->tunFd, buffer.c_str(), buffer.size());
     }
 
-    int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+    int setSysRtTable(Candy::IP4 dst, Candy::IP4 mask, Candy::IP4 nexthop) {
         int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd == -1) {
             spdlog::error("set route failed: create socket failed");
@@ -191,15 +187,15 @@ public:
 
         addr = (struct sockaddr_in *)&route.rt_dst;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(dst);
+        addr->sin_addr.s_addr = dst;
 
         addr = (struct sockaddr_in *)&route.rt_genmask;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(mask);
+        addr->sin_addr.s_addr = mask;
 
         addr = (struct sockaddr_in *)&route.rt_gateway;
         addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = Candy::Address::hostToNet(nexthop);
+        addr->sin_addr.s_addr = nexthop;
 
         route.rt_flags = RTF_UP | RTF_GATEWAY;
         if (ioctl(sockfd, SIOCADDRT, &route) == -1) {
@@ -214,12 +210,13 @@ public:
 
 private:
     std::string name;
-    uint32_t ip;
-    uint32_t mask;
+    Candy::IP4 ip;
+    Candy::IP4 mask;
     int mtu;
     int timeout;
     int tunFd;
 };
+
 } // namespace
 
 namespace Candy {
@@ -244,21 +241,22 @@ int Tun::setAddress(const std::string &cidr) {
     std::shared_ptr<LinuxTun> tun;
     Address address;
 
-    if (address.cidrUpdate(cidr)) {
+    if (address.fromCidr(cidr)) {
         return -1;
     }
-    spdlog::info("client address: {}", address.getCidr());
+    spdlog::info("client address: {}", address.toCidr());
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    if (tun->setIP(address.getIp())) {
+    if (tun->setIP(address.Host())) {
         return -1;
     }
-    if (tun->setMask(address.getMask())) {
+    if (tun->setMask(address.Mask())) {
         return -1;
     }
+    this->tunAddress = cidr;
     return 0;
 }
 
-uint32_t Tun::getIP() {
+IP4 Tun::getIP() {
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     return tun->getIP();
@@ -268,15 +266,6 @@ int Tun::setMTU(int mtu) {
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     if (tun->setMTU(mtu)) {
-        return -1;
-    }
-    return 0;
-}
-
-int Tun::setTimeout(int timeout) {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    if (tun->setTimeout(timeout)) {
         return -1;
     }
     return 0;
@@ -306,7 +295,7 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
-int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     return tun->setSysRtTable(dst, mask, nexthop);

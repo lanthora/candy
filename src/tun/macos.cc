@@ -2,8 +2,8 @@
 #include <Poco/Platform.h>
 #if POCO_OS == POCO_OS_MAC_OS_X
 
+#include "core/net.h"
 #include "tun/tun.h"
-#include "utility/address.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <memory>
@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 namespace {
+
 class MacTun {
 public:
     int setName(const std::string &name) {
@@ -30,27 +31,22 @@ public:
         return 0;
     }
 
-    int setIP(uint32_t ip) {
+    int setIP(Candy::IP4 ip) {
         this->ip = ip;
         return 0;
     }
 
-    int getIP() {
+    Candy::IP4 getIP() {
         return this->ip;
     }
 
-    int setMask(uint32_t mask) {
+    int setMask(Candy::IP4 mask) {
         this->mask = mask;
         return 0;
     }
 
     int setMTU(int mtu) {
         this->mtu = mtu;
-        return 0;
-    }
-
-    int setTimeout(int timeout) {
-        this->timeout = timeout;
         return 0;
     }
 
@@ -120,18 +116,19 @@ public:
         strncpy(areq.ifra_name, ifname, IFNAMSIZ);
         ((struct sockaddr_in *)&areq.ifra_addr)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_addr)->sin_len = sizeof(areq.ifra_addr);
-        ((struct sockaddr_in *)&areq.ifra_addr)->sin_addr.s_addr = Candy::Address::hostToNet(this->ip);
+        ((struct sockaddr_in *)&areq.ifra_addr)->sin_addr.s_addr = this->ip;
 
         ((struct sockaddr_in *)&areq.ifra_mask)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_mask)->sin_len = sizeof(areq.ifra_mask);
-        ((struct sockaddr_in *)&areq.ifra_mask)->sin_addr.s_addr = Candy::Address::hostToNet(this->mask);
+        ((struct sockaddr_in *)&areq.ifra_mask)->sin_addr.s_addr = this->mask;
 
         ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_len = sizeof(areq.ifra_broadaddr);
-        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = Candy::Address::hostToNet((this->ip & this->mask));
+        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = (this->ip & this->mask);
 
         if (ioctl(sockfd, SIOCAIFADDR, (void *)&areq) == -1) {
-            spdlog::critical("set ip mask failed: {}: ip {:08x} mask {:08x}", strerror(errno), this->ip, this->mask);
+            spdlog::critical("set ip mask failed: {}: ip {} mask {}", strerror(errno), this->ip.toString(),
+                             this->mask.toString());
             close(sockfd);
             return -1;
         }
@@ -185,7 +182,7 @@ public:
         }
 
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            struct timeval timeout = {.tv_sec = this->timeout};
+            struct timeval timeout = {.tv_sec = 1};
             fd_set set;
 
             FD_ZERO(&set);
@@ -208,7 +205,7 @@ public:
         return ::writev(this->tunFd, iov, sizeof(iov) / sizeof(iov[0])) - sizeof(sizeof(this->packetinfo));
     }
 
-    int setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+    int setSysRtTable(Candy::IP4 dst, Candy::IP4 mask, Candy::IP4 nexthop) {
         struct {
             struct rt_msghdr msghdr;
             struct sockaddr_in addr[3];
@@ -224,9 +221,9 @@ public:
             msg.addr[idx].sin_len = sizeof(msg.addr[0]);
             msg.addr[idx].sin_family = AF_INET;
         }
-        msg.addr[0].sin_addr.s_addr = Candy::Address::hostToNet(dst);
-        msg.addr[1].sin_addr.s_addr = Candy::Address::hostToNet(nexthop);
-        msg.addr[2].sin_addr.s_addr = Candy::Address::hostToNet(mask);
+        msg.addr[0].sin_addr.s_addr = dst;
+        msg.addr[1].sin_addr.s_addr = nexthop;
+        msg.addr[2].sin_addr.s_addr = mask;
 
         int routefd = socket(AF_ROUTE, SOCK_RAW, 0);
         if (routefd < 0) {
@@ -245,14 +242,15 @@ public:
 private:
     std::string name;
     char ifname[IFNAMSIZ] = {0};
-    uint32_t ip;
-    uint32_t mask;
+    Candy::IP4 ip;
+    Candy::IP4 mask;
     int mtu;
     int timeout;
     int tunFd;
 
     uint8_t packetinfo[4] = {0x00, 0x00, 0x00, 0x02};
 };
+
 } // namespace
 
 namespace Candy {
@@ -277,21 +275,21 @@ int Tun::setAddress(const std::string &cidr) {
     std::shared_ptr<MacTun> tun;
     Address address;
 
-    if (address.cidrUpdate(cidr)) {
+    if (address.fromCidr(cidr)) {
         return -1;
     }
-    spdlog::info("client address: {}", address.getCidr());
+    spdlog::info("client address: {}", address.toCidr());
     tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    if (tun->setIP(address.getIp())) {
+    if (tun->setIP(address.Host())) {
         return -1;
     }
-    if (tun->setMask(address.getMask())) {
+    if (tun->setMask(address.Mask())) {
         return -1;
     }
     return 0;
 }
 
-uint32_t Tun::getIP() {
+IP4 Tun::getIP() {
     std::shared_ptr<MacTun> tun;
     tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->getIP();
@@ -301,15 +299,6 @@ int Tun::setMTU(int mtu) {
     std::shared_ptr<MacTun> tun;
     tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     if (tun->setMTU(mtu)) {
-        return -1;
-    }
-    return 0;
-}
-
-int Tun::setTimeout(int timeout) {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    if (tun->setTimeout(timeout)) {
         return -1;
     }
     return 0;
@@ -339,7 +328,7 @@ int Tun::write(const std::string &buffer) {
     return tun->write(buffer);
 }
 
-int Tun::setSysRtTable(uint32_t dst, uint32_t mask, uint32_t nexthop) {
+int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
     std::shared_ptr<MacTun> tun;
     tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
     return tun->setSysRtTable(dst, mask, nexthop);

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "utility/time.h"
-#include "utility/address.h"
-#include "utility/byteswap.h"
+#include "core/net.h"
 #include <Poco/Net/DatagramSocket.h>
-#include <Poco/Platform.h>
-#include <bit>
 #include <chrono>
 #include <spdlog/fmt/bin_to_hex.h>
 #include <spdlog/spdlog.h>
@@ -13,8 +10,8 @@
 
 namespace Candy {
 
-bool Time::useSystemTime = false;
-std::string Time::ntpServer;
+bool useSystemTime = false;
+std::string ntpServer;
 
 struct ntp_packet {
     uint8_t li_vn_mode = 0x23;
@@ -40,10 +37,10 @@ struct ntp_packet {
     uint32_t txTm_f;
 };
 
-static int64_t ntpTime() {
+int64_t ntpTime() {
     try {
         Poco::Net::DatagramSocket socket;
-        socket.connect(Poco::Net::SocketAddress(Time::ntpServer, 123));
+        socket.connect(Poco::Net::SocketAddress(ntpServer, 123));
 
         struct ntp_packet packet = {};
         socket.sendBytes(&packet, sizeof(packet));
@@ -56,7 +53,7 @@ static int64_t ntpTime() {
             return 0;
         }
 
-        int64_t retval = (int64_t)(Candy::Address::netToHost(packet.rxTm_s));
+        int64_t retval = (int64_t)(ntoh(packet.rxTm_s));
         if (retval == 0) {
             spdlog::warn("invalid ntp response buffer: {:n}", spdlog::to_hex(std::string((char *)(&packet), sizeof(packet))));
             return 0;
@@ -75,7 +72,7 @@ static int64_t ntpTime() {
     }
 }
 
-int64_t Time::unixTime() {
+int64_t unixTime() {
     using namespace std::chrono;
 
     int64_t sysTime;
@@ -107,32 +104,10 @@ int64_t Time::unixTime() {
     return sysTime;
 }
 
-int64_t Time::bootTime() {
+int64_t bootTime() {
     using namespace std::chrono;
     auto now = steady_clock::now();
     return duration_cast<milliseconds>(now.time_since_epoch()).count();
-}
-
-int64_t Time::hostToNet(int64_t host) {
-    if (std::endian::native == std::endian::little) {
-        return byteswap(host);
-    }
-    return host;
-}
-
-int64_t Time::netToHost(int64_t net) {
-    return Time::hostToNet(net);
-}
-
-int32_t Time::hostToNet(int32_t host) {
-    if (std::endian::native == std::endian::little) {
-        return byteswap(host);
-    }
-    return host;
-}
-
-int32_t Time::netToHost(int32_t net) {
-    return Time::hostToNet(net);
 }
 
 } // namespace Candy

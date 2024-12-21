@@ -3,199 +3,76 @@
 #define CANDY_CORE_CLIENT_H
 
 #include "core/message.h"
-#include "peer/udp.h"
+#include "peer/peer.h"
 #include "tun/tun.h"
-#include "utility/random.h"
 #include "websocket/client.h"
-#include <atomic>
 #include <condition_variable>
-#include <functional>
-#include <list>
 #include <queue>
-#include <shared_mutex>
 #include <string>
-#include <thread>
-#include <unordered_map>
 
 namespace Candy {
 
-struct StunCache {
-    uint32_t ip;
-    uint16_t port;
-    std::string uri;
-};
+void shutdown(Client *client);
 
-struct CandyRouteEntry {
-    uint32_t dst;
-    uint32_t next;
-    int32_t delay;
-
-    CandyRouteEntry(uint32_t dst = 0, uint32_t next = 0, int32_t delay = DELAY_LIMIT) : dst(dst), next(next), delay(delay) {}
-};
-
-struct SysRouteEntry {
-    uint32_t dst;
-    uint32_t mask;
-    uint32_t next;
-
-    SysRouteEntry(uint32_t dst = 0, uint32_t mask = 0, uint32_t next = 0) : dst(dst), mask(mask), next(next) {}
-};
-
-class Client {
+/* 各模块之间通过消息队列通信 */
+class MsgQueue {
 public:
-    // 设置客户端名称,用于设置 TUN 设备的名称,格式为 candy-name, 如果 name 为空将被命名为 candy.
-    int setName(const std::string &name);
-    std::string getName() const;
-
-    // 客户端工作线程数量
-    int setWorkers(int number);
-
-    // 连接 websocket 服务端时身份认证的口令
-    int setPassword(const std::string &password);
-
-    // 用于数据转发和对等连接控制的服务端地址
-    int setWebSocketServer(const std::string &server);
-
-    // TUN 地址,向服务端要求强制使用这个地址,使用相同地址的前一个设备会被踢出网络
-    int setTunAddress(const std::string &cidr);
-
-    // 向服务端请求时期望获得的地址,地址不可用时服务端返回新地址
-    int setExpectedAddress(const std::string &cidr);
-
-    // 虚拟 Mac 地址
-    int setVirtualMac(const std::string &vmac);
-
-    // STUN 服务端,用于开启对等连接
-    int setStun(const std::string &stun);
-
-    // 主动发现时间间隔
-    int setDiscoveryInterval(int interval);
-
-    // 通过本节点路由的代价
-    int setRouteCost(int cost);
-
-    // 本地地址更新时执行的回调函数
-    int setAddressUpdateCallback(std::function<int(const std::string &)> callback);
-
-    // 绑定用于 P2P 连接的 UDP 端口, 0 表示由操作系统分配
-    int setUdpBindPort(int port);
-
-    // 用于局域网连接的地址
-    int setLocalhost(std::string ip);
-
-    // 设置最大传输单元
-    int setMtu(int mtu);
-
-    // 启停客户端用于处理任务的线程
-    int run();
-    int shutdown();
+    // 阻塞读
+    Msg read();
+    // 向队列中写入消息
+    void write(Msg msg);
 
 private:
-    // Common
-    int workers = 0;
-    int mtu = 1400;
+    std::queue<Msg> msgQueue;
+    std::mutex msgMutex;
+    std::condition_variable msgCondition;
+};
+
+/* 客户端只负责维护模块间通信的消息队列,以及进程启动时的参数透传,本身不提供实质性的功能 */
+class Client {
+public:
+    // 通过配置文件或命令行设置的参数
+    void setName(const std::string &name);
+    void setPassword(const std::string &password);
+    void setWebSocket(const std::string &uri);
+    void setTunAddress(const std::string &cidr);
+    void setStun(const std::string &stun);
+    void setDiscoveryInterval(int interval);
+    void setRouteCost(int cost);
+    void setPort(int port);
+    void setLocalhost(std::string ip);
+    void setMtu(int mtu);
+    void setTunUpdateCallback(std::function<int(const std::string &)> callback);
+
+    // 期望使用的地址,当地址可用时服务端优先分配这个地址
+    void setExptTunAddress(const std::string &cidr);
+    // 虚拟的硬件地址,在程序第一次启动时随机生成的 16 位随机字符串,用于和最近一次使用的地址绑定
+    // 当相同虚拟硬件地址的设备登录时,判定为前一个客户端已断开,踢出前一个客户端并分配为与前一个客户端相同的 IP
+    void setVirtualMac(const std::string &vmac);
+
+    // 启动客户端,非阻塞
+    void run();
+    // 关闭客户端,阻塞,直到所有子模块退出
+    void shutdown();
+
     bool running = false;
-    std::string password;
-    std::mutex runningMutex;
-    std::function<int(const std::string &)> addressUpdateCallback;
-    int startWorkerThreads();
-    int stopWorkerThreads();
 
-    // WebSocket
-    int startWsThread();
-    void handleWebSocketMessage();
-    void sendForwardMessage(const std::string &buffer);
-    void sendVirtualMacMessage();
-    void sendDynamicAddressMessage();
-    void sendAuthMessage();
-    void sendPeerConnMessage(const PeerInfo &peer);
-    void sendDiscoveryMessage(uint32_t dst);
-    void sendLocalPeerConnMessage(const PeerInfo &peer);
-    void handleForwardMessage(WebSocketMessage &message);
-    void handleExpectedAddressMessage(WebSocketMessage &message);
-    void handlePeerConnMessage(WebSocketMessage &message);
-    void handleDiscoveryMessage(WebSocketMessage &message);
-    void handleSysRtMessage(WebSocketMessage &message);
-    void handleGeneralMessage(WebSocketMessage &message);
-    void handleLocalPeerConnMessage(WebSocketMessage &message);
-    void tryDirectConnection(uint32_t ip);
-    std::string hostName();
+    std::string getName() const;
 
-    WebSocketClient ws;
-    std::string wsUri;
-    std::thread wsThread;
+public:
+    //  三个消息队列,子模块使用这些队列通信
+    MsgQueue tunMsgQueue, peerMsgQueue, wsMsgQueue;
 
-    // TUN
-    int startTunThread();
-    void recvTunMessage();
-    void handleTunMessage(std::string message);
-
+private:
+    // TUN 模块,与本机通信
     Tun tun;
+    // PEER 模块,用于建立 P2P 连接,以及在 P2P 连接之上的客户端中继功能
+    Peer peer;
+    // WS 模块,主要处理与服务端之间的控制信息,在 P2P 无法使用时提供服务端中继
+    WebSocketClient ws;
+
+private:
     std::string tunName;
-    std::string tunAddress;
-    std::string expectedAddress;
-    std::string realAddress;
-    std::string virtualMac;
-    std::thread tunThread;
-    std::vector<std::thread> tunMsgWorkerThreads;
-    std::mutex tunMsgQueueMutex;
-    std::queue<std::string> tunMsgQueue;
-    std::condition_variable tunMsgQueueCondition;
-
-    // P2P
-    int startUdpThread();
-    int startTickThread();
-    void recvUdpMessage();
-    void handleUdpMessage(UdpMessage message);
-    void tick();
-    std::string encrypt(const std::string &key, const std::string &plaintext);
-    std::string decrypt(const std::string &key, const std::string &ciphertext);
-    std::string encryptHelper(const std::string &key, const std::string &plaintext);
-    std::string decryptHelper(const std::string &key, const std::string &ciphertext);
-    int sendStunRequest();
-    int sendHeartbeatMessage(const PeerInfo &peer);
-    int sendPeerForwardMessage(const std::string &buffer);
-    int sendPeerForwardMessage(const std::string &buffer, uint32_t nextHop);
-    bool isStunResponse(const UdpMessage &message);
-    bool isHeartbeatMessage(const UdpMessage &message);
-    bool isPeerForwardMessage(const UdpMessage &message);
-    int handleStunResponse(const std::string &buffer);
-    int handleHeartbeatMessage(const UdpMessage &message);
-    int handlePeerForwardMessage(const UdpMessage &message);
-    static bool isLocalIp(uint32_t ip);
-
-    UdpHolder udpHolder;
-    StunCache stun;
-    PeerInfo selfInfo;
-    std::shared_mutex ipPeerMutex;
-    std::unordered_map<uint32_t, PeerInfo> ipPeerMap;
-    std::thread udpThread;
-    std::thread tickThread;
-    uint64_t tickTick = randomUint32();
-    uint32_t discoveryInterval;
-    std::mutex cryptMutex;
-    std::atomic<bool> localP2PDisabled;
-    std::vector<std::thread> udpMsgWorkerThreads;
-    std::mutex udpMsgQueueMutex;
-    std::queue<UdpMessage> udpMsgQueue;
-    std::condition_variable udpMsgQueueCondition;
-
-    // Route
-    void showCandyRtChange(const CandyRouteEntry &entry);
-    int updateCandyRtTable(CandyRouteEntry entry);
-    int sendDelayMessage(const PeerInfo &peer);
-    int sendDelayMessage(const PeerInfo &peer, const PeerDelayMessage &delay);
-    int sendCandyRtMessage(uint32_t dst, int32_t delay);
-    bool isDelayMessage(const UdpMessage &message);
-    bool isCandyRtMessage(const UdpMessage &message);
-    int handleDelayMessage(const UdpMessage &message);
-    int handleCandyRtMessage(const UdpMessage &message);
-
-    std::shared_mutex sysRtTableMutex;
-    std::list<SysRouteEntry> sysRtTable;
-    std::shared_mutex candyRtTableMutex;
-    std::unordered_map<uint32_t, CandyRouteEntry> candyRtTable;
-    int32_t routeCost;
 };
 
 } // namespace Candy
