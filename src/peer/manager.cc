@@ -6,6 +6,7 @@
 #include "peer/message.h"
 #include "utility/time.h"
 #include <Poco/Net/NetException.h>
+#include <Poco/Net/NetworkInterface.h>
 #include <Poco/Timespan.h>
 #include <Poco/URI.h>
 #include <openssl/sha.h>
@@ -41,6 +42,7 @@ int PeerManager::setPort(int port) {
 }
 
 int PeerManager::setLocalhost(const std::string &ip) {
+    this->localhost.fromString(ip);
     return 0;
 }
 
@@ -52,6 +54,22 @@ int PeerManager::setTransport(const std::vector<std::string> &transport) {
 int PeerManager::run(Client *client) {
     this->client = client;
     this->localP2PDisabled = false;
+
+    if (this->localhost.empty()) {
+        try {
+            for (const auto &iface : Poco::Net::NetworkInterface::list()) {
+                if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint() &&
+                    iface.type() != iface.NI_TYPE_OTHER) {
+                    auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
+                    memcpy(&this->localhost, firstAddress.addr(), sizeof(this->localhost));
+                    spdlog::debug("localhost: {}", this->localhost.toString());
+                    break;
+                }
+            }
+        } catch (std::exception &e) {
+            spdlog::warn("local ip failed: {}", e.what());
+        }
+    }
 
     if (this->initSocket()) {
         Candy::shutdown(this->client);
@@ -65,11 +83,8 @@ int PeerManager::run(Client *client) {
     });
     this->tickThread = std::thread([&] {
         while (this->client->running) {
-            // 执行耗时操作前设置唤醒时间
             auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
-            // 操作时间不应该超过总休眠时间
             tick();
-            // 根据先前设定时间唤醒进程,能够确保唤醒时间不受 tick() 执行时间影响
             std::this_thread::sleep_until(wake_time);
         }
     });
@@ -123,37 +138,44 @@ void PeerManager::handlePeerQueue() {
     }
 }
 
-int PeerManager::sendPacket(IP4 dst, const Msg &msg, bool direct) {
-    if (direct) {
-        std::shared_lock ipPeerLock(this->ipPeerMutex);
-        auto it = this->ipPeerMap.find(dst);
-        if (it != this->ipPeerMap.end()) {
-            auto &peer = it->second;
-            auto connector = peer.findConnector();
-            if (connector) {
-                std::string data;
-                data.push_back(PeerMsgKind::FORWARD);
-                data += msg.data;
-                return peer.send(data, connector);
-            }
-        }
-        return -1;
+int PeerManager::sendPacket(IP4 dst, const Msg &msg) {
+    if (!directSendPacket(dst, msg)) {
+        return 0;
     }
     std::shared_lock rtTableLock(this->rtTableMutex);
     auto rt = this->rtTableMap.find(dst);
     if (rt != this->rtTableMap.end()) {
-        if (!sendPacket(rt->second, msg, true)) {
-            return 0;
+        return directSendPacket(rt->second, msg);
+    }
+    return -1;
+}
+
+int PeerManager::directSendPacket(IP4 dst, const Msg &msg) {
+    std::shared_lock ipPeerLock(this->ipPeerMutex);
+    auto it = this->ipPeerMap.find(dst);
+    if (it != this->ipPeerMap.end()) {
+        auto &peer = it->second;
+        auto connector = peer.findConnector();
+        if (connector) {
+            std::string data;
+            data.push_back(PeerMsgKind::FORWARD);
+            data += msg.data;
+            return peer.send(data, connector);
         }
     }
-    return sendPacket(dst, msg, true);
+    return -1;
 }
 
 int PeerManager::sendPubInfo(CoreMsg::PubInfo info) {
     info.src = this->client->address();
-    if (!info.v6 && !info.tcp && !info.local) {
-        info.ip = this->udpStun.ip;
-        info.port = this->udpStun.port;
+    if (!info.v6 && !info.tcp) {
+        if (info.local) {
+            info.ip = this->localhost;
+            info.port = this->udp4socket.address().port();
+        } else {
+            info.ip = this->udpStun.ip;
+            info.port = this->udpStun.port;
+        }
     }
     this->client->wsMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
     return 0;
@@ -220,12 +242,18 @@ void PeerManager::handlePubInfo(Msg msg) {
     std::shared_lock ipPeerLock(this->ipPeerMutex);
     auto it = this->ipPeerMap.find(info->src);
     if (it == this->ipPeerMap.end()) {
-        spdlog::warn("can not find src peer: {}", info->src.toString());
-        return;
+        this->ipPeerMutex.unlock_shared();
+        {
+            std::unique_lock lock(this->ipPeerMutex);
+            this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(info->src),
+                                    std::forward_as_tuple(info->src, this));
+        }
+        this->ipPeerMutex.lock_shared();
+        it = this->ipPeerMap.find(info->src);
     }
 
-    if (!info->v6 && !info->tcp && !info->local) {
-        it->second.handleUdp4Conn(info->ip, info->port);
+    if (!info->v6 && !info->tcp) {
+        it->second.handleUdp4Conn(info->ip, info->port, info->local);
     }
 }
 
@@ -252,21 +280,21 @@ int PeerManager::initSocket() {
         for (auto &transport : this->transport) {
             if (transport == "UDP4") {
                 this->udp4socket.bind(SocketAddress(AddressFamily::IPv4, this->listenPort), true);
-                spdlog::info("IPv4 UDP listen port: {}", this->udp4socket.address().port());
+                spdlog::debug("IPv4 UDP listen port: {}", this->udp4socket.address().port());
                 this->pollSet.add(this->udp4socket, PollSet::POLL_READ);
             } else if (transport == "UDP6") {
                 this->udp6socket.bind6(SocketAddress(AddressFamily::IPv6, this->listenPort), true, true, true);
-                spdlog::info("IPv6 UDP listen port: {}", this->udp6socket.address().port());
+                spdlog::debug("IPv6 UDP listen port: {}", this->udp6socket.address().port());
                 this->pollSet.add(this->udp6socket, PollSet::POLL_READ);
             } else if (transport == "TCP4") {
                 this->tcp4socket.bind(SocketAddress(AddressFamily::IPv4, this->listenPort), true);
                 this->tcp4socket.listen();
-                spdlog::info("IPv4 TCP listen port: {}", this->tcp4socket.address().port());
+                spdlog::debug("IPv4 TCP listen port: {}", this->tcp4socket.address().port());
                 this->pollSet.add(this->tcp4socket, PollSet::POLL_READ);
             } else if (transport == "TCP6") {
                 this->tcp6socket.bind6(SocketAddress(AddressFamily::IPv6, this->listenPort), true, true);
                 this->tcp6socket.listen();
-                spdlog::info("IPv6 TCP listen port: {}", this->tcp6socket.address().port());
+                spdlog::debug("IPv6 TCP listen port: {}", this->tcp6socket.address().port());
                 this->pollSet.add(this->tcp6socket, PollSet::POLL_READ);
             }
         }

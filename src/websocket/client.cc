@@ -121,12 +121,21 @@ void WebSocketClient::handlePacket(Msg msg) {
 void WebSocketClient::handlePubInfo(Msg msg) {
     CoreMsg::PubInfo *info = (CoreMsg::PubInfo *)(msg.data.data());
     if (!info->v6 && !info->tcp && !info->local) {
-        WsMsg::Udp4Conn buffer;
-        buffer.src = info->src;
-        buffer.dst = info->dst;
-        buffer.ip = info->ip;
-        buffer.port = hton(info->port);
-        sendFrame(&buffer, sizeof(buffer));
+        if (info->local) {
+            WsMsg::Udp4ConnLocal buffer;
+            buffer.ge.src = info->src;
+            buffer.ge.dst = info->dst;
+            buffer.ip = info->ip;
+            buffer.port = hton(info->port);
+            sendFrame(&buffer, sizeof(buffer));
+        } else {
+            WsMsg::Udp4Conn buffer;
+            buffer.src = info->src;
+            buffer.dst = info->dst;
+            buffer.ip = info->ip;
+            buffer.port = hton(info->port);
+            sendFrame(&buffer, sizeof(buffer));
+        }
     }
 }
 
@@ -202,6 +211,7 @@ void WebSocketClient::handleWsMsg(std::string buffer) {
         handleRouteMsg(std::move(buffer));
         break;
     case WsMsgKind::GENERAL:
+        handleGeneralMsg(std::move(buffer));
         break;
     default:
         spdlog::debug("unknown websocket message kind: {}", msgKind);
@@ -268,6 +278,22 @@ void WebSocketClient::handleRouteMsg(std::string buffer) {
         this->client->tunMsgQueue.write(Msg(MsgKind::SYSRT, std::string((char *)(rt + idx), sizeof(SysRouteEntry))));
         this->client->peerMsgQueue.write(Msg(MsgKind::SYSRT));
     }
+}
+
+void WebSocketClient::handleGeneralMsg(std::string buffer) {
+    if (buffer.size() < sizeof(WsMsg::Udp4ConnLocal)) {
+        spdlog::warn("invalid udp4conn local message: {:n}", spdlog::to_hex(buffer));
+        return;
+    }
+    WsMsg::Udp4ConnLocal *header = (WsMsg::Udp4ConnLocal *)buffer.data();
+    CoreMsg::PubInfo info = {
+        .src = header->ge.src,
+        .dst = header->ge.dst,
+        .ip = header->ip,
+        .port = ntoh(header->port),
+        .local = true,
+    };
+    this->client->peerMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
 }
 
 void WebSocketClient::sendFrame(const std::string &buffer, int flags) {
@@ -363,7 +389,7 @@ int WebSocketClient::connect() {
         }
         this->timestamp = bootTime();
         this->pingMessage = fmt::format("candy::{}::{}::{}", CANDY_SYSTEM, CANDY_VERSION, hostName());
-        spdlog::info("client info: {}", this->pingMessage);
+        spdlog::debug("client info: {}", this->pingMessage);
         return 0;
     } catch (std::exception &e) {
         spdlog::critical("websocket connect failed: {}", e.what());

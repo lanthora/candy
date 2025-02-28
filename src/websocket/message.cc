@@ -129,5 +129,9 @@ General::General() {
     this->type = WsMsgKind::GENERAL;
 }
 
+Udp4ConnLocal::Udp4ConnLocal() {
+    this->ge.subtype = GeSubType::LOCALUDP4CONN;
+    this->ge.extra = 0;
+}
 } // namespace WsMsg
 } // namespace Candy

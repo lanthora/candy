@@ -41,6 +41,7 @@ private:
     void handleUdp4ConnMsg(std::string buffer);
     void handleDiscoveryMsg(std::string buffer);
     void handleRouteMsg(std::string buffer);
+    void handleGeneralMsg(std::string buffer);
     std::thread wsThread;
 
     void sendFrame(const std::string &buffer, int flags = Poco::Net::WebSocket::FRAME_BINARY);

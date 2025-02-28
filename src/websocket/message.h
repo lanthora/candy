@@ -99,10 +99,12 @@ struct __attribute__((packed)) General {
     General();
 };
 
-struct __attribute__((packed)) LocalUDP4 {
+struct __attribute__((packed)) Udp4ConnLocal {
     General ge;
     IP4 ip;
     uint16_t port;
+
+    Udp4ConnLocal();
 };
 
 } // namespace WsMsg

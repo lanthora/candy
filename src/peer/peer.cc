@@ -94,10 +94,10 @@ int Peer::send(const std::string &data, std::shared_ptr<Candy::Connector> connec
     return -1;
 }
 
-void Peer::handleUdp4Conn(IP4 ip, uint16_t port) {
+void Peer::handleUdp4Conn(IP4 ip, uint16_t port, bool local) {
     auto peer = Udp4();
     if (peer) {
-        peer->updateInfo(ip, port);
+        peer->updateInfo(ip, port, local);
     }
 }
 

@@ -8,6 +8,7 @@
 namespace Candy {
 
 namespace PeerMsgKind {
+
 constexpr uint8_t HEARTBEAT = 0;
 constexpr uint8_t FORWARD = 1;
 constexpr uint8_t DELAY = 2;

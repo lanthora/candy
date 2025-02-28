@@ -47,6 +47,7 @@ public:
 
 private:
     std::string password;
+    IP4 localhost;
 
 public:
     int sendPubInfo(CoreMsg::PubInfo info);
@@ -62,7 +63,8 @@ private:
 
     std::thread msgThread;
 
-    int sendPacket(IP4 dst, const Msg &msg, bool direct = false);
+    int sendPacket(IP4 dst, const Msg &msg);
+    int directSendPacket(IP4 dst, const Msg &msg);
     Address tunAddr;
 
 private:

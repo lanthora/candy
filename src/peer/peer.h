@@ -27,7 +27,7 @@ public:
     void tick();
     int send(const std::string &data, std::shared_ptr<Candy::Connector> connector = nullptr);
 
-    void handleUdp4Conn(IP4 ip, uint16_t port);
+    void handleUdp4Conn(IP4 ip, uint16_t port, bool local = false);
     void handleUdpStunResponse();
 
     PeerManager &getManager();
