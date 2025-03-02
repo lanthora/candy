@@ -75,6 +75,7 @@ private:
     std::shared_mutex ipPeerMutex;
     std::unordered_map<IP4, Peer> ipPeerMap;
 
+    // TODO: 路由表需要换一个数据结构表示
     std::shared_mutex rtTableMutex;
     std::unordered_map<IP4, IP4> rtTableMap;
 

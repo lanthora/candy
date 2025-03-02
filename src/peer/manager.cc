@@ -77,12 +77,12 @@ int PeerManager::run(Client *client) {
     }
 
     this->msgThread = std::thread([&] {
-        while (this->client->running) {
+        while (getClient().running) {
             handlePeerQueue();
         }
     });
     this->tickThread = std::thread([&] {
-        while (this->client->running) {
+        while (getClient().running) {
             auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
             tick();
             std::this_thread::sleep_until(wake_time);
@@ -113,7 +113,7 @@ std::string PeerManager::getPassword() {
 }
 
 void PeerManager::handlePeerQueue() {
-    Msg msg = this->client->peerMsgQueue.read();
+    Msg msg = getClient().peerMsgQueue.read();
     switch (msg.kind) {
     case MsgKind::TIMEOUT:
         break;
@@ -167,7 +167,7 @@ int PeerManager::directSendPacket(IP4 dst, const Msg &msg) {
 }
 
 int PeerManager::sendPubInfo(CoreMsg::PubInfo info) {
-    info.src = this->client->address();
+    info.src = getClient().address();
     if (!info.v6 && !info.tcp) {
         if (info.local) {
             info.ip = this->localhost;
@@ -177,7 +177,7 @@ int PeerManager::sendPubInfo(CoreMsg::PubInfo info) {
             info.port = this->udpStun.port;
         }
     }
-    this->client->wsMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
+    getClient().wsMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
     return 0;
 }
 
@@ -190,7 +190,7 @@ void PeerManager::handlePacket(Msg msg) {
     if (!sendPacket(header->daddr, msg)) {
         return;
     }
-    this->client->wsMsgQueue.write(std::move(msg));
+    getClient().wsMsgQueue.write(std::move(msg));
 }
 
 void PeerManager::handleTunAddr(Msg msg) {
@@ -234,7 +234,7 @@ void PeerManager::handleTryP2P(Msg msg) {
 void PeerManager::handlePubInfo(Msg msg) {
     CoreMsg::PubInfo *info = (CoreMsg::PubInfo *)(msg.data.data());
 
-    if (info->src == this->client->address() || info->dst != this->client->address()) {
+    if (info->src == getClient().address() || info->dst != getClient().address()) {
         spdlog::warn("invalid public info: src=[{}] dst=[{}]", info->src.toString(), info->dst.toString());
         return;
     }
@@ -306,7 +306,7 @@ int PeerManager::initSocket() {
     this->decryptCtx = std::shared_ptr<EVP_CIPHER_CTX>(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
 
     this->pollThread = std::thread([&]() {
-        while (this->client->running) {
+        while (getClient().running) {
             poll();
         }
     });
@@ -374,8 +374,6 @@ void PeerManager::handleUdpStunResponse(const std::string &buffer) {
     memcpy(&this->udpStun.ip, &ip, sizeof(this->udpStun.ip));
     this->udpStun.port = port;
 
-    // 收到 STUN 响应后,向所有 PREPARING 状态的对端发送自己的公网信息,如果当前持有对端公网信息,就将状态调整为 CONNECTING,
-    // 否则调整为 SYNCHRONIZING
     std::shared_lock lock(this->ipPeerMutex);
     for (auto &[tun, peer] : this->ipPeerMap) {
         peer.handleUdpStunResponse();
@@ -418,8 +416,7 @@ void PeerManager::handleUdp4HeartbeatMessage(std::string &buffer, const SocketAd
         return;
     }
 
-    auto peer = it->second.Udp4();
-    if (peer) {
+    if (auto peer = it->second.Udp4()) {
         peer->handleHeartbeatMessage(address, heartbeat->ack);
     }
 }
@@ -432,9 +429,9 @@ void PeerManager::handleUdp4ForwardMessage(std::string &buffer, const SocketAddr
     buffer.erase(0, 1);
     IP4Header *header = (IP4Header *)buffer.data();
     if (header->daddr == getTunIp()) {
-        this->client->tunMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+        getClient().tunMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
     } else {
-        this->client->peerMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+        getClient().peerMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
     }
 }
 
@@ -455,16 +452,10 @@ void PeerManager::poll() {
     for (auto &pair : socketModeMap) {
         if (pair.second & PollSet::POLL_READ) {
             if (pair.first == tcp4socket) {
-                Socket clientSocket = tcp4socket.acceptConnection();
-                pollSet.add(clientSocket, PollSet::POLL_READ);
-                continue;
-            }
-            if (pair.first == tcp6socket) {
-                Socket clientSocket = tcp6socket.acceptConnection();
-                pollSet.add(clientSocket, PollSet::POLL_READ);
-                continue;
-            }
-            if (pair.first == udp4socket) {
+                // TODO: tcp4
+            } else if (pair.first == tcp6socket) {
+                // TODO: tcp6
+            } else if (pair.first == udp4socket) {
                 std::string buffer(1500, 0);
                 SocketAddress address;
                 auto size = udp4socket.receiveFrom(buffer.data(), buffer.size(), address);
@@ -472,17 +463,14 @@ void PeerManager::poll() {
                     buffer.resize(size);
                     if (this->udpStun.address == address) {
                         handleUdpStunResponse(buffer);
-                    } else {
-                        auto plaintext = decrypt(buffer);
-                        if (plaintext) {
-                            handleUdp4Message(*plaintext, address);
-                        }
+                    } else if (auto plaintext = decrypt(buffer)) {
+                        handleUdp4Message(*plaintext, address);
                     }
                 }
-                continue;
-            }
-            if (pair.first == udp6socket) {
-                continue;
+            } else if (pair.first == udp6socket) {
+                // TODO: udp6
+            } else {
+                spdlog::warn("unexpected socket: {}", pair.first.address().toString());
             }
         }
     }
