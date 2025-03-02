@@ -52,22 +52,22 @@ int arguments::parse(int argc, char *argv[]) {
     argparse::ArgumentParser program("candy", CANDY_VERSION);
 
     program.add_argument("-c", "--config").help("config file path");
-    program.add_argument("--mode").help("working mode");
-    program.add_argument("--websocket").help("websocket address");
-    program.add_argument("--password").help("authorization password");
+    program.add_argument("-m", "--mode").help("working mode");
+    program.add_argument("-w", "--websocket").help("websocket address");
+    program.add_argument("-p", "--password").help("authorization password");
     program.add_argument("--ntp").help("ntp server");
-    program.add_argument("--restart").help("restart interval").scan<'i', int>();
-    program.add_argument("--dhcp").help("dhcp address range");
+    program.add_argument("-r", "--restart").help("restart interval").scan<'i', int>();
+    program.add_argument("-d", "--dhcp").help("dhcp address range");
     program.add_argument("--sdwan").help("software-defined wide area network");
-    program.add_argument("--name").help("network interface name");
+    program.add_argument("-n", "--name").help("network interface name");
     program.add_argument("--workers").help("workers number").scan<'i', int>();
-    program.add_argument("--tun").help("static address");
+    program.add_argument("-t", "--tun").help("static address");
     program.add_argument("--transport").help("used p2p methods in order of priority");
-    program.add_argument("--stun").help("stun address");
-    program.add_argument("--port").help("udp port").scan<'i', int>();
+    program.add_argument("-s", "--stun").help("stun address");
+    program.add_argument("--port").help("p2p listen port").scan<'i', int>();
     program.add_argument("--mtu").help("maximum transmission unit").scan<'i', int>();
-    program.add_argument("--route").help("routing cost").scan<'i', int>();
-    program.add_argument("--discovery").help("discovery interval").scan<'i', int>();
+    program.add_argument("-r", "--route").help("routing cost").scan<'i', int>();
+    program.add_argument("-d", "--discovery").help("discovery interval").scan<'i', int>();
     program.add_argument("--localhost").help("local ip");
 
     program.add_argument("--no-timestamp").implicit_value(true);
