@@ -50,6 +50,8 @@ struct __attribute__((packed)) Heartbeat {
 struct __attribute__((packed)) Forward {
     uint8_t type;
     IP4Header iph;
+
+    static std::string create(const std::string &packet);
 };
 
 struct __attribute__((packed)) Delay {
@@ -63,7 +65,7 @@ struct __attribute__((packed)) Route {
     uint8_t type;
     IP4 dst;
     IP4 next;
-    int32_t delay;
+    int32_t rtt;
 };
 
 } // namespace PeerMsg

@@ -8,7 +8,7 @@
 
 namespace Candy {
 
-constexpr int32_t DELAY_LIMIT = INT32_MAX;
+constexpr int32_t RTT_LIMIT = INT32_MAX;
 constexpr uint32_t RETRY_MIN = 30;
 constexpr uint32_t RETRY_MAX = 3600;
 
@@ -28,7 +28,7 @@ class UDP : public Connector {
 public:
     UDP(Peer *peer) : Connector(peer) {}
 
-    bool isConnected() const;
+    std::optional<int32_t> isConnected() const;
     bool tryToConnect();
 
 protected:
@@ -40,7 +40,7 @@ protected:
 
     uint8_t ack = 0;
     uint32_t retry = RETRY_MIN;
-    int32_t delay = DELAY_LIMIT;
+    int32_t rtt = RTT_LIMIT;
 };
 
 class UDP4 : public UDP {

@@ -4,9 +4,9 @@
 
 namespace Candy {
 
-bool TCP::isConnected() const {
+std::optional<int32_t> TCP::isConnected() const {
     // TODO: 判断 TCP 是否是连接状态
-    return false;
+    return std::nullopt;
 }
 
 bool TCP::tryToConnect() {

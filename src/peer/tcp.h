@@ -10,7 +10,7 @@ class TCP : public Connector {
 public:
     TCP(Peer *peer) : Connector(peer) {}
 
-    bool isConnected() const;
+    std::optional<int32_t> isConnected() const;
     bool tryToConnect();
 };
 

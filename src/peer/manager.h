@@ -4,6 +4,7 @@
 
 #include "core/message.h"
 #include "core/net.h"
+#include "peer/connector.h"
 #include "peer/message.h"
 #include "peer/peer.h"
 #include <Poco/Net/DatagramSocket.h>
@@ -64,7 +65,9 @@ private:
     std::thread msgThread;
 
     int sendPacket(IP4 dst, const Msg &msg);
-    int directSendPacket(IP4 dst, const Msg &msg);
+    int sendPacketDirect(IP4 dst, const Msg &msg);
+    int sendPacketRelay(IP4 dst, const Msg &msg);
+   
     Address tunAddr;
 
 private:
@@ -75,9 +78,8 @@ private:
     std::shared_mutex ipPeerMutex;
     std::unordered_map<IP4, Peer> ipPeerMap;
 
-    // TODO: 路由表需要换一个数据结构表示
     std::shared_mutex rtTableMutex;
-    std::unordered_map<IP4, IP4> rtTableMap;
+    std::unordered_map<IP4, std::shared_ptr<Connector>> rtTableMap;
 
 public:
     Stun udpStun;

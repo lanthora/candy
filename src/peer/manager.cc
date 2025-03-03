@@ -139,28 +139,35 @@ void PeerManager::handlePeerQueue() {
 }
 
 int PeerManager::sendPacket(IP4 dst, const Msg &msg) {
-    if (!directSendPacket(dst, msg)) {
+    if (!sendPacketDirect(dst, msg)) {
         return 0;
     }
-    std::shared_lock rtTableLock(this->rtTableMutex);
-    auto rt = this->rtTableMap.find(dst);
-    if (rt != this->rtTableMap.end()) {
-        return directSendPacket(rt->second, msg);
+    if (!sendPacketRelay(dst, msg)) {
+        return 0;
     }
     return -1;
 }
 
-int PeerManager::directSendPacket(IP4 dst, const Msg &msg) {
+int PeerManager::sendPacketDirect(IP4 dst, const Msg &msg) {
     std::shared_lock ipPeerLock(this->ipPeerMutex);
     auto it = this->ipPeerMap.find(dst);
     if (it != this->ipPeerMap.end()) {
         auto &peer = it->second;
-        auto connector = peer.findConnector();
-        if (connector) {
-            std::string data;
-            data.push_back(PeerMsgKind::FORWARD);
-            data += msg.data;
-            return peer.send(data, connector);
+        if (auto connector = peer.findConnector()) {
+            return peer.send(PeerMsg::Forward::create(msg.data), connector);
+        }
+    }
+    return -1;
+}
+
+int PeerManager::sendPacketRelay(IP4 dst, const Msg &msg) {
+    std::shared_lock rtTableLock(this->rtTableMutex);
+    auto rt = this->rtTableMap.find(dst);
+    if (rt != this->rtTableMap.end()) {
+        if (auto connector = rt->second) {
+            if (connector->isConnected()) {
+                return connector->getPeer().send(PeerMsg::Forward::create(msg.data), connector);
+            }
         }
     }
     return -1;

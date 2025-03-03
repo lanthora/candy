@@ -39,8 +39,11 @@ bool isLocalNetwork(const SocketAddress &addr) {
 
 namespace Candy {
 
-bool UDP::isConnected() const {
-    return this->state == UdpPeerState::CONNECTED;
+std::optional<int32_t> UDP::isConnected() const {
+    if (this->state == UdpPeerState::CONNECTED) {
+        return this->rtt;
+    }
+    return std::nullopt;
 }
 
 bool UDP::tryToConnect() {
@@ -255,7 +258,7 @@ void UDP4::resetState() {
     this->local = std::nullopt;
     this->real = std::nullopt;
     this->ack = 0;
-    this->delay = DELAY_LIMIT;
+    this->rtt = RTT_LIMIT;
 }
 
 std::string UDP6::getName() {
