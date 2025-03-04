@@ -39,8 +39,7 @@ COMPILER_ROOT="$TOOLCHAINS/$TARGET"
 
 if [ ! -d "$COMPILER_ROOT" ]; then
     mkdir -p $TOOLCHAINS
-    RESPONSE=$(curl -s https://api.github.com/repos/musl-cross/musl-cross/releases/latest)
-    VERSION=$(echo "$RESPONSE" | grep 'tag_name' | cut -d'"' -f4)
+    VERSION=20250206
     wget -c https://github.com/musl-cross/musl-cross/releases/download/$VERSION/$TARGET.tar.xz -P $TOOLCHAINS
     tar xvf $COMPILER_ROOT.tar.xz -C $TOOLCHAINS
 fi
