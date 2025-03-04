@@ -67,7 +67,7 @@ private:
     int sendPacket(IP4 dst, const Msg &msg);
     int sendPacketDirect(IP4 dst, const Msg &msg);
     int sendPacketRelay(IP4 dst, const Msg &msg);
-   
+
     Address tunAddr;
 
 private:

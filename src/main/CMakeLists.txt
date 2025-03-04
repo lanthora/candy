@@ -6,10 +6,6 @@ set_target_properties(${CANDY_EXECUTE_NAME} PROPERTIES CXX_STANDARD 23)
 if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE spdlog::spdlog)
 else()
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SPDLOG REQUIRED spdlog)
-    add_definitions(${SPDLOG_CFLAGS})
-    include_directories(${SPDLOG_INCLUDEDIR})
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${SPDLOG_LIBRARIES})
 endif()
 
@@ -17,10 +13,7 @@ if (${CANDY_STATIC_OPENSSL})
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
 endif()
 
-if (${CANDY_STATIC_POCO})
-    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
-endif()
-
+target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)

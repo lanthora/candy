@@ -19,6 +19,8 @@ if (${CANDY_STATIC})
     set(CANDY_STATIC_POCO 1)
 endif()
 
+find_package(PkgConfig REQUIRED)
+
 if (${CANDY_STATIC_OPENSSL})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/openssl
@@ -60,6 +62,8 @@ if (${CANDY_STATIC_OPENSSL})
     set(OPENSSL_LIB_CRYPTO ${OPENSSL_ROOT_DIR}/libcrypto.a)
     set(OPENSSL_LIB_SSL ${OPENSSL_ROOT_DIR}/libssl.a)
     include_directories(${OPENSSL_INCLUDE})
+else()
+    find_package(OpenSSL REQUIRED)
 endif()
 
 if (${CANDY_STATIC_FMT})
@@ -70,6 +74,10 @@ endif()
 if (${CANDY_STATIC_SPDLOG})
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(spdlog "https://github.com/gabime/spdlog.git" "v1.14.1")
+else()
+    pkg_check_modules(SPDLOG REQUIRED spdlog)
+    add_definitions(${SPDLOG_CFLAGS})
+    include_directories(${SPDLOG_INCLUDEDIR})
 endif()
 
 if (${CANDY_STATIC_POCO})
@@ -90,6 +98,8 @@ if (${CANDY_STATIC_POCO})
     set(ENABLE_JWT OFF CACHE BOOL "" FORCE)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(poco "https://github.com/pocoproject/poco.git" "poco-1.13.3-release")
+else()
+    find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
 endif()
 
 set(CANDY_EXECUTE_NAME "candy")
