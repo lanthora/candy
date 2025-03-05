@@ -39,6 +39,18 @@ IP4 Client::address() {
     return this->tun.getIP();
 }
 
+MsgQueue &Client::getTunMsgQueue() {
+    return this->tunMsgQueue;
+}
+
+MsgQueue &Client::getPeerMsgQueue() {
+    return this->peerMsgQueue;
+}
+
+MsgQueue &Client::getWsMsgQueue() {
+    return this->wsMsgQueue;
+}
+
 void Client::setPassword(const std::string &password) {
     ws.setPassword(password);
     peerManager.setPassword(password);

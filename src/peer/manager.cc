@@ -113,7 +113,7 @@ std::string PeerManager::getPassword() {
 }
 
 void PeerManager::handlePeerQueue() {
-    Msg msg = getClient().peerMsgQueue.read();
+    Msg msg = getClient().getPeerMsgQueue().read();
     switch (msg.kind) {
     case MsgKind::TIMEOUT:
         break;
@@ -184,7 +184,7 @@ int PeerManager::sendPubInfo(CoreMsg::PubInfo info) {
             info.port = this->udpStun.port;
         }
     }
-    getClient().wsMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
+    getClient().getWsMsgQueue().write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
     return 0;
 }
 
@@ -197,7 +197,7 @@ void PeerManager::handlePacket(Msg msg) {
     if (!sendPacket(header->daddr, msg)) {
         return;
     }
-    getClient().wsMsgQueue.write(std::move(msg));
+    getClient().getWsMsgQueue().write(std::move(msg));
 }
 
 void PeerManager::handleTunAddr(Msg msg) {
@@ -436,9 +436,9 @@ void PeerManager::handleUdp4ForwardMessage(std::string &buffer, const SocketAddr
     buffer.erase(0, 1);
     IP4Header *header = (IP4Header *)buffer.data();
     if (header->daddr == getTunIp()) {
-        getClient().tunMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+        getClient().getTunMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
     } else {
-        getClient().peerMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+        getClient().getPeerMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
     }
 }
 

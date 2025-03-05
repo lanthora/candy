@@ -70,11 +70,11 @@ void Tun::handleTunDevice() {
     }
 
     // 流量给 P2P 模块,如果 P2P 模块无法处理,由 P2P 模块转发给 WS 模块
-    this->client->peerMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
 }
 
 void Tun::handleTunQueue() {
-    Msg msg = this->client->tunMsgQueue.read();
+    Msg msg = this->client->getTunMsgQueue().read();
     switch (msg.kind) {
     case MsgKind::TIMEOUT:
         break;

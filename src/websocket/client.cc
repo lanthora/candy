@@ -95,7 +95,7 @@ int WebSocketClient::shutdown() {
 }
 
 void WebSocketClient::handleWsQueue() {
-    Msg msg = this->client->wsMsgQueue.read();
+    Msg msg = this->client->getWsMsgQueue().read();
     switch (msg.kind) {
     case MsgKind::TIMEOUT:
         break;
@@ -229,9 +229,9 @@ void WebSocketClient::handleForwardMsg(std::string buffer) {
     // 尝试与源地址建立对等连接
     IP4Header *header = (IP4Header *)buffer.data();
     // 每次通过服务端转发收到报文都触发一次尝试 P2P 连接, 用于暗示通过服务端转发是个非常耗时的操作
-    this->client->peerMsgQueue.write(Msg(MsgKind::TRYP2P, header->saddr.toString()));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::TRYP2P, header->saddr.toString()));
     // 最后把报文移动到 TUN 模块, 因为有移动操作所以必须在最后执行
-    this->client->tunMsgQueue.write(Msg(MsgKind::PACKET, std::move(buffer)));
+    this->client->getTunMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
 }
 
 void WebSocketClient::handleExptTunMsg(std::string buffer) {
@@ -252,7 +252,7 @@ void WebSocketClient::handleUdp4ConnMsg(std::string buffer) {
     }
     WsMsg::Udp4Conn *header = (WsMsg::Udp4Conn *)buffer.data();
     CoreMsg::PubInfo info = {.src = header->src, .dst = header->dst, .ip = header->ip, .port = ntoh(header->port)};
-    this->client->peerMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
 }
 
 void WebSocketClient::handleDiscoveryMsg(std::string buffer) {
@@ -264,7 +264,7 @@ void WebSocketClient::handleDiscoveryMsg(std::string buffer) {
     if (header->dst == IP4("255.255.255.255")) {
         sendDiscoveryMsg(header->src);
     }
-    this->client->peerMsgQueue.write(Msg(MsgKind::TRYP2P, header->src.toString()));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::TRYP2P, header->src.toString()));
 }
 
 void WebSocketClient::handleRouteMsg(std::string buffer) {
@@ -275,8 +275,8 @@ void WebSocketClient::handleRouteMsg(std::string buffer) {
     WsMsg::SysRoute *header = (WsMsg::SysRoute *)buffer.data();
     SysRouteEntry *rt = header->rtTable;
     for (uint8_t idx = 0; idx < header->size; ++idx) {
-        this->client->tunMsgQueue.write(Msg(MsgKind::SYSRT, std::string((char *)(rt + idx), sizeof(SysRouteEntry))));
-        this->client->peerMsgQueue.write(Msg(MsgKind::SYSRT));
+        this->client->getTunMsgQueue().write(Msg(MsgKind::SYSRT, std::string((char *)(rt + idx), sizeof(SysRouteEntry))));
+        this->client->getPeerMsgQueue().write(Msg(MsgKind::SYSRT));
     }
 }
 
@@ -293,7 +293,7 @@ void WebSocketClient::handleGeneralMsg(std::string buffer) {
         .port = ntoh(header->port),
         .local = true,
     };
-    this->client->peerMsgQueue.write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::PUBINFO, std::string((char *)(&info), sizeof(info))));
 }
 
 void WebSocketClient::sendFrame(const std::string &buffer, int flags) {
@@ -328,8 +328,8 @@ void WebSocketClient::sendAuthMsg() {
     WsMsg::Auth buffer(address.Host());
     buffer.updateHash(this->password);
     sendFrame(&buffer, sizeof(buffer));
-    this->client->tunMsgQueue.write(Msg(MsgKind::TUNADDR, address.toCidr()));
-    this->client->peerMsgQueue.write(Msg(MsgKind::TUNADDR, address.toCidr()));
+    this->client->getTunMsgQueue().write(Msg(MsgKind::TUNADDR, address.toCidr()));
+    this->client->getPeerMsgQueue().write(Msg(MsgKind::TUNADDR, address.toCidr()));
     if (addressUpdateCallback) {
         addressUpdateCallback(address.toCidr());
     }

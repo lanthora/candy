@@ -62,10 +62,14 @@ public:
     IP4 address();
 
 public:
+    MsgQueue &getTunMsgQueue();
+    MsgQueue &getPeerMsgQueue();
+    MsgQueue &getWsMsgQueue();
+
+private:
     //  三个消息队列,子模块使用这些队列通信
     MsgQueue tunMsgQueue, peerMsgQueue, wsMsgQueue;
 
-private:
     // TUN 模块,与本机通信
     Tun tun;
     // PEER 模块,用于建立 P2P 连接,以及在 P2P 连接之上的客户端中继功能

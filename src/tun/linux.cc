@@ -118,26 +118,6 @@ public:
             return -1;
         }
 
-        // 设置路由
-        struct rtentry route;
-        memset(&route, 0, sizeof(route));
-
-        addr = (struct sockaddr_in *)&route.rt_dst;
-        addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = this->ip;
-
-        addr = (struct sockaddr_in *)&route.rt_genmask;
-        addr->sin_family = AF_INET;
-        addr->sin_addr.s_addr = this->mask;
-
-        route.rt_dev = (char *)this->name.c_str();
-        route.rt_flags = RTF_UP | RTF_HOST;
-        if (ioctl(sockfd, SIOCADDRT, &route) == -1) {
-            spdlog::critical("set route failed");
-            close(sockfd);
-            return -1;
-        }
-
         close(sockfd);
 
         return 0;
