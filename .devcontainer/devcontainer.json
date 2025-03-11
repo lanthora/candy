@@ -1,0 +1,13 @@
+{
+    "name": "My Dev Container",
+    "dockerFile": "Dockerfile",
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        // "ms-vscode.cpptools",
+        // "ms-vscode.cmake-tools"
+    ],
+    // "postCreateCommand": "apt-get update && apt-get install -y cmake"
+}
