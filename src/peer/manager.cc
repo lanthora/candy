@@ -193,7 +193,7 @@ IP4 PeerManager::getTunIp() {
 }
 
 void PeerManager::handlePacket(Msg msg) {
-    IP4Header *header = (IP4Header *)msg.data.data();
+    auto header = (IP4Header *)msg.data.data();
     if (!sendPacket(header->daddr, msg)) {
         return;
     }
@@ -239,7 +239,7 @@ void PeerManager::handleTryP2P(Msg msg) {
 }
 
 void PeerManager::handlePubInfo(Msg msg) {
-    CoreMsg::PubInfo *info = (CoreMsg::PubInfo *)(msg.data.data());
+    auto info = (CoreMsg::PubInfo *)(msg.data.data());
 
     if (info->src == getClient().address() || info->dst != getClient().address()) {
         spdlog::warn("invalid public info: src=[{}] dst=[{}]", info->src.toString(), info->dst.toString());
@@ -341,7 +341,7 @@ void PeerManager::handleUdpStunResponse(const std::string &buffer) {
         spdlog::debug("invalid stun response length: {}", buffer.length());
         return;
     }
-    StunResponse *response = (StunResponse *)buffer.c_str();
+    auto response = (StunResponse *)buffer.c_str();
     if (ntoh(response->type) != 0x0101) {
         spdlog::debug("invalid stun reponse type: {}", ntoh(response->type));
         return;
@@ -415,7 +415,7 @@ void PeerManager::handleUdp4HeartbeatMessage(std::string &buffer, const SocketAd
         return;
     }
 
-    PeerMsg::Heartbeat *heartbeat = (PeerMsg::Heartbeat *)buffer.c_str();
+    auto heartbeat = (PeerMsg::Heartbeat *)buffer.c_str();
     std::shared_lock lock(this->ipPeerMutex);
     auto it = this->ipPeerMap.find(heartbeat->tunip);
     if (it == this->ipPeerMap.end()) {
@@ -434,7 +434,7 @@ void PeerManager::handleUdp4ForwardMessage(std::string &buffer, const SocketAddr
         return;
     }
     buffer.erase(0, 1);
-    IP4Header *header = (IP4Header *)buffer.data();
+    auto header = (IP4Header *)buffer.data();
     if (header->daddr == getTunIp()) {
         getClient().getTunMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
     } else {
@@ -443,10 +443,23 @@ void PeerManager::handleUdp4ForwardMessage(std::string &buffer, const SocketAddr
 }
 
 void PeerManager::handleUdp4DelayMessage(std::string &buffer, const SocketAddress &address) {
+    if (buffer.size() < sizeof(PeerMsg::Delay)) {
+        spdlog::warn("invalid delay message: {:n}", spdlog::to_hex(buffer));
+        return;
+    }
+
+    auto header = (PeerMsg::Delay *)buffer.data();
+    auto timestamp = ntoh(header->timestamp);
+
     // TODO: handle udp4 delay message
 }
 
 void PeerManager::handleUdp4RouteMessage(std::string &buffer, const SocketAddress &address) {
+    if (buffer.size() < sizeof(PeerMsg::Route)) {
+        spdlog::warn("invalid delay message: {:n}", spdlog::to_hex(buffer));
+        return;
+    }
+    auto header = (PeerMsg::Route *)buffer.data();
     // TODO: handle udp4 route message
 }
 

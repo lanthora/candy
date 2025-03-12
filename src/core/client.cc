@@ -77,10 +77,10 @@ void Client::setTransport(const std::string &transport) {
     std::istringstream stream(transport);
     std::string item;
 
-    while (std::getline(stream, item, ';')) {
+    while (std::getline(stream, item, ' ')) {
         item = Poco::trim(item);
         if (!item.empty()) {
-            inner_transport.push_back(item);
+            inner_transport.push_back(Poco::toUpper(item));
         }
     }
     peerManager.setTransport(inner_transport);
