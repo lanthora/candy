@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory>
+#include <sys/socket.h>
 #include <net/if.h>
 #include <net/if_utun.h>
 #include <net/route.h>
@@ -17,7 +18,6 @@
 #include <sys/ioctl.h>
 #include <sys/kern_control.h>
 #include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/sys_domain.h>
 #include <sys/uio.h>
 #include <unistd.h>
