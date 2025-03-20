@@ -7,7 +7,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory>
+// clang-format off
+#include <sys/socket.h>
 #include <net/if.h>
+// clang-format on
 #include <net/if_utun.h>
 #include <net/route.h>
 #include <netinet/in.h>
@@ -17,7 +20,6 @@
 #include <sys/ioctl.h>
 #include <sys/kern_control.h>
 #include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/sys_domain.h>
 #include <sys/uio.h>
 #include <unistd.h>
