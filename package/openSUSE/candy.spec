@@ -24,7 +24,7 @@ Group:          Productivity/Networking/Security
 URL:            https://github.com/lanthora/candy
 Source:         candy.tar.gz
 BuildRequires:  cmake
-BuildRequires:  gcc13-c++
+BuildRequires:  gcc14-c++
 BuildRequires:  libopenssl-devel
 BuildRequires:  poco-devel
 BuildRequires:  pcre2-devel
