@@ -40,7 +40,7 @@ A reliable, low-latency, and anti-censorship virtual private network
 %setup -q -n candy
 
 %build
-%cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-13
+%cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14
 %make_build
 
 %install
