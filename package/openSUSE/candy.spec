@@ -24,7 +24,7 @@ Group:          Productivity/Networking/Security
 URL:            https://github.com/lanthora/candy
 Source:         candy.tar.gz
 BuildRequires:  cmake
-BuildRequires:  gcc13-c++
+BuildRequires:  gcc14-c++
 BuildRequires:  libopenssl-devel
 BuildRequires:  poco-devel
 BuildRequires:  pcre2-devel
@@ -40,7 +40,7 @@ A reliable, low-latency, and anti-censorship virtual private network
 %setup -q -n candy
 
 %build
-%cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-13
+%cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14
 %make_build
 
 %install
