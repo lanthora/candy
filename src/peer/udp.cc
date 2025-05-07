@@ -219,9 +219,12 @@ void UDP4::handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbea
 
 int UDP4::send(const std::string &buffer) {
     if (this->real) {
-        // FIXME: 处理 sendTo 产生的异常
-        if (buffer.size() == getPeerManager().udp4socket.sendTo(buffer.data(), buffer.size(), *this->real)) {
-            return 0;
+        try {
+            if (buffer.size() == getPeerManager().udp4socket.sendTo(buffer.data(), buffer.size(), *this->real)) {
+                return 0;
+            }
+        } catch (std::exception &e) {
+            spdlog::debug("udp4 send failed: {}", e.what());
         }
     }
     return -1;
