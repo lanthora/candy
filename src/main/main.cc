@@ -15,6 +15,7 @@ namespace Candy {
 void shutdown(Client *client) {
     running = false;
     running.notify_one();
+    client->running = false;
 }
 
 void shutdown(Server *server) {
