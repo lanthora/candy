@@ -28,7 +28,6 @@ bool isLocalNetwork(const SocketAddress &addr) {
         std::memcpy(&ipv4_net, ip.addr(), 4);
         return isIPv4Local(Candy::ntoh(ipv4_net));
     } else if (ip.isV6()) {
-        // TODO: 添加 IPv6 支持
         spdlog::error("unexpected ipv6 local address");
     }
 
@@ -268,12 +267,9 @@ std::string UDP6::getName() {
     return "UDP6";
 }
 
-void UDP6::tick() {
-    // TODO: UDP6 tick
-}
+void UDP6::tick() {}
 
 int UDP6::send(const std::string &buffer) {
-    // TODO: UDP6 send
     return -1;
 }
 

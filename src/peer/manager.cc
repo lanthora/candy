@@ -472,9 +472,7 @@ void PeerManager::poll() {
     for (auto &pair : socketModeMap) {
         if (pair.second & PollSet::POLL_READ) {
             if (pair.first == tcp4socket) {
-                // TODO: tcp4
             } else if (pair.first == tcp6socket) {
-                // TODO: tcp6
             } else if (pair.first == udp4socket) {
                 std::string buffer(1500, 0);
                 SocketAddress address;
@@ -488,7 +486,6 @@ void PeerManager::poll() {
                     }
                 }
             } else if (pair.first == udp6socket) {
-                // TODO: udp6
             } else {
                 spdlog::warn("unexpected socket: {}", pair.first.address().toString());
             }
