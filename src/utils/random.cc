@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-#include "utility/random.h"
+#include "utils/random.h"
 #include <iostream>
 #include <random>
 #include <sstream>

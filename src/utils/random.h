@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-#ifndef CANDY_UTILITY_RANDOM_H
-#define CANDY_UTILITY_RANDOM_H
+#ifndef CANDY_UTILS_RANDOM_H
+#define CANDY_UTILS_RANDOM_H
 
 #include <string>
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-#ifndef CANDY_UTILITY_TIME_H
-#define CANDY_UTILITY_TIME_H
+#ifndef CANDY_UTILS_TIME_H
+#define CANDY_UTILS_TIME_H
 
 #include <cstdint>
 #include <string>

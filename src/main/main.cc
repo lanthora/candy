@@ -2,7 +2,7 @@
 #include "core/client.h"
 #include "core/server.h"
 #include "main/config.h"
-#include "utility/time.h"
+#include "utils/time.h"
 #include <atomic>
 #include <signal.h>
 #include <spdlog/spdlog.h>

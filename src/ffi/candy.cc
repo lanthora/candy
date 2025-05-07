@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "ffi/candy.h"
 #include "core/client.h"
-#include "utility/time.h"
+#include "utils/time.h"
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/spdlog.h>
 #include <stdlib.h>

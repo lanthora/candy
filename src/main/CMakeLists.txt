@@ -20,7 +20,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE Threads::Threads)
 
 target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE core)
-target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE utility)
+target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE utils)
 
 if (NOT ${CANDY_NOEXE})
     install(TARGETS ${CANDY_EXECUTE_NAME})

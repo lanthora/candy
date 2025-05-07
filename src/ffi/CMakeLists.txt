@@ -8,7 +8,7 @@ target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE core)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE websocket)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE tun)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE peer)
-target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE utility)
+target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE utils)
 
 if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE spdlog::spdlog)
