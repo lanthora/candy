@@ -5,6 +5,7 @@
 #include "core/net.h"
 #include "peer/connector.h"
 #include <Poco/Net/SocketAddress.h>
+#include <shared_mutex>
 
 namespace Candy {
 
@@ -61,6 +62,7 @@ protected:
 private:
     void sendHeartbeat();
     std::optional<SocketAddress> wide, local, real;
+    std::shared_mutex socket_address_mutex;
 };
 
 class UDP6 : public UDP {

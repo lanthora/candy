@@ -203,6 +203,7 @@ void UDP4::handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbea
         return;
     }
 
+    std::unique_lock lock(this->socket_address_mutex);
     if (!this->real || isLocalNetwork(address) || !isLocalNetwork(*this->real)) {
         this->real = address;
     }
@@ -217,14 +218,16 @@ void UDP4::handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbea
 }
 
 int UDP4::send(const std::string &buffer) {
-    if (this->real) {
-        try {
+    try {
+        std::shared_lock lock(this->socket_address_mutex);
+        if (this->real) {
+
             if (buffer.size() == getPeerManager().udp4socket.sendTo(buffer.data(), buffer.size(), *this->real)) {
                 return 0;
             }
-        } catch (std::exception &e) {
-            spdlog::debug("udp4 send failed: {}", e.what());
         }
+    } catch (std::exception &e) {
+        spdlog::debug("udp4 send failed: {}", e.what());
     }
     return -1;
 }
@@ -241,6 +244,7 @@ void UDP4::sendHeartbeat() {
     }
 
     using Poco::Net::SocketAddress;
+    std::shared_lock lock(this->socket_address_mutex);
     if (this->real && (this->state == UdpPeerState::CONNECTED)) {
         getPeerManager().udp4socket.sendTo(buffer->data(), buffer->size(), *this->real);
     }
@@ -256,6 +260,7 @@ void UDP4::sendHeartbeat() {
 }
 
 void UDP4::resetState() {
+    std::unique_lock lock(this->socket_address_mutex);
     this->wide = std::nullopt;
     this->local = std::nullopt;
     this->real = std::nullopt;
