@@ -120,7 +120,7 @@ void WebSocketClient::handlePacket(Msg msg) {
 
 void WebSocketClient::handlePubInfo(Msg msg) {
     CoreMsg::PubInfo *info = (CoreMsg::PubInfo *)(msg.data.data());
-    if (!info->v6 && !info->tcp && !info->local) {
+    if (!info->v6 && !info->tcp) {
         if (info->local) {
             WsMsg::Udp4ConnLocal buffer;
             buffer.ge.src = info->src;
