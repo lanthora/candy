@@ -2,58 +2,59 @@
 #ifndef CANDY_PEER_PEER_H
 #define CANDY_PEER_PEER_H
 
-#include "utility/random.h"
+#include "core/net.h"
+#include "peer/tcp.h"
+#include "peer/udp.h"
 #include <cstdint>
+#include <map>
+#include <memory>
+#include <openssl/evp.h>
+#include <optional>
 #include <string>
 
 namespace Candy {
 
-enum class PeerState {
-    INIT,
-    PREPARING,
-    SYNCHRONIZING,
-    CONNECTING,
-    CONNECTED,
-    WAITING,
-    FAILED,
-};
+class PeerManager;
 
-constexpr int32_t DELAY_LIMIT = INT32_MAX;
-constexpr uint32_t RETRY_MIN = 30U;
-constexpr uint32_t RETRY_MAX = 3600U;
-
-class PeerInfo {
+class Peer {
 public:
-    struct {
-        uint32_t ip = 0;
-        uint16_t port = 0;
-    } wide, local, real;
-    uint8_t ack = 0;
-    uint32_t count = 0;
-    uint32_t tick = randomUint32();
-    uint32_t retry = RETRY_MIN;
-    int32_t delay = DELAY_LIMIT;
+    Peer(const IP4 &addr, PeerManager *peerManager);
+    ~Peer();
 
 public:
-    int setTun(uint32_t tun, const std::string &password);
-    std::string getKey() const;
-    uint32_t getTun() const;
-    void updateState(PeerState state);
-    PeerState getState() const;
-    std::string getStateStr() const;
+    std::shared_ptr<Candy::Connector> findConnector();
+    void tryConnecct();
+    void tick();
+
+    void handleUdp4Conn(IP4 ip, uint16_t port, bool local = false);
+    void handleUdpStunResponse();
+
+    PeerManager &getManager();
+    IP4 getAddr();
 
 private:
-    static std::string getStateStr(PeerState state);
-    PeerState state = PeerState::INIT;
-    uint32_t tun = 0;
-    std::string key;
-};
+    // 对端虚拟地址
+    IP4 addr;
+    PeerManager *peerManager;
 
-class UdpMessage {
 public:
-    uint32_t ip;
-    uint16_t port;
-    std::string buffer;
+    // 所有对等连接使用统一的加密方式, 为了解决 TCP 无法分包的问题,
+    // 加密使用的 IV 前两个字节用于表示报文长度, 由于 MTU 的限制, 两个字节大小足够
+    std::optional<std::string> encrypt(const std::string &plaintext);
+
+private:
+    std::shared_ptr<EVP_CIPHER_CTX> encryptCtx;
+    std::mutex encryptCtxMutex;
+    std::string key;
+
+public:
+    std::shared_ptr<UDP4> Udp4();
+    std::shared_ptr<UDP6> Udp6();
+    std::shared_ptr<TCP4> Tcp4();
+    std::shared_ptr<TCP6> Tcp6();
+
+private:
+    std::map<std::string, std::shared_ptr<Connector>> connectors;
 };
 
 } // namespace Candy
