@@ -19,6 +19,8 @@ public:
     TCP4(Peer *peer) : TCP(peer) {}
     std::string getName();
     void tick();
+
+private:
     int send(const std::string &buffer);
 };
 
@@ -27,6 +29,8 @@ public:
     TCP6(Peer *peer) : TCP(peer) {}
     std::string getName();
     void tick();
+
+private:
     int send(const std::string &buffer);
 };
 

@@ -14,15 +14,16 @@ class PeerManager;
 class Connector {
 public:
     Connector(Peer *peer) : peer(peer) {}
+    Peer &getPeer();
+    IP4 getPeerAddress();
+    PeerManager &getPeerManager();
+    int sendEncrypted(const std::string &buffer);
 
     virtual std::optional<int32_t> isConnected() const = 0;
     virtual bool tryToConnect() = 0;
     virtual void tick() = 0;
     virtual int send(const std::string &buffer) = 0;
     virtual std::string getName() = 0;
-    IP4 getPeerAddress();
-    PeerManager &getPeerManager();
-    Peer &getPeer();
 
 protected:
     void refreshActiveTime();

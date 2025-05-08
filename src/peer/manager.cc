@@ -154,7 +154,7 @@ int PeerManager::sendPacketDirect(IP4 dst, const Msg &msg) {
     if (it != this->ipPeerMap.end()) {
         auto &peer = it->second;
         if (auto connector = peer.findConnector()) {
-            return peer.send(PeerMsg::Forward::create(msg.data), connector);
+            return connector->sendEncrypted(PeerMsg::Forward::create(msg.data));
         }
     }
     return -1;
@@ -166,7 +166,7 @@ int PeerManager::sendPacketRelay(IP4 dst, const Msg &msg) {
     if (rt != this->rtTableMap.end()) {
         if (auto connector = rt->second) {
             if (connector->isConnected()) {
-                return connector->getPeer().send(PeerMsg::Forward::create(msg.data), connector);
+                return connector->sendEncrypted(PeerMsg::Forward::create(msg.data));
             }
         }
     }

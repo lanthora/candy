@@ -15,6 +15,13 @@ Peer &Connector::getPeer() {
     return *this->peer;
 }
 
+int Connector::sendEncrypted(const std::string &data) {
+    if (auto buffer = getPeer().encrypt(data)) {
+        return send(*buffer);
+    }
+    return -1;
+}
+
 void Connector::refreshActiveTime() {
     this->lastActiveTime = std::chrono::system_clock::now();
 }

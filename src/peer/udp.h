@@ -54,12 +54,11 @@ public:
     void tick();
     void handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbeatAck);
 
-    int send(const std::string &buffer);
-
 protected:
     void resetState();
 
 private:
+    int send(const std::string &buffer);
     void sendHeartbeat();
     std::optional<SocketAddress> wide, local, real;
     std::shared_mutex socket_address_mutex;
@@ -71,10 +70,11 @@ public:
     std::string getName();
     void tick();
 
-    int send(const std::string &buffer);
-
 protected:
     void resetState() {}
+
+private:
+    int send(const std::string &buffer);
 };
 
 } // namespace Candy

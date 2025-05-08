@@ -73,27 +73,6 @@ void Peer::tick() {
     }
 }
 
-int Peer::send(const std::string &data, std::shared_ptr<Candy::Connector> connector) {
-    if (!connector) {
-        for (const std::string &transport : peerManager->getTransport()) {
-            auto it = this->connectors.find(transport);
-            if (it != this->connectors.end()) {
-                if (it->second->isConnected()) {
-                    connector = it->second;
-                }
-            }
-        }
-    }
-    if (connector) {
-        auto buffer = encrypt(data);
-        if (buffer) {
-            return connector->send(*buffer);
-        }
-    }
-
-    return -1;
-}
-
 void Peer::handleUdp4Conn(IP4 ip, uint16_t port, bool local) {
     if (auto peer = Udp4()) {
         peer->updateInfo(ip, port, local);
