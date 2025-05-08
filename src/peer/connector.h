@@ -22,7 +22,6 @@ public:
     virtual std::optional<int32_t> isConnected() const = 0;
     virtual bool tryToConnect() = 0;
     virtual void tick() = 0;
-    virtual int send(const std::string &buffer) = 0;
     virtual std::string getName() = 0;
 
 protected:
@@ -31,6 +30,7 @@ protected:
     Peer *peer;
 
 private:
+    virtual int send(const std::string &buffer) = 0;
     std::chrono::system_clock::time_point lastActiveTime;
 };
 

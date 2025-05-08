@@ -46,7 +46,7 @@ int serve(const arguments &args) {
         Candy::Client client;
         client.setDiscoveryInterval(args.discovery);
         client.setRouteCost(args.routeCost);
-        client.setPort(args.udpPort);
+        client.setPort(args.port);
         client.setLocalhost(args.localhost);
         client.setPassword(args.password);
         client.setWebSocket(args.websocket);

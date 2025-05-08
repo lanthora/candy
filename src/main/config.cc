@@ -43,8 +43,7 @@ void arguments::dump() {
     dump("discovery", this->discovery);
     dump("route", this->routeCost);
     dump("mtu", this->mtu);
-    dump("workers", this->workers);
-    dump("port", this->udpPort);
+    dump("port", this->port);
     spdlog::debug("================================");
 }
 
@@ -60,7 +59,6 @@ int arguments::parse(int argc, char *argv[]) {
     program.add_argument("-d", "--dhcp").help("dhcp address range");
     program.add_argument("--sdwan").help("software-defined wide area network");
     program.add_argument("-n", "--name").help("network interface name");
-    program.add_argument("--workers").help("workers number").scan<'i', int>();
     program.add_argument("-t", "--tun").help("static address");
     program.add_argument("--transport").help("used p2p methods in order of priority");
     program.add_argument("-s", "--stun").help("stun address");
@@ -93,12 +91,11 @@ int arguments::parse(int argc, char *argv[]) {
         program.set_if_used("--dhcp", this->dhcp);
         program.set_if_used("--sdwan", this->sdwan);
         program.set_if_used("--name", this->name);
-        program.set_if_used("--workers", this->workers);
         program.set_if_used("--tun", this->tun);
         program.set_if_used("--transport", this->transport);
         program.set_if_used("--stun", this->stun);
         program.set_if_used("--localhost", this->localhost);
-        program.set_if_used("--port", this->udpPort);
+        program.set_if_used("--port", this->port);
         program.set_if_used("--mtu", this->mtu);
         program.set_if_used("--discovery", this->discovery);
         program.set_if_used("--route", this->routeCost);
@@ -146,10 +143,9 @@ void arguments::parseFile(std::string cfgFile) {
             {"transport", [&](const std::string &value) { this->transport = value; }},
             {"stun", [&](const std::string &value) { this->stun = value; }},
             {"name", [&](const std::string &value) { this->name = value; }},
-            {"workers", [&](const std::string &value) { this->workers = std::stoi(value); }},
             {"discovery", [&](const std::string &value) { this->discovery = std::stoi(value); }},
             {"route", [&](const std::string &value) { this->routeCost = std::stoi(value); }},
-            {"port", [&](const std::string &value) { this->udpPort = std::stoi(value); }},
+            {"port", [&](const std::string &value) { this->port = std::stoi(value); }},
             {"mtu", [&](const std::string &value) { this->mtu = std::stoi(value); }},
             {"localhost", [&](const std::string &value) { this->localhost = value; }},
         };

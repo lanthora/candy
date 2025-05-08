@@ -26,8 +26,7 @@ struct arguments {
     std::string transport;
     std::string stun;
     std::string localhost;
-    int workers = 0;
-    int udpPort = 0;
+    int port = 0;
     int discovery = 0;
     int routeCost = 0;
     int mtu = 1400;
