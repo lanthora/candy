@@ -25,6 +25,13 @@ void MsgQueue::write(Msg msg) {
     msgCondition.notify_one();
 }
 
+void MsgQueue::clear() {
+    std::unique_lock lock(this->msgMutex);
+    while (!msgQueue.empty()) {
+        msgQueue.pop();
+    }
+}
+
 void Client::setName(const std::string &name) {
     this->tunName = name;
     tun.setName(name);
@@ -112,6 +119,10 @@ void Client::shutdown() {
     ws.shutdown();
     tun.shutdown();
     peerManager.shutdown();
+
+    wsMsgQueue.clear();
+    tunMsgQueue.clear();
+    peerMsgQueue.clear();
 }
 
 } // namespace Candy

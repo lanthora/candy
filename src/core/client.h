@@ -18,6 +18,7 @@ class MsgQueue {
 public:
     Msg read();
     void write(Msg msg);
+    void clear();
 
 private:
     std::queue<Msg> msgQueue;

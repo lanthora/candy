@@ -83,6 +83,7 @@ int PeerManager::run(Client *client) {
         while (getClient().running) {
             handlePeerQueue();
         }
+        spdlog::debug("peer msg thread exit");
     });
     this->tickThread = std::thread([&] {
         while (getClient().running) {
@@ -90,6 +91,7 @@ int PeerManager::run(Client *client) {
             tick();
             std::this_thread::sleep_until(wake_time);
         }
+        spdlog::debug("peer tick thread exit");
     });
 
     return 0;
@@ -106,7 +108,17 @@ int PeerManager::shutdown() {
         this->pollThread.join();
     }
 
-    socket.close();
+    this->socket.close();
+
+    {
+        std::unique_lock lock(this->rtTableMutex);
+        this->rtTableMap.clear();
+    }
+
+    {
+        std::unique_lock lock(this->ipPeerMutex);
+        this->ipPeerMap.clear();
+    }
 
     return 0;
 }
@@ -301,6 +313,7 @@ int PeerManager::initSocket() {
         while (getClient().running) {
             poll();
         }
+        spdlog::debug("peer poll thread exit");
     });
     return 0;
 }

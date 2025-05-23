@@ -59,6 +59,7 @@ int WebSocketClient::run(Client *client) {
         while (this->client->running) {
             handleWsQueue();
         }
+        spdlog::debug("websocket msg thread exit");
     });
 
     if (connect()) {
@@ -76,9 +77,11 @@ int WebSocketClient::run(Client *client) {
 
     this->wsThread = std::thread([&] {
         while (this->client->running) {
-            handleWsConn();
+            if (handleWsConn()) {
+                break;
+            }
         }
-        spdlog::debug("websocket client thread exit");
+        spdlog::debug("websocket handle thread exit");
     });
 
     return 0;
@@ -91,6 +94,7 @@ int WebSocketClient::shutdown() {
     if (this->wsThread.joinable()) {
         this->wsThread.join();
     }
+
     return 0;
 }
 
@@ -144,7 +148,7 @@ void WebSocketClient::handleDiscovery(Msg msg) {
     sendDiscoveryMsg(IP4("255.255.255.255"));
 }
 
-void WebSocketClient::handleWsConn() {
+int WebSocketClient::handleWsConn() {
     try {
         std::string buffer;
         int flags = 0;
@@ -154,12 +158,12 @@ void WebSocketClient::handleWsConn() {
             if (bootTime() - this->timestamp > 30000) {
                 spdlog::warn("websocket pong timeout");
                 Candy::shutdown(this->client);
-                return;
+                return -1;
             }
             if (bootTime() - this->timestamp > 15000) {
                 sendPingMessage();
             }
-            return;
+            return 0;
         }
 
         buffer.resize(1500);
@@ -167,33 +171,34 @@ void WebSocketClient::handleWsConn() {
         if (length == 0 && flags == 0) {
             spdlog::info("abnormal disconnect");
             Candy::shutdown(this->client);
-            return;
+            return -1;
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PING) {
             this->timestamp = bootTime();
             flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
             sendFrame(buffer.data(), length, flags);
-            return;
+            return 0;
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PONG) {
             this->timestamp = bootTime();
-            return;
+            return 0;
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
             spdlog::info("websocket close: {}", buffer);
             Candy::shutdown(this->client);
-            return;
+            return -1;
         }
         if (length > 0) {
             this->timestamp = bootTime();
             buffer.resize(length);
             handleWsMsg(std::move(buffer));
-            return;
+            return 0;
         }
+        return 0;
     } catch (std::exception &e) {
         spdlog::warn("handle ws conn failed: {}", e.what());
         Candy::shutdown(this->client);
-        return;
+        return -1;
     }
 }
 
