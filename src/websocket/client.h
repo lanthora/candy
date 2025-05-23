@@ -35,7 +35,7 @@ private:
 
     std::thread msgThread;
 
-    void handleWsConn();
+    int handleWsConn();
     void handleWsMsg(std::string buffer);
     void handleForwardMsg(std::string buffer);
     void handleExptTunMsg(std::string buffer);
