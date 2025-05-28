@@ -45,7 +45,7 @@ struct __attribute__((packed)) Forward {
 struct __attribute__((packed)) ExptTun {
     uint8_t type;
     int64_t timestamp;
-    char cidr[32];
+    char cidr[32] = {0};
     uint8_t hash[SHA256_DIGEST_LENGTH];
 
     ExptTun(const std::string &cidr);

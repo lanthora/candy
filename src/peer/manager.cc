@@ -230,24 +230,25 @@ void PeerManager::handleTunAddr(Msg msg) {
 void PeerManager::handleTryP2P(Msg msg) {
     IP4 src(msg.data);
 
-    std::shared_lock ipPeerLock(this->ipPeerMutex);
-    auto it = this->ipPeerMap.find(src);
-    if (it == this->ipPeerMap.end()) {
-        this->ipPeerMutex.unlock_shared();
-        {
-            std::unique_lock lock(this->ipPeerMutex);
-            this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(src), std::forward_as_tuple(src, this));
+    {
+        std::shared_lock lock(this->ipPeerMutex);
+        auto it = this->ipPeerMap.find(src);
+        if (it != this->ipPeerMap.end()) {
+            it->second.tryConnecct();
+            return;
         }
-        this->ipPeerMutex.lock_shared();
-        it = this->ipPeerMap.find(src);
     }
 
-    if (it == this->ipPeerMap.end()) {
-        spdlog::warn("can not find peer: {}", src.toString());
-        return;
+    {
+        std::unique_lock lock(this->ipPeerMutex);
+        auto it = this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(src), std::forward_as_tuple(src, this));
+        if (it.second) {
+            it.first->second.tryConnecct();
+            return;
+        }
     }
 
-    it->second.tryConnecct();
+    spdlog::warn("can not find peer: {}", src.toString());
 }
 
 void PeerManager::handlePubInfo(Msg msg) {
@@ -324,8 +325,13 @@ void PeerManager::sendStunRequest() {
         if (!uri.getPort()) {
             uri.setPort(3478);
         }
+        {
+            std::unique_lock lock(this->stun.addressMutex);
+            this->stun.address = Poco::Net::SocketAddress(uri.getHost(), uri.getPort());
+        }
+
         StunRequest request;
-        this->stun.address = Poco::Net::SocketAddress(uri.getHost(), uri.getPort());
+        std::shared_lock lock(this->stun.addressMutex);
         if (sendTo(&request, sizeof(request), this->stun.address) != sizeof(request)) {
             spdlog::warn("the stun request was not completely sent");
         }
@@ -334,7 +340,7 @@ void PeerManager::sendStunRequest() {
     }
 }
 
-void PeerManager::handleStunResponse(const std::string &buffer) {
+void PeerManager::handleStunResponse(std::string buffer) {
     if (buffer.length() < sizeof(StunResponse)) {
         spdlog::debug("invalid stun response length: {}", buffer.length());
         return;
@@ -387,22 +393,22 @@ void PeerManager::handleStunResponse(const std::string &buffer) {
     return;
 }
 
-void PeerManager::handleMessage(std::string &buffer, const SocketAddress &address) {
+void PeerManager::handleMessage(std::string buffer, const SocketAddress &address) {
     switch (buffer.front()) {
     case PeerMsgKind::HEARTBEAT:
-        handleHeartbeatMessage(buffer, address);
+        handleHeartbeatMessage(std::move(buffer), address);
         break;
     case PeerMsgKind::FORWARD:
-        handleForwardMessage(buffer, address);
+        handleForwardMessage(std::move(buffer), address);
         break;
     case PeerMsgKind::DELAY:
         if (clientRelayEnabled()) {
-            handleDelayMessage(buffer, address);
+            handleDelayMessage(std::move(buffer), address);
         }
         break;
     case PeerMsgKind::ROUTE:
         if (clientRelayEnabled()) {
-            handleRouteMessage(buffer, address);
+            handleRouteMessage(std::move(buffer), address);
         }
         break;
     default:
@@ -411,7 +417,7 @@ void PeerManager::handleMessage(std::string &buffer, const SocketAddress &addres
     }
 }
 
-void PeerManager::handleHeartbeatMessage(std::string &buffer, const SocketAddress &address) {
+void PeerManager::handleHeartbeatMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Heartbeat)) {
         spdlog::debug("udp4 heartbeat failed: len {} address {}", buffer.length(), address.toString());
         return;
@@ -427,7 +433,7 @@ void PeerManager::handleHeartbeatMessage(std::string &buffer, const SocketAddres
     it->second.handleHeartbeatMessage(address, heartbeat->ack);
 }
 
-void PeerManager::handleForwardMessage(std::string &buffer, const SocketAddress &address) {
+void PeerManager::handleForwardMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Forward)) {
         spdlog::warn("invalid forward message: {:n}", spdlog::to_hex(buffer));
         return;
@@ -441,7 +447,7 @@ void PeerManager::handleForwardMessage(std::string &buffer, const SocketAddress 
     }
 }
 
-void PeerManager::handleDelayMessage(std::string &buffer, const SocketAddress &address) {
+void PeerManager::handleDelayMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Delay)) {
         spdlog::warn("invalid delay message: {:n}", spdlog::to_hex(buffer));
         return;
@@ -473,7 +479,7 @@ void PeerManager::handleDelayMessage(std::string &buffer, const SocketAddress &a
     }
 }
 
-void PeerManager::handleRouteMessage(std::string &buffer, const SocketAddress &address) {
+void PeerManager::handleRouteMessage(std::string buffer, const SocketAddress &address) {
     if (!routeCost) {
         return;
     }
@@ -503,10 +509,16 @@ void PeerManager::poll() {
                 auto size = socket.receiveFrom(buffer.data(), buffer.size(), address);
                 if (size > 0) {
                     buffer.resize(size);
-                    if (this->stun.address == address) {
+
+                    auto isStunResponse = [&]() {
+                        std::shared_lock lock(this->stun.addressMutex);
+                        return this->stun.address == address;
+                    }();
+
+                    if (isStunResponse) {
                         handleStunResponse(buffer);
                     } else if (auto plaintext = decrypt(buffer)) {
-                        handleMessage(*plaintext, address);
+                        handleMessage(std::move(*plaintext), address);
                     }
                 }
             }
