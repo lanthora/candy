@@ -25,6 +25,7 @@ class Client;
 struct Stun {
     std::string uri;
     SocketAddress address;
+    std::shared_mutex addressMutex;
     bool needed = false;
     IP4 ip;
     uint16_t port;
@@ -97,12 +98,12 @@ public:
 private:
     int initSocket();
     void sendStunRequest();
-    void handleStunResponse(const std::string &buffer);
-    void handleMessage(std::string &buffer, const SocketAddress &address);
-    void handleHeartbeatMessage(std::string &buffer, const SocketAddress &address);
-    void handleForwardMessage(std::string &buffer, const SocketAddress &address);
-    void handleDelayMessage(std::string &buffer, const SocketAddress &address);
-    void handleRouteMessage(std::string &buffer, const SocketAddress &address);
+    void handleStunResponse(std::string buffer);
+    void handleMessage(std::string buffer, const SocketAddress &address);
+    void handleHeartbeatMessage(std::string buffer, const SocketAddress &address);
+    void handleForwardMessage(std::string buffer, const SocketAddress &address);
+    void handleDelayMessage(std::string buffer, const SocketAddress &address);
+    void handleRouteMessage(std::string buffer, const SocketAddress &address);
     void poll();
 
     std::optional<std::string> decrypt(const std::string &ciphertext);

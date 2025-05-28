@@ -17,21 +17,11 @@ namespace {
 
 using namespace Poco::Net;
 
-bool isIPv4Local(uint32_t ipv4_host) {
-    return ((ipv4_host & 0xFF000000) == 0x0A000000) || // 10.0.0.0/8
-           ((ipv4_host & 0xFFF00000) == 0xAC100000) || // 172.16.0.0/12
-           ((ipv4_host & 0xFFFF0000) == 0xC0A80000) || // 192.168.0.0/16
-           ((ipv4_host & 0xFF000000) == 0x7F000000) || // 127.0.0.0/8
-           ((ipv4_host & 0xFFFF0000) == 0xA9FE0000);   // 169.254.0.0/16
-}
-
 bool isLocalNetwork(const SocketAddress &addr) {
     IPAddress ip = addr.host();
 
     if (ip.isV4()) {
-        uint32_t ipv4_net;
-        std::memcpy(&ipv4_net, ip.addr(), 4);
-        return isIPv4Local(Candy::ntoh(ipv4_net));
+        return ip.isSiteLocal() || ip.isLinkLocal() || ip.isSiteLocalMC();
     } else if (ip.isV6()) {
         spdlog::error("unexpected ipv6 local address");
     }
@@ -321,24 +311,27 @@ void Peer::sendHeartbeatMessage() {
     heartbeat.tunip = getManager().getTunIp();
     heartbeat.ack = this->ack;
 
-    auto buffer = encrypt(std::string((char *)&heartbeat, sizeof(heartbeat)));
-    if (!buffer) {
-        return;
-    }
+    if (auto buffer = encrypt(std::string((char *)&heartbeat, sizeof(heartbeat)))) {
+        using Poco::Net::SocketAddress;
+        std::shared_lock lock(this->socketAddressMutex);
+        if (this->real && (this->state == PeerState::CONNECTED)) {
+            heartbeat.ip = this->real->host().toString();
+            heartbeat.port = this->real->port();
+            getManager().sendTo(buffer->data(), buffer->size(), *this->real);
+        }
 
-    using Poco::Net::SocketAddress;
-    std::shared_lock lock(this->socketAddressMutex);
-    if (this->real && (this->state == PeerState::CONNECTED)) {
-        getManager().sendTo(buffer->data(), buffer->size(), *this->real);
-    }
+        if (this->wide && (this->state == PeerState::CONNECTING)) {
+            heartbeat.ip = this->wide->host().toString();
+            heartbeat.port = this->wide->port();
+            getManager().sendTo(buffer->data(), buffer->size(), *this->wide);
+        }
 
-    if (this->wide && (this->state == PeerState::CONNECTING)) {
-        getManager().sendTo(buffer->data(), buffer->size(), *this->wide);
-    }
-
-    if (this->local && (this->state == PeerState::PREPARING || this->state == PeerState::SYNCHRONIZING ||
-                        this->state == PeerState::CONNECTING)) {
-        getManager().sendTo(buffer->data(), buffer->size(), *this->local);
+        if (this->local && (this->state == PeerState::PREPARING || this->state == PeerState::SYNCHRONIZING ||
+                            this->state == PeerState::CONNECTING)) {
+            heartbeat.ip = this->local->host().toString();
+            heartbeat.port = this->local->port();
+            getManager().sendTo(buffer->data(), buffer->size(), *this->local);
+        }
     }
 }
 
