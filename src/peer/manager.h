@@ -23,12 +23,14 @@ using Poco::Net::SocketAddress;
 class Client;
 
 struct Stun {
-    std::string uri;
     SocketAddress address;
-    std::shared_mutex addressMutex;
     bool needed = false;
     IP4 ip;
     uint16_t port;
+
+    bool enabled() {
+        return !this->address.host().isWildcard();
+    }
 };
 
 struct PeerRouteEntry {
@@ -78,6 +80,7 @@ private:
 
     Address tunAddr;
 
+    int startTickThread();
     void tick();
     std::thread tickThread;
     uint64_t tickTick = randomUint32();

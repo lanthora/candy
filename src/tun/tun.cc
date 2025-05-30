@@ -15,7 +15,6 @@ int Tun::run(Client *client) {
         while (this->client->running) {
             handleTunQueue();
         }
-        spdlog::debug("tun msg thread exit");
     });
     return 0;
 }
@@ -120,7 +119,6 @@ void Tun::handleTunAddr(Msg msg) {
         while (this->client->running) {
             handleTunDevice();
         }
-        spdlog::debug("tun handle thread exit");
         if (down()) {
             Candy::shutdown(this->client);
             return;

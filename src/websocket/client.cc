@@ -59,7 +59,6 @@ int WebSocketClient::run(Client *client) {
         while (this->client->running) {
             handleWsQueue();
         }
-        spdlog::debug("websocket msg thread exit");
     });
 
     if (connect()) {
@@ -81,7 +80,6 @@ int WebSocketClient::run(Client *client) {
                 break;
             }
         }
-        spdlog::debug("websocket handle thread exit");
     });
 
     return 0;

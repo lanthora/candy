@@ -73,6 +73,7 @@ private:
     int send(const std::string &buffer);
     void sendHeartbeatMessage();
     void sendDelayMessage();
+
     std::optional<SocketAddress> wide, local, real;
     std::shared_mutex socketAddressMutex;
 

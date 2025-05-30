@@ -173,12 +173,15 @@ std::string Peer::stateString(PeerState state) const {
 }
 
 void Peer::handlePubInfo(IP4 ip, uint16_t port, bool local) {
-    if (local) {
-        this->local = SocketAddress(ip.toString(), port);
-        return;
-    }
+    {
+        std::unique_lock lock(this->socketAddressMutex);
+        if (local) {
+            this->local = SocketAddress(ip.toString(), port);
+            return;
+        }
 
-    this->wide = SocketAddress(ip.toString(), port);
+        this->wide = SocketAddress(ip.toString(), port);
+    }
 
     if (this->state == PeerState::CONNECTED) {
         return;
@@ -215,7 +218,7 @@ void Peer::tick() {
     case PeerState::INIT:
         break;
     case PeerState::PREPARING:
-        if (!getManager().stun.uri.empty() && checkActivityWithin(std::chrono::seconds(10))) {
+        if (getManager().stun.enabled() && checkActivityWithin(std::chrono::seconds(10))) {
             getManager().stun.needed = true;
         } else {
             updateState(PeerState::FAILED);
