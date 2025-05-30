@@ -10,6 +10,7 @@
 #include <Poco/Net/PollSet.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
+#include <Poco/URI.h>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -25,10 +26,29 @@ class Client;
 struct Stun {
     std::string uri;
     SocketAddress address;
-    std::shared_mutex addressMutex;
     bool needed = false;
     IP4 ip;
     uint16_t port;
+
+    bool enabled() {
+        return !this->address.host().isWildcard();
+    }
+
+    int update() {
+        try {
+            if (!this->uri.empty()) {
+                Poco::URI uri(this->uri);
+                if (!uri.getPort()) {
+                    uri.setPort(3478);
+                }
+                this->address = Poco::Net::SocketAddress(uri.getHost(), uri.getPort());
+            }
+            return 0;
+        } catch (std::exception &e) {
+            spdlog::warn("set stun server address failed: {}", e.what());
+            return -1;
+        }
+    }
 };
 
 struct PeerRouteEntry {
@@ -78,6 +98,7 @@ private:
 
     Address tunAddr;
 
+    int startTickThread();
     void tick();
     std::thread tickThread;
     uint64_t tickTick = randomUint32();

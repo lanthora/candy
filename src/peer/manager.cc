@@ -8,7 +8,6 @@
 #include <Poco/Net/NetException.h>
 #include <Poco/Net/NetworkInterface.h>
 #include <Poco/Timespan.h>
-#include <Poco/URI.h>
 #include <openssl/sha.h>
 #include <shared_mutex>
 #include <spdlog/fmt/bin_to_hex.h>
@@ -58,24 +57,7 @@ int PeerManager::run(Client *client) {
     this->client = client;
     this->localP2PDisabled = false;
 
-    if (this->localhost.empty()) {
-        try {
-            for (const auto &iface : Poco::Net::NetworkInterface::list()) {
-                if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint() &&
-                    iface.type() != iface.NI_TYPE_OTHER) {
-                    auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
-                    memcpy(&this->localhost, firstAddress.addr(), sizeof(this->localhost));
-                    spdlog::debug("localhost: {}", this->localhost.toString());
-                    break;
-                }
-            }
-        } catch (std::exception &e) {
-            spdlog::warn("local ip failed: {}", e.what());
-        }
-    }
-
-    if (this->initSocket()) {
-        Candy::shutdown(this->client);
+    if (this->stun.update()) {
         return -1;
     }
 
@@ -83,15 +65,6 @@ int PeerManager::run(Client *client) {
         while (getClient().running) {
             handlePeerQueue();
         }
-        spdlog::debug("peer msg thread exit");
-    });
-    this->tickThread = std::thread([&] {
-        while (getClient().running) {
-            auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
-            tick();
-            std::this_thread::sleep_until(wake_time);
-        }
-        spdlog::debug("peer tick thread exit");
     });
 
     return 0;
@@ -136,6 +109,7 @@ void PeerManager::handlePeerQueue() {
         handlePacket(std::move(msg));
         break;
     case MsgKind::TUNADDR:
+        startTickThread();
         handleTunAddr(std::move(msg));
         break;
     case MsgKind::SYSRT:
@@ -259,24 +233,59 @@ void PeerManager::handlePubInfo(Msg msg) {
         return;
     }
 
-    std::shared_lock ipPeerLock(this->ipPeerMutex);
-    auto it = this->ipPeerMap.find(info->src);
-    if (it == this->ipPeerMap.end()) {
-        this->ipPeerMutex.unlock_shared();
-        {
-            std::unique_lock lock(this->ipPeerMutex);
-            this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(info->src),
-                                    std::forward_as_tuple(info->src, this));
+    {
+
+        std::shared_lock lock(this->ipPeerMutex);
+        auto it = this->ipPeerMap.find(info->src);
+        if (it != this->ipPeerMap.end()) {
+            it->second.handlePubInfo(info->ip, info->port, info->local);
         }
-        this->ipPeerMutex.lock_shared();
-        it = this->ipPeerMap.find(info->src);
     }
 
-    it->second.handlePubInfo(info->ip, info->port, info->local);
+    {
+        std::unique_lock lock(this->ipPeerMutex);
+        auto it = this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(info->src),
+                                          std::forward_as_tuple(info->src, this));
+        if (it.second) {
+            it.first->second.handlePubInfo(info->ip, info->port, info->local);
+            return;
+        }
+    }
+}
+
+int PeerManager::startTickThread() {
+    if (this->localhost.empty()) {
+        try {
+            for (const auto &iface : Poco::Net::NetworkInterface::list()) {
+                if (iface.supportsIPv4() && !iface.isLoopback() && !iface.isPointToPoint() &&
+                    iface.type() != iface.NI_TYPE_OTHER) {
+                    auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
+                    memcpy(&this->localhost, firstAddress.addr(), sizeof(this->localhost));
+                    spdlog::debug("localhost: {}", this->localhost.toString());
+                    break;
+                }
+            }
+        } catch (std::exception &e) {
+            spdlog::warn("local ip failed: {}", e.what());
+        }
+    }
+
+    if (this->initSocket()) {
+        Candy::shutdown(this->client);
+        return -1;
+    }
+    this->tickThread = std::thread([&] {
+        while (getClient().running) {
+            auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
+            tick();
+            std::this_thread::sleep_until(wake_time);
+        }
+    });
+    return 0;
 }
 
 void PeerManager::tick() {
-    if (this->discoveryInterval && !this->stun.uri.empty()) {
+    if (this->discoveryInterval && this->stun.enabled()) {
         if ((++tickTick % discoveryInterval == 0)) {
             getClient().getWsMsgQueue().write(Msg(MsgKind::DISCOVERY));
         }
@@ -314,24 +323,13 @@ int PeerManager::initSocket() {
         while (getClient().running) {
             poll();
         }
-        spdlog::debug("peer poll thread exit");
     });
     return 0;
 }
 
 void PeerManager::sendStunRequest() {
     try {
-        Poco::URI uri(this->stun.uri);
-        if (!uri.getPort()) {
-            uri.setPort(3478);
-        }
-        {
-            std::unique_lock lock(this->stun.addressMutex);
-            this->stun.address = Poco::Net::SocketAddress(uri.getHost(), uri.getPort());
-        }
-
         StunRequest request;
-        std::shared_lock lock(this->stun.addressMutex);
         if (sendTo(&request, sizeof(request), this->stun.address) != sizeof(request)) {
             spdlog::warn("the stun request was not completely sent");
         }
@@ -510,12 +508,7 @@ void PeerManager::poll() {
                 if (size > 0) {
                     buffer.resize(size);
 
-                    auto isStunResponse = [&]() {
-                        std::shared_lock lock(this->stun.addressMutex);
-                        return this->stun.address == address;
-                    }();
-
-                    if (isStunResponse) {
+                    if (this->stun.address == address) {
                         handleStunResponse(buffer);
                     } else if (auto plaintext = decrypt(buffer)) {
                         handleMessage(std::move(*plaintext), address);
