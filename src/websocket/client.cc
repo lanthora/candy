@@ -357,9 +357,6 @@ void WebSocketClient::sendDiscoveryMsg(IP4 dst) {
 }
 
 std::string WebSocketClient::hostName() {
-    if (!this->name.empty()) {
-        return this->name;
-    }
     char hostname[64] = {0};
     if (!gethostname(hostname, sizeof(hostname))) {
         return std::string(hostname, strnlen(hostname, sizeof(hostname)));

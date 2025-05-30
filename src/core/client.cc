@@ -108,21 +108,27 @@ void Client::setTunUpdateCallback(std::function<int(const std::string &)> callba
 }
 
 void Client::run() {
-    this->running = true;
-    ws.run(this);
-    tun.run(this);
-    peerManager.run(this);
+    std::lock_guard lock(this->runningMutex);
+    if (this->running == false) {
+        this->running = true;
+        ws.run(this);
+        tun.run(this);
+        peerManager.run(this);
+    }
 }
 
 void Client::shutdown() {
-    this->running = false;
-    ws.shutdown();
-    tun.shutdown();
-    peerManager.shutdown();
+    std::lock_guard lock(this->runningMutex);
+    if (this->running == true) {
+        this->running = false;
+        ws.shutdown();
+        tun.shutdown();
+        peerManager.shutdown();
 
-    wsMsgQueue.clear();
-    tunMsgQueue.clear();
-    peerMsgQueue.clear();
+        wsMsgQueue.clear();
+        tunMsgQueue.clear();
+        peerMsgQueue.clear();
+    }
 }
 
 } // namespace Candy
