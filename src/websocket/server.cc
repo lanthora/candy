@@ -213,11 +213,6 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
     }
 
     WsMsg::Forward *header = (WsMsg::Forward *)ctx.buffer.data();
-    if (ctx.ip != header->iph.saddr) {
-        spdlog::debug("forward failed: auth {} source {}", ctx.ip.toString(), header->iph.saddr.toString());
-        ctx.status = -1;
-        return;
-    }
 
     {
         std::shared_lock lock(this->ipCtxMutex);
