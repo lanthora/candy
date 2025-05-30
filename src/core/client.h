@@ -7,6 +7,7 @@
 #include "tun/tun.h"
 #include "websocket/client.h"
 #include <condition_variable>
+#include <mutex>
 #include <queue>
 #include <string>
 
@@ -47,6 +48,7 @@ public:
     void shutdown();
 
     bool running = false;
+    std::mutex runningMutex;
 
     std::string getName() const;
     IP4 address();
