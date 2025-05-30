@@ -188,32 +188,36 @@ public:
     }
 
     int read(std::string &buffer) {
-        DWORD size;
-        BYTE *packet = WintunReceivePacket(this->session, &size);
-        if (packet) {
-            buffer.assign((char *)packet, size);
-            WintunReleaseReceivePacket(this->session, packet);
-            return size;
+        if (this->session) {
+            DWORD size;
+            BYTE *packet = WintunReceivePacket(this->session, &size);
+            if (packet) {
+                buffer.assign((char *)packet, size);
+                WintunReleaseReceivePacket(this->session, packet);
+                return size;
+            }
+            if (GetLastError() == ERROR_NO_MORE_ITEMS) {
+                WaitForSingleObject(WintunGetReadWaitEvent(this->session), 1000);
+                return 0;
+            }
+            spdlog::error("wintun read failed: {}", GetLastError());
         }
-        if (GetLastError() == ERROR_NO_MORE_ITEMS) {
-            WaitForSingleObject(WintunGetReadWaitEvent(this->session), 1000);
-            return 0;
-        }
-        spdlog::error("wintun read failed: {}", GetLastError());
         return -1;
     }
 
     int write(const std::string &buffer) {
-        BYTE *packet = WintunAllocateSendPacket(this->session, buffer.size());
-        if (packet) {
-            memcpy(packet, buffer.c_str(), buffer.size());
-            WintunSendPacket(this->session, packet);
-            return buffer.size();
+        if (this->session) {
+            BYTE *packet = WintunAllocateSendPacket(this->session, buffer.size());
+            if (packet) {
+                memcpy(packet, buffer.c_str(), buffer.size());
+                WintunSendPacket(this->session, packet);
+                return buffer.size();
+            }
+            if (GetLastError() == ERROR_BUFFER_OVERFLOW) {
+                return 0;
+            }
+            spdlog::error("wintun write failed: {}", GetLastError());
         }
-        if (GetLastError() == ERROR_BUFFER_OVERFLOW) {
-            return 0;
-        }
-        spdlog::error("wintun write failed: {}", GetLastError());
         return -1;
     }
 
