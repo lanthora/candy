@@ -277,7 +277,7 @@ void WebSocketClient::handleDiscoveryMsg(std::string buffer) {
 
 void WebSocketClient::handleRouteMsg(std::string buffer) {
     if (buffer.size() < sizeof(WsMsg::SysRoute)) {
-        spdlog::warn("invalid expt tun message: {:n}", spdlog::to_hex(buffer));
+        spdlog::warn("invalid route message: {:n}", spdlog::to_hex(buffer));
         return;
     }
     WsMsg::SysRoute *header = (WsMsg::SysRoute *)buffer.data();

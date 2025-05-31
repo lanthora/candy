@@ -312,7 +312,7 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
     header->timestamp = hton(unixTime());
     std::strcpy(header->cidr, exptTun.toCidr().c_str());
     header->updateHash(this->password);
-    ctx.sendFrame(ctx.buffer.data());
+    ctx.sendFrame(ctx.buffer);
 }
 
 void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
