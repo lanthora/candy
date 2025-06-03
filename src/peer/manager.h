@@ -7,7 +7,6 @@
 #include "peer/message.h"
 #include "peer/peer.h"
 #include <Poco/Net/DatagramSocket.h>
-#include <Poco/Net/PollSet.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/URI.h>
@@ -143,7 +142,6 @@ public:
     bool clientRelayEnabled() const;
 
 private:
-    Poco::Net::PollSet pollSet;
     std::thread pollThread;
 
     int discoveryInterval = 0;

@@ -305,13 +305,11 @@ void PeerManager::tick() {
 
 int PeerManager::initSocket() {
     using Poco::Net::AddressFamily;
-    using Poco::Net::PollSet;
     using Poco::Net::SocketAddress;
 
     try {
         this->socket.bind(SocketAddress(AddressFamily::IPv4, this->listenPort));
         spdlog::debug("listen port: {}", this->socket.address().port());
-        this->pollSet.add(this->socket, PollSet::POLL_READ);
     } catch (Poco::Net::NetException &e) {
         spdlog::critical("peer socket init failed: {}: {}", e.what(), e.message());
         return -1;
@@ -494,26 +492,20 @@ void PeerManager::handleRouteMessage(std::string buffer, const SocketAddress &ad
 }
 
 void PeerManager::poll() {
-    using Poco::Net::PollSet;
     using Poco::Net::Socket;
     using Poco::Net::SocketAddress;
 
-    PollSet::SocketModeMap socketModeMap = this->pollSet.poll(Poco::Timespan(1, 0));
-    for (auto &pair : socketModeMap) {
-        if (pair.second & PollSet::POLL_READ) {
-            if (pair.first == socket) {
-                std::string buffer(1500, 0);
-                SocketAddress address;
-                auto size = socket.receiveFrom(buffer.data(), buffer.size(), address);
-                if (size > 0) {
-                    buffer.resize(size);
+    if (this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ)) {
+        std::string buffer(1500, 0);
+        SocketAddress address;
+        auto size = this->socket.receiveFrom(buffer.data(), buffer.size(), address);
+        if (size > 0) {
+            buffer.resize(size);
 
-                    if (this->stun.address == address) {
-                        handleStunResponse(buffer);
-                    } else if (auto plaintext = decrypt(buffer)) {
-                        handleMessage(std::move(*plaintext), address);
-                    }
-                }
+            if (this->stun.address == address) {
+                handleStunResponse(buffer);
+            } else if (auto plaintext = decrypt(buffer)) {
+                handleMessage(std::move(*plaintext), address);
             }
         }
     }
