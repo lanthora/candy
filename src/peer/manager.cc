@@ -62,9 +62,11 @@ int PeerManager::run(Client *client) {
     }
 
     this->msgThread = std::thread([&] {
+        spdlog::info("start thread: peer manager msg");
         while (getClient().running) {
             handlePeerQueue();
         }
+        spdlog::info("stop thread: peer manager msg");
     });
 
     return 0;
@@ -275,11 +277,14 @@ int PeerManager::startTickThread() {
         return -1;
     }
     this->tickThread = std::thread([&] {
+        spdlog::info("start thread: peer manager tick");
         while (getClient().running) {
             auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
             tick();
             std::this_thread::sleep_until(wake_time);
         }
+
+        spdlog::info("stop thread: peer manager tick");
     });
     return 0;
 }
@@ -318,9 +323,11 @@ int PeerManager::initSocket() {
     this->decryptCtx = std::shared_ptr<EVP_CIPHER_CTX>(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
 
     this->pollThread = std::thread([&]() {
+        spdlog::info("start thread: peer manager poll");
         while (getClient().running) {
             poll();
         }
+        spdlog::info("stop thread: peer manager poll");
     });
     return 0;
 }
