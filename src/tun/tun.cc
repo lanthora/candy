@@ -12,9 +12,11 @@ namespace Candy {
 int Tun::run(Client *client) {
     this->client = client;
     this->msgThread = std::thread([&] {
+        spdlog::info("start thread: tun msg");
         while (this->client->running) {
             handleTunQueue();
         }
+        spdlog::info("stop thread: tun msg");
     });
     return 0;
 }
@@ -113,13 +115,19 @@ void Tun::handleTunAddr(Msg msg) {
 
     this->tunThread = std::thread([&] {
         if (up()) {
+            spdlog::critical("tun up failed");
             Candy::shutdown(this->client);
             return;
         }
+
+        spdlog::info("start thread: tun");
         while (this->client->running) {
             handleTunDevice();
         }
+        spdlog::info("stop thread: tun");
+
         if (down()) {
+            spdlog::critical("tun down failed");
             Candy::shutdown(this->client);
             return;
         }

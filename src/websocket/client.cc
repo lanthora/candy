@@ -55,11 +55,6 @@ int WebSocketClient::setTunUpdateCallback(std::function<int(const std::string &)
 
 int WebSocketClient::run(Client *client) {
     this->client = client;
-    this->msgThread = std::thread([&] {
-        while (this->client->running) {
-            handleWsQueue();
-        }
-    });
 
     if (connect()) {
         spdlog::critical("websocket client connect failed");
@@ -74,12 +69,23 @@ int WebSocketClient::run(Client *client) {
         sendAuthMsg();
     }
 
+    this->msgThread = std::thread([&] {
+        spdlog::info("start thread: websocket client msg");
+        while (this->client->running) {
+            handleWsQueue();
+        }
+        spdlog::info("stop thread: websocket client msg");
+    });
+
     this->wsThread = std::thread([&] {
+        spdlog::info("start thread: websocket client ws");
         while (this->client->running) {
             if (handleWsConn()) {
+                Candy::shutdown(this->client);
                 break;
             }
         }
+        spdlog::info("stop thread: websocket client ws");
     });
 
     return 0;
@@ -155,7 +161,6 @@ int WebSocketClient::handleWsConn() {
         if (!this->ws->poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ)) {
             if (bootTime() - this->timestamp > 30000) {
                 spdlog::warn("websocket pong timeout");
-                Candy::shutdown(this->client);
                 return -1;
             }
             if (bootTime() - this->timestamp > 15000) {
@@ -168,7 +173,6 @@ int WebSocketClient::handleWsConn() {
         int length = this->ws->receiveFrame(buffer.data(), buffer.size(), flags);
         if (length == 0 && flags == 0) {
             spdlog::info("abnormal disconnect");
-            Candy::shutdown(this->client);
             return -1;
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_PING) {
@@ -183,7 +187,6 @@ int WebSocketClient::handleWsConn() {
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
             spdlog::info("websocket close: {}", buffer);
-            Candy::shutdown(this->client);
             return -1;
         }
         if (length > 0) {
@@ -195,7 +198,6 @@ int WebSocketClient::handleWsConn() {
         return 0;
     } catch (std::exception &e) {
         spdlog::warn("handle ws conn failed: {}", e.what());
-        Candy::shutdown(this->client);
         return -1;
     }
 }
