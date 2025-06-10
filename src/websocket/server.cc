@@ -306,7 +306,7 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
                 ctx.status = -1;
                 return;
             }
-        } while (!exptTun.isValid() && this->ipCtxMap.contains(exptTun.Host()));
+        } while (!exptTun.isValid() && this->ipCtxMap.find(exptTun.Host()) != this->ipCtxMap.end());
         this->dhcp = exptTun;
     }
     header->timestamp = hton(unixTime());

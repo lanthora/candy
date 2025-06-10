@@ -41,3 +41,5 @@ if (${CANDY_STATIC_OPENSSL})
 endif()
 
 target_link_libraries(tun PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
+
+target_link_libraries(tun PRIVATE utils)
