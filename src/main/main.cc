@@ -4,22 +4,64 @@
 #include "main/config.h"
 #include "utils/time.h"
 #include <atomic>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 #include <signal.h>
 #include <spdlog/spdlog.h>
 #include <string>
 
-std::atomic<bool> running = true;
+template <typename T> class Atomic {
+public:
+    explicit Atomic(T initial = T()) : value_(initial) {}
+
+    T load() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return value_;
+    }
+
+    void store(T new_value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        value_ = new_value;
+        cv_.notify_all();
+    }
+
+    void wait(const T &expected) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait(lock, [this, &expected] { return value_ != expected; });
+    }
+
+    template <typename Predicate> void wait_until(Predicate pred) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait(lock, pred);
+    }
+
+    void notify_one() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        cv_.notify_one();
+    }
+
+    void notify_all() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        cv_.notify_all();
+    }
+
+private:
+    T value_;
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+};
+
+Atomic<bool> running(true);
 
 namespace Candy {
 
 void shutdown(Client *client) {
-    running = false;
-    running.notify_one();
+    running.store(false);
 }
 
 void shutdown(Server *server) {
-    running = false;
-    running.notify_one();
+    running.store(false);
 }
 
 } // namespace Candy
@@ -73,8 +115,7 @@ int serve(const arguments &args) {
 
 void signalHandler(int signal) {
     exitCode = 0;
-    running = false;
-    running.notify_one();
+    running.store(false);
 }
 
 int main(int argc, char *argv[]) {
@@ -86,13 +127,13 @@ int main(int argc, char *argv[]) {
 
     if (!hasContainerVolume(args)) {
         spdlog::critical("the container needs to add a storage volume: {}", storageDirectory());
-        running = false;
+        running.store(false);
     }
 
     Candy::ntpServer = args.ntp;
 
-    while (running && serve(args) && args.restart) {
-        running = true;
+    while (running.load() && serve(args) && args.restart) {
+        running.store(true);
         Candy::useSystemTime = false;
         spdlog::info("service will restart in {} seconds", args.restart);
         std::this_thread::sleep_for(std::chrono::seconds(args.restart));

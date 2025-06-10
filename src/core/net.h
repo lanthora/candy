@@ -3,16 +3,40 @@
 #define CANDY_CORE_NET_H
 
 #include <array>
-#include <bit>
 #include <cstdint>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <type_traits>
 
 namespace Candy {
 
+template <typename T> typename std::enable_if<std::is_integral<T>::value, T>::type byteswap(T value) {
+    static_assert(std::is_integral<T>::value, "byteswap requires integral type");
+
+    union {
+        T value;
+        uint8_t bytes[sizeof(T)];
+    } src, dst;
+
+    src.value = value;
+    for (size_t i = 0; i < sizeof(T); i++) {
+        dst.bytes[i] = src.bytes[sizeof(T) - i - 1];
+    }
+    return dst.value;
+}
+
 template <typename T> T ntoh(T v) {
-    if (std::endian::native == std::endian::little) {
-        return std::byteswap(v);
+    static_assert(std::is_integral<T>::value, "ntoh requires integral type");
+
+    uint8_t *bytes = reinterpret_cast<uint8_t *>(&v);
+    bool isLittleEndian = true;
+    {
+        uint16_t test = 0x0001;
+        isLittleEndian = (*reinterpret_cast<uint8_t *>(&test) == 0x01);
+    }
+
+    if (isLittleEndian) {
+        return byteswap(v);
     }
     return v;
 }

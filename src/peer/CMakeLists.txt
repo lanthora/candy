@@ -20,3 +20,4 @@ else()
 endif()
 
 target_link_libraries(peer PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
+

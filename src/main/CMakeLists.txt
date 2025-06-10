@@ -3,6 +3,11 @@ add_executable(${CANDY_EXECUTE_NAME} ${DIR_SRCS})
 
 set_target_properties(${CANDY_EXECUTE_NAME} PROPERTIES CXX_STANDARD 23)
 
+find_library(STDCPPFS_LIB stdc++fs)
+if(STDCPPFS_LIB)
+    target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE ${STDCPPFS_LIB})
+endif()
+
 if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(${CANDY_EXECUTE_NAME} PRIVATE spdlog::spdlog)
 else()

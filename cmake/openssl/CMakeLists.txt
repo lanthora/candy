@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.18.4)
-cmake_policy(SET CMP0135 NEW)
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
 project(openssl)
 
 include(ExternalProject)

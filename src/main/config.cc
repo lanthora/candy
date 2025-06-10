@@ -275,6 +275,10 @@ std::string virtualMac(const std::string &name) {
     return initVirtualMac();
 }
 
+bool starts_with(const std::string &str, const std::string &prefix) {
+    return str.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), str.begin());
+}
+
 bool hasContainerVolume(const arguments &args) {
     if (args.mode != "client") {
         return true;
@@ -282,7 +286,7 @@ bool hasContainerVolume(const arguments &args) {
     if (!std::filesystem::exists(storageDirectory("lost"))) {
         return true;
     }
-    if (args.websocket.starts_with("wss://canets.org")) {
+    if (starts_with(args.websocket, "wss://canets.org")) {
         return false;
     }
     if (!args.tun.empty()) {

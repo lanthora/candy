@@ -7,7 +7,6 @@
 #include <Poco/Net/IPAddress.h>
 #include <Poco/Net/SocketAddress.h>
 #include <algorithm>
-#include <bit>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>

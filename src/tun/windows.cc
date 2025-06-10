@@ -4,7 +4,7 @@
 
 #include "core/net.h"
 #include "tun/tun.h"
-#include <codecvt>
+#include "utils/codecvt.h"
 #include <memory>
 #include <openssl/sha.h>
 #include <spdlog/fmt/bin_to_hex.h>
@@ -125,8 +125,7 @@ public:
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256((unsigned char *)data.c_str(), data.size(), hash);
         memcpy(&Guid, hash, sizeof(Guid));
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        this->adapter = WintunCreateAdapter(converter.from_bytes(this->name).c_str(), L"Candy", &Guid);
+        this->adapter = WintunCreateAdapter(Candy::UTF8ToUTF16(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
             spdlog::critical("create wintun adapter failed: {}", GetLastError());
             return -1;
