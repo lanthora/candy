@@ -2,7 +2,7 @@ aux_source_directory(. DIR_SRCS)
 add_library(${CANDY_LIBRARY_NAME} STATIC ${DIR_SRCS})
 
 set_target_properties(${CANDY_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${CANDY_EXECUTE_NAME})
-set_target_properties(${CANDY_LIBRARY_NAME} PROPERTIES CXX_STANDARD 23)
+set_target_properties(${CANDY_LIBRARY_NAME} PROPERTIES CXX_STANDARD 17)
 
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE core)
 target_link_libraries(${CANDY_LIBRARY_NAME} PRIVATE websocket)

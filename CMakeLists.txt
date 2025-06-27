@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18.4)
+cmake_minimum_required(VERSION 3.16)
 
 project(candy LANGUAGES C CXX VERSION 6.0.4)
 
