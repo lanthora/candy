@@ -1,7 +1,7 @@
 aux_source_directory(. DIR_LIB_SRCS)
 add_library(websocket STATIC ${DIR_LIB_SRCS})
 
-set_target_properties(websocket PROPERTIES CXX_STANDARD 23)
+set_target_properties(websocket PROPERTIES CXX_STANDARD 17)
 
 if (${CANDY_STATIC_SPDLOG})
     target_link_libraries(websocket PRIVATE spdlog::spdlog)
