@@ -113,13 +113,13 @@ void Tun::handleTunAddr(Msg msg) {
         return;
     }
 
-    this->tunThread = std::thread([&] {
-        if (up()) {
-            spdlog::critical("tun up failed");
-            Candy::shutdown(this->client);
-            return;
-        }
+    if (up()) {
+        spdlog::critical("tun up failed");
+        Candy::shutdown(this->client);
+        return;
+    }
 
+    this->tunThread = std::thread([&] {
         spdlog::info("start thread: tun");
         while (this->client->running) {
             handleTunDevice();
