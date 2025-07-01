@@ -14,7 +14,7 @@ jobs:
         uses: jidicula/clang-format-action@v4.11.0
         with:
           check-path: 'src'
-          exclude-regex: 'src/utils/argparse.h'
+          exclude-regex: 'argparse.h'
 
   linux:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
     runs-on: macos-latest
     steps:
     - name: depends
-      run: brew update && brew install fmt poco spdlog
+      run: brew update && brew install fmt poco spdlog nlohmann-json
     - name: checkout
       uses: actions/checkout@v4
     - name: build
@@ -57,6 +57,7 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-poco
+          mingw-w64-x86_64-nlohmann-json
     - name: checkout
       uses: actions/checkout@v4
     - name: cache

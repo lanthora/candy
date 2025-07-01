@@ -1,0 +1,12 @@
+{
+    "editor.detectIndentation": false,
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.formatOnSaveMode": "modifications",
+    "files.insertFinalNewline": true,
+    "json.format.enable": true,
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.autoAddFileAssociations": false,
+    "C_Cpp.errorSquiggles": "disabled"
+}
