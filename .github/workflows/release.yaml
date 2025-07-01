@@ -61,6 +61,7 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-poco
+          mingw-w64-x86_64-nlohmann-json
     - name: checkout
       uses: actions/checkout@v4
     - name: cache
@@ -74,8 +75,8 @@ jobs:
         cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
         mkdir artifact
         cp candy.cfg artifact
-        cp build/src/tun/wintun/bin/amd64/wintun.dll artifact
-        scripts/search-deps.sh build/src/main/candy.exe artifact
+        cp build/candy/wintun/bin/amd64/wintun.dll artifact
+        scripts/search-deps.sh build/candy-cli/candy.exe artifact
     - name: set release package name
       shell: bash
       if: github.event_name == 'release'

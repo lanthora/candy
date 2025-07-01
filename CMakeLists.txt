@@ -1,29 +1,30 @@
 cmake_minimum_required(VERSION 3.16)
+project(Candy VERSION 6.1.0)
 
-project(candy LANGUAGES C CXX VERSION 6.0.5)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(CANDY_NOEXE  "Don't build executable")
-option(CANDY_DEVEL  "Build development library")
-option(CANDY_STATIC "Static linking dependent libraries")
+add_compile_definitions(CANDY_VERSION="${PROJECT_VERSION}")
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
 
 if (${CANDY_STATIC})
-    set(CMAKE_SKIP_BUILD_RPATH TRUE)
     set(CANDY_STATIC_OPENSSL 1)
-    set(CANDY_STATIC_FMT 1)
     set(CANDY_STATIC_SPDLOG 1)
+    set(CANDY_STATIC_NLOHMANN_JSON 1)
     set(CANDY_STATIC_POCO 1)
 endif()
 
 find_package(PkgConfig REQUIRED)
+include(${CMAKE_SOURCE_DIR}/cmake/Fetch.cmake)
 
 if (${CANDY_STATIC_OPENSSL})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/openssl
     )
     execute_process(
-        COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/openssl
+        COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_SOURCE_DIR}/cmake/openssl
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/openssl
         RESULT_VARIABLE result
     )
@@ -63,18 +64,10 @@ else()
     find_package(OpenSSL REQUIRED)
 endif()
 
-if (${CANDY_STATIC_FMT})
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
-    Fetch(fmt "https://github.com/fmtlib/fmt.git" "10.2.1")
-endif()
-
 if (${CANDY_STATIC_SPDLOG})
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
-    Fetch(spdlog "https://github.com/gabime/spdlog.git" "v1.14.1")
+    Fetch(spdlog "https://github.com/gabime/spdlog.git" "v1.15.3")
 else()
-    pkg_check_modules(SPDLOG REQUIRED spdlog)
-    add_definitions(${SPDLOG_CFLAGS})
-    include_directories(${SPDLOG_INCLUDEDIR})
+    find_package(spdlog REQUIRED)
 endif()
 
 if (${CANDY_STATIC_POCO})
@@ -93,24 +86,16 @@ if (${CANDY_STATIC_POCO})
     set(ENABLE_ACTIVERECORD_COMPILER OFF CACHE BOOL "" FORCE)
     set(ENABLE_ZIP OFF CACHE BOOL "" FORCE)
     set(ENABLE_JWT OFF CACHE BOOL "" FORCE)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
     Fetch(poco "https://github.com/pocoproject/poco.git" "poco-1.13.3-release")
 else()
     find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
 endif()
 
-set(CANDY_EXECUTE_NAME "candy")
-set(CANDY_LIBRARY_NAME "libcandy")
+if (${CANDY_STATIC_NLOHMANN_JSON})
+    Fetch(nlohmann_json "https://github.com/nlohmann/json.git" "v3.11.3")
+else()
+    find_package(nlohmann_json REQUIRED)
+endif()
 
-add_compile_definitions(CANDY_VERSION="${PROJECT_VERSION}")
-add_compile_options("-Wfatal-errors")
-
-include_directories(${PROJECT_SOURCE_DIR}/src)
-
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/ffi)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/main)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/core)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/websocket)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/tun)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/peer)
-add_subdirectory(${PROJECT_SOURCE_DIR}/src/utils)
+add_subdirectory(candy)
+add_subdirectory(candy-cli)
