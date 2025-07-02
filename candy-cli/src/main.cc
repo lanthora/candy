@@ -6,10 +6,9 @@
 int main(int argc, char *argv[]) {
     arguments args;
     args.parse(argc, argv);
-
     auto config = args.json();
 
-    if (config["mode"] == "client") {
+    if (config.getValue<std::string>("mode") == "client") {
         static const std::string id = "cli";
 
         auto handler = [](int) -> void { candy::client::shutdown(id); };
@@ -21,14 +20,11 @@ int main(int argc, char *argv[]) {
             while (true) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 auto status = candy::client::status(id);
-                if (status) {
-                    auto it = (*status).find("address");
-                    if (it != (*status).end() && it->is_string()) {
-                        auto address = it->get<std::string>();
-                        if (!address.empty()) {
-                            saveTunAddress(config["name"], address);
-                            break;
-                        }
+                if (status && (*status).has("address")) {
+                    std::string address = (*status).getValue<std::string>("address");
+                    if (!address.empty()) {
+                        saveTunAddress(config.getValue<std::string>("name"), address);
+                        break;
                     }
                 }
             }
@@ -38,7 +34,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    if (config["mode"] == "server") {
+    if (config.getValue<std::string>("mode") == "server") {
         auto handler = [](int) -> void { candy::server::shutdown(); };
 
         signal(SIGINT, handler);

@@ -9,8 +9,7 @@ target_include_directories(candy-cli PUBLIC
 set_target_properties(candy-cli PROPERTIES OUTPUT_NAME "candy")
 
 target_link_libraries(candy-cli PRIVATE spdlog::spdlog)
-target_link_libraries(candy-cli PRIVATE Poco::Foundation)
-target_link_libraries(candy-cli PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(candy-cli PRIVATE Poco::Foundation Poco::JSON)
 target_link_libraries(candy-cli PRIVATE Candy::Library)
 
 install(TARGETS candy-cli)

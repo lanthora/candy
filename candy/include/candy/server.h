@@ -2,13 +2,13 @@
 #ifndef CANDY_SERVER_H
 #define CANDY_SERVER_H
 
-#include <nlohmann/json.hpp>
+#include <Poco/JSON/Object.h>
 #include <string>
 
 namespace candy {
 namespace server {
 
-bool run(const nlohmann::json &config);
+bool run(const Poco::JSON::Object &config);
 bool shutdown();
 
 } // namespace server

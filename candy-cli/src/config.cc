@@ -2,6 +2,7 @@
 #include "config.h"
 #include "argparse.h"
 #include "candy/candy.h"
+#include <Poco/JSON/Object.h>
 #include <Poco/Platform.h>
 #include <Poco/String.h>
 #include <filesystem>
@@ -9,29 +10,34 @@
 #include <functional>
 #include <iostream>
 #include <map>
-#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
 
-nlohmann::json arguments::json() {
-    nlohmann::json config = {
-        {"mode", this->mode},
-        {"websocket", this->websocket},
-        {"password", this->password},
-        {"dhcp", this->dhcp},
-        {"sdwan", this->sdwan},
-        {"name", this->name},
-        {"tun", this->tun},
-        {"stun", this->stun},
-        {"localhost", this->localhost},
-        {"discovery", this->discovery},
-        {"route", this->routeCost},
-        {"mtu", this->mtu},
-        {"port", this->port},
-        {"vmac", virtualMac(this->name)},
-        {"expt", loadTunAddress(this->name)},
-    };
+Poco::JSON::Object arguments::json() {
+    Poco::JSON::Object config;
+    config.set("mode", this->mode);
+    config.set("websocket", this->websocket);
+    config.set("password", this->password);
+
+    if (this->mode == "client") {
+        config.set("name", this->name);
+        config.set("tun", this->tun);
+        config.set("stun", this->stun);
+        config.set("localhost", this->localhost);
+        config.set("discovery", this->discovery);
+        config.set("route", this->routeCost);
+        config.set("mtu", this->mtu);
+        config.set("port", this->port);
+        config.set("vmac", virtualMac(this->name));
+        config.set("expt", loadTunAddress(this->name));
+    }
+
+    if (this->mode == "server") {
+        config.set("dhcp", this->dhcp);
+        config.set("sdwan", this->sdwan);
+    }
+
     return config;
 }
 

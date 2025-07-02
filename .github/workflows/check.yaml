@@ -28,7 +28,7 @@ jobs:
     runs-on: macos-latest
     steps:
     - name: depends
-      run: brew update && brew install fmt poco spdlog nlohmann-json
+      run: brew update && brew install fmt poco spdlog
     - name: checkout
       uses: actions/checkout@v4
     - name: build
@@ -57,7 +57,6 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-poco
-          mingw-w64-x86_64-nlohmann-json
     - name: checkout
       uses: actions/checkout@v4
     - name: cache

@@ -2,13 +2,13 @@
 #ifndef CANDY_CLI_CONFIG_H
 #define CANDY_CLI_CONFIG_H
 
+#include <Poco/JSON/Object.h>
 #include <map>
-#include <nlohmann/json.hpp>
 #include <string>
 
 struct arguments {
     int parse(int argc, char *argv[]);
-    nlohmann::json json();
+    Poco::JSON::Object json();
 
 private:
     void parseFile(std::string cfgFile);
