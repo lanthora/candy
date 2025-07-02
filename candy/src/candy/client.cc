@@ -2,10 +2,11 @@
 #include "candy/client.h"
 #include "core/client.h"
 #include "utils/atomic.h"
+#include <Poco/JSON/Object.h>
+#include <Poco/JSON/Stringifier.h>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <nlohmann/json.hpp>
 #include <optional>
 #include <shared_mutex>
 #include <spdlog/spdlog.h>
@@ -29,10 +30,10 @@ public:
         }
     }
 
-    nlohmann::json status() {
-        nlohmann::json data;
+    Poco::JSON::Object status() {
+        Poco::JSON::Object data;
         if (auto client = this->client.lock()) {
-            data["address"] = client->getTunCidr();
+            data.set("address", client->getTunCidr());
         }
         return data;
     }
@@ -70,27 +71,33 @@ bool try_erase_instance(const std::string &id) {
 
 } // namespace
 
-bool run(const std::string &id, const nlohmann::json &config) {
+bool run(const std::string &id, const Poco::JSON::Object &config) {
     auto instance = try_create_instance(id);
     if (!instance) {
         return false;
     }
 
-    spdlog::info("run enter: id={} config={}", id, config.dump(4));
+    auto toString = [](const Poco::JSON::Object &obj) -> std::string {
+        std::ostringstream oss;
+        Poco::JSON::Stringifier::stringify(obj, oss, 4);
+        return oss.str();
+    };
+
+    spdlog::info("run enter: id={} config={}", id, toString(config));
     while ((*instance)->is_running()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         auto client = (*instance)->create_client();
-        client->setName(config["name"]);
-        client->setPassword(config["password"]);
-        client->setWebSocket(config["websocket"]);
-        client->setTunAddress(config["tun"]);
-        client->setVirtualMac(config["vmac"]);
-        client->setExptTunAddress(config["expt"]);
-        client->setStun(config["stun"]);
-        client->setDiscoveryInterval(config["discovery"]);
-        client->setRouteCost(config["route"]), client->setMtu(config["mtu"]);
-        client->setPort(config["port"]);
-        client->setLocalhost(config["localhost"]);
+        client->setName(config.getValue<std::string>("name"));
+        client->setPassword(config.getValue<std::string>("password"));
+        client->setWebSocket(config.getValue<std::string>("websocket"));
+        client->setTunAddress(config.getValue<std::string>("tun"));
+        client->setVirtualMac(config.getValue<std::string>("vmac"));
+        client->setExptTunAddress(config.getValue<std::string>("expt"));
+        client->setStun(config.getValue<std::string>("stun"));
+        client->setDiscoveryInterval(config.getValue<int>("discovery"));
+        client->setRouteCost(config.getValue<int>("route")), client->setMtu(config.getValue<int>("mtu"));
+        client->setPort(config.getValue<int>("port"));
+        client->setLocalhost(config.getValue<std::string>("localhost"));
         client->run();
     }
     spdlog::info("run exit: id={} ", id);
@@ -111,7 +118,7 @@ bool shutdown(const std::string &id) {
     return true;
 }
 
-std::optional<nlohmann::json> status(const std::string &id) {
+std::optional<Poco::JSON::Object> status(const std::string &id) {
     std::shared_lock lock(instance_mutex);
     auto it = instance_map.find(id);
     if (it != instance_map.end()) {

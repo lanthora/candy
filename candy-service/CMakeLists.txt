@@ -9,8 +9,7 @@ target_include_directories(candy-service PUBLIC
 set_target_properties(candy-service PROPERTIES OUTPUT_NAME "candy-service")
 
 target_link_libraries(candy-service PRIVATE spdlog::spdlog)
-target_link_libraries(candy-service PRIVATE Poco::Foundation)
-target_link_libraries(candy-service PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(candy-service PRIVATE Poco::Foundation Poco::JSON)
 target_link_libraries(candy-service PRIVATE Candy::Library)
 
 install(TARGETS candy-service)

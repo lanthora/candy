@@ -3,7 +3,7 @@ RUN apk update
 RUN apk add spdlog openssl poco
 
 FROM base AS build
-RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev poco-dev nlohmann-json linux-headers
+RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev poco-dev linux-headers
 COPY . candy
 RUN cd candy && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build && cmake --install build
 

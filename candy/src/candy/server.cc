@@ -11,14 +11,14 @@ Utils::Atomic<bool> running(true);
 std::shared_ptr<Server> server;
 } // namespace
 
-bool run(const nlohmann::json &config) {
+bool run(const Poco::JSON::Object &config) {
     while (running.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         server = std::make_shared<Server>();
-        server->setWebSocket(config["websocket"]);
-        server->setPassword(config["password"]);
-        server->setDHCP(config["dhcp"]);
-        server->setSdwan(config["sdwan"]);
+        server->setWebSocket(config.getValue<std::string>("websocket"));
+        server->setPassword(config.getValue<std::string>("password"));
+        server->setDHCP(config.getValue<std::string>("dhcp"));
+        server->setSdwan(config.getValue<std::string>("sdwan"));
         server->run();
     }
     return true;

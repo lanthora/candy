@@ -61,7 +61,6 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-spdlog
           mingw-w64-x86_64-poco
-          mingw-w64-x86_64-nlohmann-json
     - name: checkout
       uses: actions/checkout@v4
     - name: cache

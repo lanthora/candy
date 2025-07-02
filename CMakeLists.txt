@@ -91,12 +91,6 @@ else()
     find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
 endif()
 
-if (${CANDY_STATIC_NLOHMANN_JSON})
-    Fetch(nlohmann_json "https://github.com/nlohmann/json.git" "v3.11.3")
-else()
-    find_package(nlohmann_json REQUIRED)
-endif()
-
 add_subdirectory(candy)
 add_subdirectory(candy-cli)
 add_subdirectory(candy-service)

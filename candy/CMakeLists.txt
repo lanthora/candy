@@ -16,8 +16,7 @@ else()
 endif()
 
 target_link_libraries(candy-library PRIVATE spdlog::spdlog)
-target_link_libraries(candy-library PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
-target_link_libraries(candy-library PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(candy-library PRIVATE Poco::Foundation Poco::JSON Poco::Net Poco::NetSSL)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
