@@ -1,35 +1,35 @@
-add_library(candy_library)
+add_library(candy-library)
 
 file(GLOB_RECURSE SOURCES "src/*.cc")
-target_sources(candy_library PRIVATE ${SOURCES})
+target_sources(candy-library PRIVATE ${SOURCES})
 
-target_include_directories(candy_library PUBLIC 
+target_include_directories(candy-library PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
 
 if (${CANDY_STATIC_OPENSSL})
-    target_link_libraries(candy_library PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
+    target_link_libraries(candy-library PRIVATE ${OPENSSL_LIB_CRYPTO} ${OPENSSL_LIB_SSL})
 else()
-    target_link_libraries(candy_library PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    target_link_libraries(candy-library PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
-target_link_libraries(candy_library PRIVATE spdlog::spdlog)
-target_link_libraries(candy_library PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
-target_link_libraries(candy_library PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(candy-library PRIVATE spdlog::spdlog)
+target_link_libraries(candy-library PRIVATE Poco::Foundation Poco::Net Poco::NetSSL)
+target_link_libraries(candy-library PRIVATE nlohmann_json::nlohmann_json)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-target_link_libraries(candy_library PRIVATE Threads::Threads)
+target_link_libraries(candy-library PRIVATE Threads::Threads)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    target_link_libraries(candy_library PRIVATE ws2_32)
+    target_link_libraries(candy-library PRIVATE ws2_32)
 endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    target_link_libraries(candy_library PRIVATE iphlpapi)
-    target_link_libraries(candy_library PRIVATE ws2_32)
+    target_link_libraries(candy-library PRIVATE iphlpapi)
+    target_link_libraries(candy-library PRIVATE ws2_32)
 
     set(WINTUN_VERSION 0.14.1)
     set(WINTUN_ZIP wintun-${WINTUN_VERSION}.zip)
@@ -54,8 +54,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     include_directories(${CMAKE_CURRENT_BINARY_DIR}/wintun/include)
 endif()
 
-set_target_properties(candy_library PROPERTIES
-    OUTPUT_NAME "candy"
-)
+set_target_properties(candy-library PROPERTIES OUTPUT_NAME "candy")
 
-add_library(Candy::Library ALIAS candy_library)
+add_library(Candy::Library ALIAS candy-library)

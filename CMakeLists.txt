@@ -17,14 +17,14 @@ if (${CANDY_STATIC})
 endif()
 
 find_package(PkgConfig REQUIRED)
-include(${CMAKE_SOURCE_DIR}/cmake/Fetch.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Fetch.cmake)
 
 if (${CANDY_STATIC_OPENSSL})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/openssl
     )
     execute_process(
-        COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_SOURCE_DIR}/cmake/openssl
+        COMMAND ${CMAKE_COMMAND} -DTARGET_OPENSSL=${TARGET_OPENSSL} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/openssl
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/openssl
         RESULT_VARIABLE result
     )
@@ -99,3 +99,4 @@ endif()
 
 add_subdirectory(candy)
 add_subdirectory(candy-cli)
+add_subdirectory(candy-service)
