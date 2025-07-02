@@ -91,6 +91,9 @@ else()
     find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
 endif()
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 add_subdirectory(candy)
 add_subdirectory(candy-cli)
 add_subdirectory(candy-service)
