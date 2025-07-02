@@ -111,7 +111,9 @@ bool IP4Header::isIPIP() {
 Address::Address() {}
 
 Address::Address(const std::string &cidr) {
-    fromCidr(cidr);
+    if (!cidr.empty()) {
+        fromCidr(cidr);
+    }
 }
 
 IP4 &Address::Host() {

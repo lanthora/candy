@@ -79,7 +79,7 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
 
     auto toString = [](const Poco::JSON::Object &obj) -> std::string {
         std::ostringstream oss;
-        Poco::JSON::Stringifier::stringify(obj, oss, 4);
+        Poco::JSON::Stringifier::stringify(obj, oss);
         return oss.str();
     };
 
