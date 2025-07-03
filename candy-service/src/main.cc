@@ -40,7 +40,7 @@ protected:
     }
 };
 
-class RunRequestHandler : public BaseJSONHandler {
+class RunHandler : public BaseJSONHandler {
 public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) override {
         if (request.getMethod() != Poco::Net::HTTPRequest::HTTP_POST) {
@@ -51,6 +51,7 @@ public:
         auto json = readRequest(request);
         auto id = json->getValue<std::string>("id");
         auto config = json->getObject("config");
+        json->remove("config");
 
         std::lock_guard lock(threadMutex);
         auto it = threadMap.find(id);
@@ -66,7 +67,7 @@ public:
     }
 };
 
-class StatusRequestHandler : public BaseJSONHandler {
+class StatusHandler : public BaseJSONHandler {
 public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) override {
         if (request.getMethod() != Poco::Net::HTTPRequest::HTTP_POST) {
@@ -94,7 +95,7 @@ public:
     }
 };
 
-class ShutdownRequestHandler : public BaseJSONHandler {
+class ShutdownHandler : public BaseJSONHandler {
 public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) override {
         if (request.getMethod() != Poco::Net::HTTPRequest::HTTP_POST) {
@@ -126,18 +127,18 @@ public:
         const std::string &uri = request.getURI();
 
         if (uri == "/api/run") {
-            return new RunRequestHandler;
+            return new RunHandler;
         } else if (uri == "/api/status") {
-            return new StatusRequestHandler;
+            return new StatusHandler;
         } else if (uri == "/api/shutdown") {
-            return new ShutdownRequestHandler;
+            return new ShutdownHandler;
         }
 
         return nullptr;
     }
 };
 
-class JSONServerApp : public Poco::Util::ServerApplication {
+class CandyServiceApp : public Poco::Util::ServerApplication {
 protected:
     std::string bindAddress;
     int port = 0;
@@ -154,13 +155,13 @@ protected:
         options.addOption(Poco::Util::Option("help", "h", "Display help information")
                               .required(false)
                               .repeatable(false)
-                              .callback(Poco::Util::OptionCallback<JSONServerApp>(this, &JSONServerApp::handleHelp)));
+                              .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleHelp)));
 
         options.addOption(Poco::Util::Option("bind", "b", "Bind address and port (address:port)")
                               .required(false)
                               .repeatable(false)
                               .argument("address:port")
-                              .callback(Poco::Util::OptionCallback<JSONServerApp>(this, &JSONServerApp::handleBind)));
+                              .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleBind)));
     }
 
     void handleHelp(const std::string &name, const std::string &value) {
@@ -172,7 +173,7 @@ protected:
     void handleBind(const std::string &name, const std::string &value) {
         size_t pos = value.find(':');
         if (pos == std::string::npos) {
-            std::cerr << "Invalid bind format. Use address:port (e.g., 0.0.0.0:8080)" << std::endl;
+            std::cerr << "Invalid bind format. Use address:port (e.g., 0.0.0.0:26817)" << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
@@ -197,8 +198,8 @@ protected:
         }
 
         if (bindAddress.empty()) {
-            bindAddress = "0.0.0.0";
-            port = 8080;
+            bindAddress = "localhost";
+            port = 26817;
         }
 
         try {
@@ -238,6 +239,6 @@ protected:
 };
 
 int main(int argc, char **argv) {
-    JSONServerApp app;
+    CandyServiceApp app;
     return app.run(argc, argv);
 }
