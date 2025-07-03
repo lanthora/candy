@@ -76,6 +76,7 @@ jobs:
         cp candy.cfg artifact
         cp build/candy/wintun/bin/amd64/wintun.dll artifact
         scripts/search-deps.sh build/candy-cli/candy.exe artifact
+        scripts/search-deps.sh build/candy-service/candy-service.exe artifact
     - name: set release package name
       shell: bash
       if: github.event_name == 'release'

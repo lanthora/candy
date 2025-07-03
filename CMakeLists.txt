@@ -88,7 +88,7 @@ if (${CANDY_STATIC_POCO})
     set(ENABLE_JWT OFF CACHE BOOL "" FORCE)
     Fetch(poco "https://github.com/pocoproject/poco.git" "poco-1.13.3-release")
 else()
-    find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL)
+    find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL Util)
 endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

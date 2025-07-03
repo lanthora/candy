@@ -64,14 +64,18 @@ if which ninja >/dev/null 2>&1;then GENERATOR="Ninja";else GENERATOR="Unix Makef
 SOURCE_DIR="$(dirname $(readlink -f "$0"))/../"
 cmake -G "$GENERATOR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCANDY_STATIC=1 -DTARGET_OPENSSL=$TARGET_OPENSSL $SOURCE_DIR
 cmake --build $BUILD_DIR --parallel $(nproc)
-mkdir -p $OUTPUT_DIR && cp $BUILD_DIR/candy-cli/candy $OUTPUT_DIR/candy
+mkdir -p $OUTPUT_DIR
+cp $BUILD_DIR/candy-cli/candy $OUTPUT_DIR/candy
+cp $BUILD_DIR/candy-service/candy-service $OUTPUT_DIR/candy-service
 
 if [[ $CANDY_STRIP && $CANDY_STRIP -eq 1 ]];then
     $STRIP $OUTPUT_DIR/candy
+    $STRIP $OUTPUT_DIR/candy-service
 fi
 
 if [[ $CANDY_UPX && $CANDY_UPX -eq 1 && $UPX -eq 1 ]];then
     upx --lzma --best -q $OUTPUT_DIR/candy
+    upx --lzma --best -q $OUTPUT_DIR/candy-service
 fi
 
 if [[ $CANDY_TGZ && $CANDY_TGZ -eq 1 && $CANDY_OS && $CANDY_ARCH ]];then
