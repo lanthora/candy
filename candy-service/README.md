@@ -73,7 +73,7 @@ candy-service \h
 ```json
 {
   "id": "test",
-  "message": "sucess",
+  "message": "success",
   "status": {
     "address": "192.168.202.1/24"
   }

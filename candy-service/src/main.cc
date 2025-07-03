@@ -60,7 +60,7 @@ public:
         } else {
             auto thread = std::thread([=]() { candy::client::run(id, *config); });
             threadMap.insert({id, std::move(thread)});
-            json->set("message", "sucess");
+            json->set("message", "success");
         }
 
         sendResponse(response, json);
@@ -83,7 +83,7 @@ public:
         if (it != threadMap.end()) {
             if (auto status = candy::client::status(id)) {
                 json->set("status", *status);
-                json->set("message", "sucess");
+                json->set("message", "success");
             } else {
                 json->set("message", "unable to get status");
             }
@@ -112,7 +112,7 @@ public:
         if (it != threadMap.end()) {
             it->second.detach();
             threadMap.erase(it);
-            json->set("message", "sucess");
+            json->set("message", "success");
         } else {
             json->set("message", "id does not exist");
         }
@@ -203,8 +203,8 @@ protected:
         }
 
         try {
-            Poco::Net::SocketAddress sa(bindAddress, port);
-            Poco::Net::ServerSocket svs(sa);
+            // FIXME: 多个进程可以重用端口,需要解决
+            Poco::Net::ServerSocket svs(Poco::Net::SocketAddress(bindAddress, port));
 
             Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams;
             params->setMaxQueued(10);
