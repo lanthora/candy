@@ -139,10 +139,10 @@ int PeerManager::handlePeerQueue() {
 }
 
 int PeerManager::sendPacket(IP4 dst, const Msg &msg) {
-    if (!sendPacketDirect(dst, msg)) {
+    if (!sendPacketRelay(dst, msg)) {
         return 0;
     }
-    if (!sendPacketRelay(dst, msg)) {
+    if (!sendPacketDirect(dst, msg)) {
         return 0;
     }
     return -1;
