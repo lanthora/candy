@@ -12,13 +12,13 @@ Candy 客户端的另一个实现.
 Linux
 
 ```bash
-candy-service -h
+candy-service --help
 ```
 
 Windows 
   
 ```bat
-candy-service \h
+candy-service /help
 ```
 
 请求响应中的 **id** 用于标识网络连接, 通过不同标识可以同时加入多个网络, 这个标识用于查看状态和关闭网络.

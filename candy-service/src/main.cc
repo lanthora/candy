@@ -152,12 +152,12 @@ protected:
     void defineOptions(Poco::Util::OptionSet &options) override {
         Poco::Util::ServerApplication::defineOptions(options);
 
-        options.addOption(Poco::Util::Option("help", "h", "Display help information")
+        options.addOption(Poco::Util::Option("help", "", "Display help information")
                               .required(false)
                               .repeatable(false)
                               .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleHelp)));
 
-        options.addOption(Poco::Util::Option("bind", "b", "Bind address and port (address:port)")
+        options.addOption(Poco::Util::Option("bind", "", "Bind address and port (address:port)")
                               .required(false)
                               .repeatable(false)
                               .argument("address:port")
