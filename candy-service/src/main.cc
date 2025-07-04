@@ -203,14 +203,15 @@ protected:
         }
 
         try {
-            // FIXME: 多个进程可以重用端口,需要解决
-            Poco::Net::ServerSocket svs(Poco::Net::SocketAddress(bindAddress, port));
+            Poco::Net::ServerSocket socket;
+            socket.bind(Poco::Net::SocketAddress(bindAddress, port));
+            socket.listen();
 
             Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams;
             params->setMaxQueued(10);
             params->setMaxThreads(1);
 
-            Poco::Net::HTTPServer server(new JSONRequestHandlerFactory, svs, params);
+            Poco::Net::HTTPServer server(new JSONRequestHandlerFactory, socket, params);
 
             server.start();
             std::cout << "candy-service bind: " << bindAddress << ":" << port << std::endl;
