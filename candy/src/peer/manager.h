@@ -124,7 +124,7 @@ private:
     void handleForwardMessage(std::string buffer, const SocketAddress &address);
     void handleDelayMessage(std::string buffer, const SocketAddress &address);
     void handleRouteMessage(std::string buffer, const SocketAddress &address);
-    void poll();
+    int poll();
 
     std::optional<std::string> decrypt(const std::string &ciphertext);
     std::shared_ptr<EVP_CIPHER_CTX> decryptCtx;
