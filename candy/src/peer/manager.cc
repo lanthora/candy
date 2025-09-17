@@ -331,6 +331,8 @@ int PeerManager::initSocket() {
 
     try {
         this->socket.bind(SocketAddress(AddressFamily::IPv4, this->listenPort));
+        this->socket.setSendBufferSize(16 * 1024 * 1024);
+        this->socket.setReceiveBufferSize(16 * 1024 * 1024);
         spdlog::debug("listen port: {}", this->socket.address().port());
     } catch (Poco::Net::NetException &e) {
         spdlog::critical("peer socket init failed: {}: {}", e.what(), e.message());
