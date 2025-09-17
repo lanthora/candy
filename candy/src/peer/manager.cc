@@ -342,7 +342,9 @@ int PeerManager::initSocket() {
     this->pollThread = std::thread([&]() {
         spdlog::debug("start thread: peer manager poll");
         while (getClient().isRunning()) {
-            poll();
+            if (poll()) {
+                break;
+            }
         }
         getClient().shutdown();
         spdlog::debug("stop thread: peer manager poll");
@@ -516,24 +518,32 @@ void PeerManager::handleRouteMessage(std::string buffer, const SocketAddress &ad
     }
 }
 
-void PeerManager::poll() {
+int PeerManager::poll() {
     using Poco::Net::Socket;
     using Poco::Net::SocketAddress;
 
-    if (this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ)) {
-        std::string buffer(1500, 0);
-        SocketAddress address;
-        auto size = this->socket.receiveFrom(buffer.data(), buffer.size(), address);
-        if (size > 0) {
-            buffer.resize(size);
+    try {
+        if (this->socket.poll(Poco::Timespan(1, 0), Poco::Net::Socket::SELECT_READ)) {
+            std::string buffer(1500, 0);
+            SocketAddress address;
+            auto size = this->socket.receiveFrom(buffer.data(), buffer.size(), address);
+            if (size > 0) {
+                buffer.resize(size);
 
-            if (this->stun.address == address) {
-                handleStunResponse(buffer);
-            } else if (auto plaintext = decrypt(buffer)) {
-                handleMessage(std::move(*plaintext), address);
+                if (this->stun.address == address) {
+                    handleStunResponse(buffer);
+                } else if (auto plaintext = decrypt(buffer)) {
+                    handleMessage(std::move(*plaintext), address);
+                }
             }
         }
+    } catch (Poco::Net::ConnectionResetException &e) {
+        // 忽略 UDP 的连接 Reset, Windows 特有的问题
+    } catch (std::exception &e) {
+        spdlog::warn("peer_manager poll failed: {}", e.what());
+        return -1;
     }
+    return 0;
 }
 
 std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
