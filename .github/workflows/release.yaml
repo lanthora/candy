@@ -71,7 +71,7 @@ jobs:
     - name: build
       shell: msys2 {0}
       run: |
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build
         mkdir artifact
         cp candy.cfg artifact
         cp build/candy/wintun/bin/amd64/wintun.dll artifact

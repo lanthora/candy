@@ -5,7 +5,7 @@ RUN apk add spdlog openssl poco
 FROM base AS build
 RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev poco-dev linux-headers
 COPY . candy
-RUN cd candy && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build && cmake --install build
+RUN cd candy && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build && cmake --install build
 
 FROM base AS product
 RUN install -D /dev/null /var/lib/candy/lost

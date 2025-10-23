@@ -193,7 +193,8 @@ int WebSocketClient::handleWsConn() {
             handleWsMsg(std::move(buffer));
             return 0;
         }
-        return 0;
+        spdlog::warn("handle ws conn failed: unexpected empty message");
+        return -1;
     } catch (std::exception &e) {
         spdlog::warn("handle ws conn failed: {}", e.what());
         return -1;
