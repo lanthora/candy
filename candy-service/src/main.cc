@@ -1,5 +1,6 @@
 #include "candy/client.h"
 #include <Poco/Exception.h>
+#include <Poco/File.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/JSON/Parser.h>
 #include <Poco/Net/HTTPRequestHandler.h>
@@ -19,6 +20,8 @@
 #include <iterator>
 #include <map>
 #include <mutex>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/spdlog.h>
 #include <sstream>
 #include <thread>
 
@@ -143,6 +146,8 @@ protected:
     std::string bindAddress;
     int port = 0;
     bool helpRequested = false;
+    std::string logdir;
+    std::string loglevel;
 
     void initialize(Poco::Util::Application &self) override {
         loadConfiguration();
@@ -162,6 +167,16 @@ protected:
                               .repeatable(false)
                               .argument("address:port")
                               .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleBind)));
+        options.addOption(Poco::Util::Option("logdir", "", "Specify log directory")
+                              .required(false)
+                              .repeatable(false)
+                              .argument("path")
+                              .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleLogDir)));
+        options.addOption(Poco::Util::Option("loglevel", "", "Specify log level")
+                              .required(false)
+                              .repeatable(false)
+                              .argument("level")
+                              .callback(Poco::Util::OptionCallback<CandyServiceApp>(this, &CandyServiceApp::handleLogLevel)));
     }
 
     void handleHelp(const std::string &name, const std::string &value) {
@@ -186,6 +201,14 @@ protected:
         }
     }
 
+    void handleLogDir(const std::string &name, const std::string &dir) {
+        this->logdir = dir;
+    }
+
+    void handleLogLevel(const std::string &name, const std::string &level) {
+        this->loglevel = level;
+    }
+
     void displayHelp() {
         Poco::Util::HelpFormatter helpFormatter(options());
         helpFormatter.setCommand(commandName());
@@ -195,6 +218,16 @@ protected:
     int main(const std::vector<std::string> &args) override {
         if (helpRequested) {
             return Poco::Util::Application::EXIT_OK;
+        }
+
+        if (!logdir.empty()) {
+            Poco::File(logdir).createDirectories();
+            auto logger = spdlog::rotating_logger_mt("app", logdir + "/app.log", 10 * 1024 * 1024, 5, true);
+            spdlog::set_default_logger(logger);
+        }
+
+        if (!loglevel.empty()) {
+            spdlog::set_level(spdlog::level::from_str(loglevel));
         }
 
         if (bindAddress.empty()) {
