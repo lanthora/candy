@@ -48,8 +48,8 @@ jobs:
           CANDY_WORKSPACE: ${{ env.WORKSPACE }}
           CANDY_OS: ${{ matrix.os }}
           CANDY_ARCH: ${{ matrix.arch }}
-          CANDY_STRIP: "1"
-          CANDY_UPX: "1"
+          CANDY_STRIP: "0"
+          CANDY_UPX: "0"
           CANDY_TGZ: "1"
       - name: upload
         uses: actions/upload-artifact@v4
