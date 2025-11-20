@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "peer/peer.h"
 #include "core/client.h"
 #include "core/message.h"

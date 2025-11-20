@@ -49,8 +49,8 @@ export AR="$COMPILER_ROOT/bin/$TARGET-ar"
 export LD="$COMPILER_ROOT/bin/$TARGET-ld"
 export RANLIB="$COMPILER_ROOT/bin/$TARGET-ranlib"
 export STRIP="$COMPILER_ROOT/bin/$TARGET-strip"
-export CFLAGS="-I $COMPILER_ROOT/$TARGET/include -L $COMPILER_ROOT/$TARGET/lib"
-export LDFLAGS="-static $CFLAGS"
+export CFLAGS="-I $COMPILER_ROOT/$TARGET/include"
+export LDFLAGS="-static -Wl,--whole-archive -latomic -Wl,--no-whole-archive $CFLAGS"
 
 if [[ $CANDY_OS && $CANDY_ARCH ]];then
     BUILD_DIR="$CANDY_WORKSPACE/build/$CANDY_OS-$CANDY_ARCH"

@@ -247,9 +247,11 @@ protected:
             Poco::Net::HTTPServer server(new JSONRequestHandlerFactory, socket, params);
 
             server.start();
-            std::cout << "candy-service bind: " << bindAddress << ":" << port << std::endl;
+            spdlog::info("bind: {}:{}", bindAddress, port);
 
             waitForTerminationRequest();
+            spdlog::info("exit signal detected");
+
             server.stop();
 
             std::lock_guard lock(threadMutex);

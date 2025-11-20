@@ -8,11 +8,13 @@ include(ExternalProject)
 ExternalProject_Add(
     openssl
     PREFIX                      ${CMAKE_CURRENT_BINARY_DIR}/openssl
-    URL                         https://www.openssl.org/source/openssl-3.4.0.tar.gz
+    URL                         https://www.openssl.org/source/openssl-3.5.4.tar.gz
     LOG_BUILD                   ON
     BUILD_IN_SOURCE             YES
+    CONFIGURE_COMMAND 
+        COMMAND sed -i "s/disable('static', 'pic', 'threads')/disable('static', 'pic')/" Configure
+        COMMAND ./config --release no-unit-test no-shared ${TARGET_OPENSSL} CFLAGS=$ENV{CFLAGS} LDFLAGS=$ENV{LDFLAGS}
     BUILD_COMMAND               ""
-    CONFIGURE_COMMAND           ./config --release no-unit-test no-shared ${TARGET_OPENSSL} CFLAGS=$ENV{CFLAGS} LDFLAGS=$ENV{LDFLAGS}
     INSTALL_COMMAND             ""
     TEST_COMMAND                ""
 )
