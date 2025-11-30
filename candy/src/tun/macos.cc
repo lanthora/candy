@@ -62,11 +62,13 @@ public:
         int flags = fcntl(this->tunFd, F_GETFL, 0);
         if (flags < 0) {
             spdlog::error("get tun flags failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
         flags |= O_NONBLOCK;
         if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
             spdlog::error("set non-blocking tun failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
@@ -75,6 +77,7 @@ public:
         strncpy(info.ctl_name, UTUN_CONTROL_NAME, MAX_KCTL_NAME);
         if (ioctl(this->tunFd, CTLIOCGINFO, &info) == -1) {
             spdlog::critical("get control id failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
@@ -87,12 +90,14 @@ public:
         ctl.sc_unit = 0;
         if (connect(this->tunFd, (struct sockaddr *)&ctl, sizeof(ctl)) == -1) {
             spdlog::critical("connect to control failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
         socklen_t ifname_len = sizeof(ifname);
         if (getsockopt(this->tunFd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, ifname, &ifname_len) == -1) {
             spdlog::critical("get interface name failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
@@ -109,6 +114,7 @@ public:
         int sockfd = socket(addr->sin_family, SOCK_DGRAM, 0);
         if (sockfd == -1) {
             spdlog::critical("create socket failed");
+            close(this->tunFd);
             return -1;
         }
 
@@ -132,6 +138,7 @@ public:
             spdlog::critical("set ip mask failed: {}: ip {} mask {}", strerror(errno), this->ip.toString(),
                              this->mask.toString());
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
@@ -140,6 +147,7 @@ public:
         if (ioctl(sockfd, SIOCSIFMTU, &ifr) == -1) {
             spdlog::critical("set mtu failed: mtu {}", this->mtu);
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
@@ -147,18 +155,21 @@ public:
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
             spdlog::critical("get interface flags failed");
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
         ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
         if (ioctl(sockfd, SIOCSIFFLAGS, &ifr) == -1) {
             spdlog::critical("set interface flags failed");
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
         close(sockfd);
 
         // 设置路由
         if (setSysRtTable(this->ip & this->mask, this->mask, this->ip)) {
+            close(this->tunFd);
             return -1;
         }
         return 0;

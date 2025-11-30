@@ -48,16 +48,19 @@ public:
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
             spdlog::critical("open /dev/net/tun failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
         int flags = fcntl(this->tunFd, F_GETFL, 0);
         if (flags < 0) {
             spdlog::error("get tun flags failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
         flags |= O_NONBLOCK;
         if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
             spdlog::error("set non-blocking tun failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
@@ -68,6 +71,7 @@ public:
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
             spdlog::critical("set tun interface failed: {}", strerror(errno));
+            close(this->tunFd);
             return -1;
         }
 
@@ -78,6 +82,7 @@ public:
         int sockfd = socket(addr->sin_family, SOCK_DGRAM, 0);
         if (sockfd == -1) {
             spdlog::critical("create socket failed");
+            close(this->tunFd);
             return -1;
         }
 
@@ -86,6 +91,7 @@ public:
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
             spdlog::critical("set ip address failed: ip {}", this->ip.toString());
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
@@ -94,6 +100,7 @@ public:
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
             spdlog::critical("set mask failed: mask {}", this->mask.toString());
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
@@ -102,6 +109,7 @@ public:
         if (ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
             spdlog::critical("set mtu failed: mtu {}", this->mtu);
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
@@ -109,12 +117,14 @@ public:
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
             spdlog::critical("get interface flags failed");
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
         ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
         if (ioctl(sockfd, SIOCSIFFLAGS, &ifr) == -1) {
             spdlog::critical("set interface flags failed");
             close(sockfd);
+            close(this->tunFd);
             return -1;
         }
 
