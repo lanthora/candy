@@ -390,6 +390,8 @@ int WebSocketClient::connect() {
             spdlog::critical("invalid websocket scheme: {}", wsServerUri);
             return -1;
         }
+        // Blocking mode may cause receiveFrame to hang and use 100% CPU
+        this->ws->setBlocking(false);
         this->timestamp = bootTime();
         this->pingMessage = fmt::format("candy::{}::{}::{}", CANDY_SYSTEM, CANDY_VERSION, hostName());
         spdlog::debug("client info: {}", this->pingMessage);
