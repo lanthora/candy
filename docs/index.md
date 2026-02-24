@@ -24,7 +24,9 @@
 
 - [Cacao](https://github.com/lanthora/cacao): WebUI 版的 Candy 服务器
 - [Cake](https://github.com/lanthora/cake): Qt 实现的 Candy GUI 桌面应用程序
+- [Candy Android](https://github.com/Jercrox/Candy_Android_Client): Android 客户端
 - [EasyTier](https://github.com/EasyTier/EasyTier): 一个简单、安全、去中心化的内网穿透 VPN 组网方案，使用 Rust 语言和 Tokio 框架实现
+- [candygo](https://github.com/SoraKasvgano/candygo): 一个简单的与candy原项目配置文件兼容的go版本
 
 ## 交流群
 
