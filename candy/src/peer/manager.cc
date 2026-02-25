@@ -108,32 +108,40 @@ std::string PeerManager::getPassword() {
 
 int PeerManager::handlePeerQueue() {
     Msg msg = getClient().getPeerMsgQueue().read();
-    switch (msg.kind) {
-    case MsgKind::TIMEOUT:
-        break;
-    case MsgKind::PACKET:
-        handlePacket(std::move(msg));
-        break;
-    case MsgKind::TUNADDR:
-        if (startTickThread()) {
-            return -1;
+    try {
+        switch (msg.kind) {
+        case MsgKind::TIMEOUT:
+            break;
+        case MsgKind::PACKET:
+            handlePacket(std::move(msg));
+            break;
+        case MsgKind::TUNADDR:
+            if (startTickThread()) {
+                return -1;
+            }
+            if (handleTunAddr(std::move(msg))) {
+                return -1;
+            }
+            break;
+        case MsgKind::SYSRT:
+            this->localP2PDisabled = true;
+            break;
+        case MsgKind::TRYP2P:
+            handleTryP2P(std::move(msg));
+            break;
+        case MsgKind::PUBINFO:
+            handlePubInfo(std::move(msg));
+            break;
+        default:
+            spdlog::warn("unexcepted peer message type: {}", static_cast<int>(msg.kind));
+            break;
         }
-        if (handleTunAddr(std::move(msg))) {
-            return -1;
-        }
-        break;
-    case MsgKind::SYSRT:
-        this->localP2PDisabled = true;
-        break;
-    case MsgKind::TRYP2P:
-        handleTryP2P(std::move(msg));
-        break;
-    case MsgKind::PUBINFO:
-        handlePubInfo(std::move(msg));
-        break;
-    default:
-        spdlog::warn("unexcepted peer message type: {}", static_cast<int>(msg.kind));
-        break;
+    } catch (const Poco::Exception &e) {
+        spdlog::warn("peer manager handle queue failed: msg_kind={}, error={}", static_cast<int>(msg.kind), e.message());
+        return 0;
+    } catch (const std::exception &e) {
+        spdlog::warn("peer manager handle queue failed: msg_kind={}, error={}", static_cast<int>(msg.kind), e.what());
+        return 0;
     }
     return 0;
 }
@@ -247,23 +255,32 @@ int PeerManager::handlePubInfo(Msg msg) {
         return 0;
     }
 
-    {
+    try {
+        {
 
-        std::shared_lock lock(this->ipPeerMutex);
-        auto it = this->ipPeerMap.find(info->src);
-        if (it != this->ipPeerMap.end()) {
-            it->second.handlePubInfo(info->ip, info->port, info->local);
+            std::shared_lock lock(this->ipPeerMutex);
+            auto it = this->ipPeerMap.find(info->src);
+            if (it != this->ipPeerMap.end()) {
+                it->second.handlePubInfo(info->ip, info->port, info->local);
+            }
         }
-    }
 
-    {
-        std::unique_lock lock(this->ipPeerMutex);
-        auto it = this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(info->src),
-                                          std::forward_as_tuple(info->src, this));
-        if (it.second) {
-            it.first->second.handlePubInfo(info->ip, info->port, info->local);
-            return 0;
+        {
+            std::unique_lock lock(this->ipPeerMutex);
+            auto it = this->ipPeerMap.emplace(std::piecewise_construct, std::forward_as_tuple(info->src),
+                                              std::forward_as_tuple(info->src, this));
+            if (it.second) {
+                it.first->second.handlePubInfo(info->ip, info->port, info->local);
+                return 0;
+            }
         }
+    } catch (const Poco::Exception &e) {
+        spdlog::warn("peer manager handle pubinfo failed: src={}, ip={}, port={}, error={}", info->src.toString(),
+                     info->ip.toString(), info->port, e.message());
+        return 0;
+    } catch (const std::exception &e) {
+        spdlog::warn("peer manager handle pubinfo failed: src={}, error={}", info->src.toString(), e.what());
+        return 0;
     }
 
     return 0;

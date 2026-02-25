@@ -173,7 +173,7 @@ std::string Peer::stateString(PeerState state) const {
 }
 
 void Peer::handlePubInfo(IP4 ip, uint16_t port, bool local) {
-    {
+    try {
         std::unique_lock lock(this->socketAddressMutex);
         if (local) {
             this->local = SocketAddress(ip.toString(), port);
@@ -181,6 +181,9 @@ void Peer::handlePubInfo(IP4 ip, uint16_t port, bool local) {
         }
 
         this->wide = SocketAddress(ip.toString(), port);
+    } catch (const Poco::Exception &e) {
+        spdlog::warn("peer handle pubinfo failed: ip={}, port={}, error={}", ip.toString(), port, e.message());
+        return;
     }
 
     if (this->state == PeerState::CONNECTED) {

@@ -188,7 +188,7 @@ int WebSocketClient::handleWsConn() {
             return 0;
         }
         if ((flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
-            spdlog::info("websocket close: {}", buffer);
+            spdlog::info("websocket close: {:n}", spdlog::to_hex(buffer));
             return -1;
         }
         if (length > 0) {
