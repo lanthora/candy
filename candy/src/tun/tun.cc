@@ -13,12 +13,17 @@ int Tun::run(Client *client) {
     this->client = client;
     this->msgThread = std::thread([&] {
         spdlog::debug("start thread: tun msg");
-        while (getClient().isRunning()) {
-            if (handleTunQueue()) {
-                break;
+        try {
+            while (getClient().isRunning()) {
+                if (handleTunQueue()) {
+                    break;
+                }
             }
+            getClient().shutdown();
+        } catch (const std::exception &e) {
+            spdlog::error("tun msg thread exception: {}", e.what());
+            getClient().shutdown();
         }
-        getClient().shutdown();
         spdlog::debug("stop thread: tun msg");
     });
     return 0;
@@ -127,17 +132,22 @@ int Tun::handleTunAddr(Msg msg) {
 
     this->tunThread = std::thread([&] {
         spdlog::debug("start thread: tun");
-        while (getClient().isRunning()) {
-            if (handleTunDevice()) {
-                break;
+        try {
+            while (getClient().isRunning()) {
+                if (handleTunDevice()) {
+                    break;
+                }
             }
-        }
-        getClient().shutdown();
-        spdlog::debug("stop thread: tun");
+            getClient().shutdown();
+            spdlog::debug("stop thread: tun");
 
-        if (down()) {
-            spdlog::critical("tun down failed");
-            return;
+            if (down()) {
+                spdlog::critical("tun down failed");
+                return;
+            }
+        } catch (const std::exception &e) {
+            spdlog::error("tun thread exception: {}", e.what());
+            getClient().shutdown();
         }
     });
 

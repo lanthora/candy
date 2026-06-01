@@ -308,14 +308,19 @@ int PeerManager::startTickThread() {
     }
     this->tickThread = std::thread([&] {
         spdlog::debug("start thread: peer manager tick");
-        while (getClient().isRunning()) {
-            auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
-            if (tick()) {
-                break;
+        try {
+            while (getClient().isRunning()) {
+                auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
+                if (tick()) {
+                    break;
+                }
+                std::this_thread::sleep_until(wake_time);
             }
-            std::this_thread::sleep_until(wake_time);
+            getClient().shutdown();
+        } catch (const std::exception &e) {
+            spdlog::error("tick thread exception: {}", e.what());
+            getClient().shutdown();
         }
-        getClient().shutdown();
         spdlog::debug("stop thread: peer manager tick");
     });
     return 0;
@@ -628,7 +633,15 @@ std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
 
 int PeerManager::sendTo(const void *buffer, int length, const SocketAddress &address) {
     std::lock_guard lock(this->socketMutex);
-    return this->socket.sendTo(buffer, length, address);
+    try {
+        return this->socket.sendTo(buffer, length, address);
+    } catch (const Poco::Net::NetException &e) {
+        spdlog::debug("socket sendTo failed: {}", e.message());
+        return -1;
+    } catch (const std::exception &e) {
+        spdlog::debug("socket sendTo failed: {}", e.what());
+        return -1;
+    }
 }
 
 int PeerManager::getDiscoveryInterval() const {

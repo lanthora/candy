@@ -69,10 +69,15 @@ int WebSocketClient::run(Client *client) {
 
     this->msgThread = std::thread([&] {
         spdlog::debug("start thread: websocket client msg");
-        while (getClient().isRunning()) {
-            handleWsQueue();
+        try {
+            while (getClient().isRunning()) {
+                handleWsQueue();
+            }
+            getClient().shutdown();
+        } catch (const std::exception &e) {
+            spdlog::error("websocket msg thread exception: {}", e.what());
+            getClient().shutdown();
         }
-        getClient().shutdown();
         spdlog::debug("stop thread: websocket client msg");
     });
 
