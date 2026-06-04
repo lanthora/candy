@@ -1,21 +1,23 @@
-# 多局域网组网
+# Multi-LAN Networking
 
-## 需求
+**[中文文档](software-defined-wide-area-network.zh-CN.md)**
 
-在多地有多个局域网时,希望能够让本局域网内的设备通过其他局域网的地址直接访问对方的设备,并且无需在所有设备上部署 Candy 客户端.
+## Requirements
 
-## 示例
+When there are multiple local area networks in multiple locations, we want devices in one LAN to directly access devices in other LANs through their addresses, without deploying Candy clients on all devices.
 
-首先你需要:
+## Example
 
-- 有一个独立的网络.可以自建服务端或者使用社区服务器
-- 在网关 (Gateway) 上部署 Candy 并成功加入自己创建的网络
+First, you need:
 
-以 LAN A 为例解释表格含义.
+- An independent network (you can build your own server or use the community server)
+- Deploy Candy on the Gateway and successfully join the network you created
 
-- 局域网 (Network) 地址为 `172.16.1.0/24`, 这个地址不能与 B,C 冲突
-- 网关 (Gateway) 可以是路由器,也可以是局域网中任意一台 Linux 系统,但需要能够部署 Candy 客户端,假设它在局域网中的地址是 `172.16.1.1`. 通过给局域网中的设备配置路由,确保流量能够进入网关
-- Candy 客户端部署在网关上,它在虚拟网络中的地址是 `192.168.202.1`
+Taking LAN A as an example to explain the table meaning:
+
+- The LAN (Network) address is `172.16.1.0/24`, which cannot conflict with B and C
+- The Gateway can be a router or any Linux system in the LAN, but it needs to be able to deploy the Candy client. Assume its address in the LAN is `172.16.1.1`. By configuring routes for devices in the LAN, ensure traffic can enter the gateway
+- The Candy client is deployed on the gateway, and its address in the virtual network is `192.168.202.1`
 
 | LAN     | A             | B             | C             |
 | :------ | :------------ | :------------ | :------------ |
@@ -23,36 +25,36 @@
 | Gateway | 172.16.1.1    | 172.16.2.1    | 172.16.3.1    |
 | Candy   | 192.168.202.1 | 192.168.202.2 | 192.168.202.3 |
 
-当 `172.16.1.0/24` 的设备访问 `172.16.2.0/24` 的设备时,希望流量可以通过以下方式送达:
+When devices in `172.16.1.0/24` access devices in `172.16.2.0/24`, we want traffic to be delivered in the following way:
 
 ```txt
 172.16.1.0/24 <=> 172.16.1.1 <=> 192.168.202.1 <=> 192.168.202.2 <=> 172.16.2.1 <=> 172.16.2.0/24
 ```
 
-### 流量转发到网关 (172.16.1.0/24 => 172.16.1.1)
+### Forward Traffic to Gateway (172.16.1.0/24 => 172.16.1.1)
 
-如果网关是路由器,不需要任何操作,流量就应该能够进入网关.否则需要在非网关设备上配置流量转发到网关的路由.
+If the gateway is a router, no operation is needed, and traffic should be able to enter the gateway. Otherwise, you need to configure routes on non-gateway devices to forward traffic to the gateway.
 
-给 172.16.1.0/24 的设备配置路由:
+Configure routes for devices in 172.16.1.0/24:
 
 - dst: 172.16.2.0/24; gw: 172.16.1.1
 - dst: 172.16.3.0/24; gw: 172.16.1.1
 
-需要用同样的方式给另外两个局域网做配置.
+You need to configure the other two LANs in the same way.
 
-### 允许网关转发流量 (172.16.1.1 <=> 192.168.202.1)
+### Allow Gateway to Forward Traffic (172.16.1.1 <=> 192.168.202.1)
 
 #### Linux
 
-如果你的网关是路由器,应该能够轻易的配置出允许转发.否则需要手动添加转发相关的配置.
+If your gateway is a router, you should be able to easily configure it to allow forwarding. Otherwise, you need to manually add forwarding-related configurations.
 
-开启内核流量转发功能
+Enable kernel traffic forwarding:
 
 ```bash
 sysctl -w net.ipv4.ip_forward=1
 ```
 
-开启动态伪装并接受转发报文.
+Enable dynamic masquerading and accept forwarded packets:
 
 ```bash
 iptables -t nat -A POSTROUTING -j MASQUERADE
@@ -61,13 +63,13 @@ iptables -A FORWARD -j ACCEPT
 
 #### Windows
 
-查看的网卡名,应该与配置文件中写的名称相同,对于 GUI 版本客户端的默认配置网卡名应该为 `candy`
+Check the network adapter name. It should be the same as written in the configuration file. For the GUI version client, the default configuration network adapter name should be `candy`.
 
 ```ps
 Get-NetAdapter
 ```
 
-允许转发,注意要把网卡名替换成上一步查出来的网卡名
+Allow forwarding. Note that you need to replace the network adapter name with the one found in the previous step:
 
 ```ps
 Set-NetIPInterface -ifAlias 'candy' -Forwarding Enabled
@@ -75,48 +77,49 @@ Set-NetIPInterface -ifAlias 'candy' -Forwarding Enabled
 
 #### macOS
 
-应该不会有人拿 macOS 做网关吧, Windows 应该都没有多少人,有需要再补充这部分文档
+Surely no one would use macOS as a gateway, right? There aren't many Windows users either. Documentation will be added if there's a need.
 
-### 创建虚拟链路 (172.16.1.0/24 <=> 172.16.2.0/24)
+### Create Virtual Link (172.16.1.0/24 <=> 172.16.2.0/24)
 
-所有 Candy 客户端 `192.168.202.0/24` 收到发往 `172.16.1.0/24` 的 IP 报文时,将其转发到 `192.168.202.1`;
-所有 Candy 客户端 `192.168.202.0/24` 收到发往 `172.16.2.0/24` 的 IP 报文时,将其转发到 `192.168.202.2`;
-所有 Candy 客户端 `192.168.202.0/24` 收到发往 `172.16.3.0/24` 的 IP 报文时,将其转发到 `192.168.202.3`;
+All Candy clients `192.168.202.0/24` receiving IP packets destined for `172.16.1.0/24` will forward them to `192.168.202.1`.
 
-策略会发下给属于 `192.168.202.0/24` 网络的客户端,上面的配置下发给了虚拟网络中的所有设备,能够满足大部分用户场景.
+All Candy clients `192.168.202.0/24` receiving IP packets destined for `172.16.2.0/24` will forward them to `192.168.202.2`.
 
-此外支持更细粒度的控制供用户选择,例如 `192.168.202.1/32` 就表示仅把路由策略下发给 `192.168.202.1` 这台设备.
+All Candy clients `192.168.202.0/24` receiving IP packets destined for `172.16.3.0/24` will forward them to `192.168.202.3`.
 
-#### Cacao 配置
+The policy will be distributed to clients belonging to the `192.168.202.0/24` network. The above configuration is distributed to all devices in the virtual network, which can satisfy most user scenarios.
 
-如果你在使用 Cacao 服务端(例如社区服务端),配置如下.
+Additionally, more fine-grained control is supported for users to choose from. For example, `192.168.202.1/32` means only distributing routing policies to the device `192.168.202.1`.
+
+#### Cacao Configuration
+
+If you are using the Cacao server (for example, the community server), configure as follows:
 
 ![sdwan](images/sdwan.png)
 
-#### Candy 配置
+#### Candy Configuration
 
-如果你在使用命令行版本的 Candy 服务端,等效配置如下. 
+If you are using the command-line version of the Candy server, the equivalent configuration is as follows:
 
 ```ini
 sdwan = "192.168.202.0/24,172.16.1.0/24,192.168.202.1;192.168.202.0/24,172.16.2.0/24,192.168.202.2;192.168.202.0/24,172.16.3.0/24,192.168.202.3;"
 ```
 
-### 测试
+### Test
 
-此时局域网设备之间应当可以相互 ping 通.
+At this point, devices in the LAN should be able to ping each other.
 
-## 常见问题
+## FAQ
 
-### 能 ping 通网关,但 ping 不通网关下的目标设备
+### Can ping gateway, but cannot ping target device behind gateway
 
-- 检查 iptables 配置的动态伪装是否生效.如果生效,抓包可以看到发往目标设备的源地址已经改成了网关地址
-- 检查目标设备防火墙.例如 Windows 系统防火墙默认禁止 ping, 此时直接尝试访问 Windows 提供出的服务,例如远程桌面, SSH, Web 服务等
+- Check whether the dynamic masquerading configured by iptables is effective. If effective, packet capture can show that the source address sent to the target device has been changed to the gateway address
+- Check the target device firewall. For example, Windows system firewall prohibits ping by default. In this case, try to directly access services provided by Windows, such as Remote Desktop, SSH, Web services, etc.
 
-### 能 ping 通目标设备,但不能访问服务
+### Can ping target device, but cannot access service
 
-- 检查 iptables 配置的动态伪装是否生效.动态伪装不生效的情况下,某种路由配置规则也可以实现 ping 通目标设备,但是防火墙会拦截对应报文.
+- Check whether the dynamic masquerading configured by iptables is effective. When dynamic masquerading is not effective, certain routing configuration rules can also achieve ping to the target device, but the firewall will intercept corresponding packets.
 
-### 关于源进源出
+### About Source-Based Routing
 
-通过合理的路由配置和对防火墙策略的调整,在不使用动态伪装的情况下,可以做到在目标设备看到请求的真实源地址.想要达成这个效果需要有足够的计算机网络知识储备,请自行探索.
-
+Through reasonable routing configuration and adjustment of firewall policies, without using dynamic masquerading, it is possible to see the real source address of the request on the target device. To achieve this effect, you need sufficient computer network knowledge. Please explore on your own.

@@ -1,44 +1,51 @@
-# 使用社区服务器
+# Use Community Server
 
-社区服务器支持用户级别的隔离,同时支持一个用户创建多个网络.
+**[中文文档](use-the-community-server.zh-CN.md)**
 
-__服务器将定期清理不活跃用户,请确保短期内至少有一台设备连接过服务器,或手动登录过服务器管理页面.__
+The community server supports user-level isolation and supports one user creating multiple networks.
 
-## 注册
+__The server will periodically clean up inactive users. Please ensure that at least one device has connected to the server in the short term, or manually log in to the server management page.__
 
-在社区服务器[注册](https://canets.org/register),示例中的用户名为 `username`.
+## Register
+
+Register on the community server [register page](https://canets.org/register). In the example, the username is `username`.
 
 ![](images/cacao-register.png)
 
-## 使用默认网络
+## Use Default Network
 
-查看网络,可以注意到已经有一个名称为 @ 的默认网络,密码是 `ZrhaUcz1`
+View the network and notice that there is already a default network named `@` with password `ZrhaUcz1`.
 
 ![](images/cacao-network.png)
 
-连接到这个网络的客户端仅需要修改以下配置,关于配置文件的位置请参考客户端安装的相关文档:
+Clients connecting to this network only need to modify the following configuration. For the location of the configuration file, please refer to the relevant documentation for client installation:
 
 ```cfg
 websocket = "wss://canets.org/username"
 password = "ZrhaUcz1"
 ```
 
-## 多个网络
+## Multiple Networks
 
-点击左上角 `Add` 可以创建多个网络,例如:
+Click `Add` in the upper left corner to create multiple networks, for example:
 
 ![](images/cacao-network-another.png)
 
-这个新网络,网络名为 `netname`, 这会体现到 `websocket` 参数中; 密码为空; 网络范围是 `10.0.0.0/24`; 不允许广播; 且租期为 3 天, 即超过 3 天不活跃的客户端将被自动从网络中移除, 配置为 0 时表示不自动移除.
+This new network has:
+- Network name `netname`, which will be reflected in the `websocket` parameter
+- Empty password
+- Network range `10.0.0.0/24`
+- No broadcast allowed
+- Lease term of 3 days, meaning inactive clients will be automatically removed from the network after more than 3 days. Configuration of 0 means no automatic removal.
 
-客户端的配置应该为:
+The client configuration should be:
 
 ```cfg
 websocket = "wss://canets.org/username/netname"
 password = ""
 ```
 
-如果要给某个客户端指定静态地址 `10.0.0.1/24`, 只需要修改配置中的:
+To assign a static address `10.0.0.1/24` to a specific client, just modify the configuration:
 
 ```cfg
 tun = "10.0.0.1/24"

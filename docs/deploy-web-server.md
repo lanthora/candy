@@ -1,54 +1,56 @@
-# 部署 Web 服务端
+# Deploy Web Server
 
-## 前置条件
+**[中文文档](deploy-web-server.zh-CN.md)**
 
-知道如何部署 Web 服务,并能够申请证书后对外提供 HTTPS 服务.
+## Prerequisites
 
-否则使用明文传输将导致数据泄漏,存在安全隐患.此时建议使用社区服务器构建私有网络.
+Know how to deploy web services and obtain certificates to provide HTTPS services externally.
 
-## 一键部署服务端
+Otherwise, using plaintext transmission will lead to data leakage and security risks. In this case, it is recommended to use the community server to build a private network.
+
+## One-Click Server Deployment
 
 ```bash
 docker run --name=cacao --detach --volume /var/lib/cacao:/var/lib/cacao --publish 8080:80 docker.io/lanthora/cacao:latest
 ```
 
-## 使用
+## Usage
 
-假设你的域名为 `example.com`, 此时通过 `https://example.com` 应该能够正常访问服务.如果不是 `https` 请回到最开始解决前置条件.
+Assume your domain is `example.com`. At this point, you should be able to access the service normally via `https://example.com`. If it's not `https`, please go back to the beginning and solve the prerequisites.
 
-服务器启动后的第一个注册用户默认被设置为管理员.管理员无法创建网络,且无权查看其他用户的网络.
+The first registered user after the server starts is set as administrator by default. Administrators cannot create networks and have no permission to view other users' networks.
 
-管理员配置页面,能够配置是否允许注册,以及允许注册时的注册间隔(避免脚本小子刷注册用户).同时可以配置自动清理不活跃用户.
+The administrator configuration page allows you to configure whether registration is allowed, and the registration interval when registration is allowed (to avoid script kiddies flooding registration users). You can also configure automatic cleanup of inactive users.
 
 ![](images/cacao-admin-setting.png)
 
-### 单网络模式
+### Single Network Mode
 
-在不允许注册时,管理员可以手动添加用户.其中名为 @ 的用户是一个特殊用户,这个用户只能创建一个名为 @ 的网络.用户名和网络名的作用在后面说明.先创建这个用户.
+When registration is not allowed, administrators can manually add users. Among them, the user named `@` is a special user who can only create a network named `@`. The role of username and network name will be explained later. First, create this user.
 
 ![](images/cacao-admin-user.png)
 
-退出管理员,并以 @ 用户登录.此时已经默认添加了 @ 网络.默认网络生成了随机密码 `ZrhaUcz1`
+Log out as administrator and log in as the `@` user. At this point, the `@` network has been added by default. The default network generated a random password `ZrhaUcz1`.
 
 ![](images/cacao-network.png)
 
-此时连接这个网络的客户端仅需要修改以下配置:
+At this point, clients connecting to this network only need to modify the following configuration:
 
 ```cfg
 websocket = "wss://example.com"
 password = "ZrhaUcz1"
 ```
 
-除非你知道自己在做什么,否则请不要修改任何其他配置项.
+Unless you know what you're doing, please do not modify any other configuration items.
 
-### 多用户多网络模式
+### Multi-User Multi-Network Mode
 
-如果只是创建一个网络,单网络模式已经足够了.如果要允许多个用户使用,且每个用户可以创建多个网络.则可以使用多用户多网络模式.
+If you just want to create one network, single network mode is sufficient. If you want to allow multiple users to use it, and each user can create multiple networks, you can use multi-user multi-network mode.
 
-假设由管理员创建或自行注册的普通用户名为 `${username}`, 这个用户拥有的一个网络名是 `${netname}`,那么客户端对应的配置仅需要修改为:
+Assume a normal user created by the administrator or self-registered is named `${username}`, and this user has a network named `${netname}`, then the corresponding client configuration only needs to be modified to:
 
 ```cfg
 websocket = "wss://example.com/${username}/${netname}"
 ```
 
-当用户名或者网络名为 @ 时,在客户端的配置中需要留空.当用户名和网络名都为空时,就是所谓的单网络模式
+When the username or network name is `@`, it needs to be left blank in the client configuration. When both username and network name are blank, it is the so-called single network mode.

@@ -1,33 +1,35 @@
-# 安装 Linux 客户端
+# Install Linux Client
 
-我们针对不同 Linux 发行版提供了多种格式的安装包.对于暂未支持的发行版,可以选择容器部署或者静态链接的可执行文件.
-我们致力于支持所有架构的 Linux 系统.
+**[中文文档](install-client-for-linux.zh-CN.md)**
+
+We provide installation packages in various formats for different Linux distributions. For distributions not yet supported, you can choose container deployment or statically linked executables.
+We are committed to supporting Linux systems of all architectures.
 
 ## Docker
 
-镜像已上传 [Docker Hub](https://hub.docker.com/r/lanthora/candy) 和 [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy).
+Images have been uploaded to [Docker Hub](https://hub.docker.com/r/lanthora/candy) and [Github Packages](https://github.com/lanthora/candy/pkgs/container/candy).
 
-获取最新镜像
+Get the latest image:
 
 ```bash
 docker pull docker.io/lanthora/candy:latest
 ```
 
-容器需要管理员权限读取设备创建虚拟网卡并设置路由,同时需要 Host 网络命名空间共享虚拟网卡.
+The container requires administrator privileges to read devices, create virtual network interfaces, and set up routing. It also needs to share the Host network namespace for virtual network interfaces.
 
-以默认配置文件启动将加入社区网络.指定的参数为 `--rm` 当进程结束时会自动销毁容器,且日志会在控制台输出,这有利于初次运行调试.
+Starting with the default configuration file will join the community network. The specified parameter `--rm` means the container will be automatically destroyed when the process ends, and logs will be output to the console, which is helpful for initial debugging.
 
 ```bash
 docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy docker.io/lanthora/candy:latest
 ```
 
-以自定义配置文件启动.请在[默认配置](https://raw.githubusercontent.com/lanthora/candy/refs/heads/master/candy.cfg)基础上自定义配置文件.
+Start with a custom configuration file. Please customize the configuration file based on the [default configuration](https://raw.githubusercontent.com/lanthora/candy/refs/heads/master/candy.cfg).
 
 ```bash
 docker run --rm --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy --volume /path/to/candy.cfg:/etc/candy.cfg docker.io/lanthora/candy:latest
 ```
 
-一切正常后,以守护进程的形式启动.
+After everything is working properly, start as a daemon process:
 
 ```bash
 docker run --detach --restart=always --privileged=true --net=host --volume /var/lib/candy:/var/lib/candy --volume /path/to/candy.cfg:/etc/candy.cfg docker.io/lanthora/candy:latest
@@ -35,7 +37,7 @@ docker run --detach --restart=always --privileged=true --net=host --volume /var/
 
 ## Arch Linux
 
-使用 [AUR](https://aur.archlinux.org/packages/candy) 或者 [archlinuxcn](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy) 仓库
+Use [AUR](https://aur.archlinux.org/packages/candy) or [archlinuxcn](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/candy) repository
 
 ```bash
 # AUR
@@ -50,13 +52,13 @@ pacman -S candy
 emerge --sync gentoo && emerge -av candy
 ```
 
-## 单文件可执行程序
+## Standalone Executable
 
-当上述所有方式都不适用时,尝试[单文件可执行程序](https://github.com/lanthora/candy/releases/latest).
+When none of the above methods work, try the [standalone executable](https://github.com/lanthora/candy/releases/latest).
 
-该程序由[交叉编译脚本](https://github.com/lanthora/candy/tree/master/scripts/build-standalone.sh)构建.
+This program is built by the [cross-compilation script](https://github.com/lanthora/candy/tree/master/scripts/build-standalone.sh).
 
-如果你的系统在使用 Systemd 管理进程.请复制以下文件到指定目录.
+If your system uses Systemd for process management, please copy the following files to the specified directories:
 
 ```bash
 cp candy.service /usr/lib/systemd/system/candy.service
@@ -64,26 +66,26 @@ cp candy@.service /usr/lib/systemd/system/candy@.service
 cp candy.cfg /etc/candy.cfg
 ```
 
-然后按照后续进程管理的方式管理进程.
+Then manage the process according to the process management section below.
 
-判断 Systemd 的方法: 检查 `ps -p 1 -o comm=` 输出的内容里是否为 systemd 
+To determine if Systemd is being used: check if the output of `ps -p 1 -o comm=` contains "systemd".
 
-## 进程管理
+## Process Management
 
-各发行版安装后自带 Service 文件,强烈建议使用 Systemd 管理进程,不要使用自己编写的脚本.
+Each distribution comes with Service files after installation. It is strongly recommended to use Systemd to manage processes rather than your own scripts.
 
-对于自定义配置的用户,可以通过以下方式启动进程,不要修改默认配置.
+For users with custom configurations, you can start processes in the following way without modifying the default configuration:
 
 ```bash
 mkdir /etc/candy.d
-# 复制一份默认配置,并修改.文件名为 one.cfg
+# Copy a default configuration and modify it. File name is one.cfg
 cp /etc/candy.cfg /etc/candy.d/one.cfg
-# 以 one.cfg 为配置启动进程
+# Start process with one.cfg as configuration
 systemctl start candy@one
 
-# 复制一份默认配置,并修改.文件名为 two.cfg
-# 需要注意不同配置文件中的 name 字段不能重复
+# Copy another default configuration and modify it. File name is two.cfg
+# Note that the name field in different configuration files cannot be duplicated
 cp /etc/candy.cfg /etc/candy.d/two.cfg
-# 以 two.cfg 为配置启动进程
+# Start process with two.cfg as configuration
 systemctl start candy@two
 ```
