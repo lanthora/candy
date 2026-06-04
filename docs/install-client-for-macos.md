@@ -1,38 +1,40 @@
-# 安装 macOS 客户端
+# Install macOS Client
 
-macOS 客户端通过 [Homebrew](https://brew.sh) 安装并提供服务.
+**[中文文档](install-client-for-macos.zh-CN.md)**
 
-## 安装 Homebrew
+The macOS client is installed and serviced via [Homebrew](https://brew.sh).
+
+## Install Homebrew
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-## 添加第三方仓库
+## Add Third-Party Repository
 
 ```bash
 brew tap lanthora/repo
 ```
 
-## 安装 Candy
+## Install Candy
 
 ```bash
 brew install candy
 ```
 
-## 修改配置
+## Modify Configuration
 
-对于 M 系列处理器,配置文件在 `/opt/homebrew/etc/candy.cfg`, Intel 系列处理器,配置文件在 `/usr/local/etc/candy.cfg`
+For M-series processors, the configuration file is at `/opt/homebrew/etc/candy.cfg`. For Intel series processors, the configuration file is at `/usr/local/etc/candy.cfg`.
 
-通过以下命令进行测试:
+Test with the following command:
 
 ```bash
 sudo candy -c /path/to/candy.cfg
 ```
 
-## 启动服务
+## Start Service
 
-测试成功后以服务的形式运行.
+After successful testing, run as a service:
 
 ```bash
 sudo brew services start lanthora/repo/candy

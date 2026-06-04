@@ -1,19 +1,21 @@
-# 安装 Windows 客户端
+# Install Windows Client
 
-## 图形用户界面
+**[中文文档](install-client-for-windows.zh-CN.md)**
 
-对于 Windows 10 及以上的用户,请使用[图形界面版本](https://github.com/lanthora/cake/releases/latest).此版本支持同时配置多个网络.
+## Graphical User Interface
 
-在没有任何配置时,点击 "文件" => "新建" 将填充默认配置,点击 "保存" 后配置生效,客户端此时才开始连接服务端. 
+For Windows 10 and above users, please use the [graphical interface version](https://github.com/lanthora/cake/releases/latest). This version supports configuring multiple networks simultaneously.
 
-图形界面的配置与[默认配置](https://raw.githubusercontent.com/lanthora/candy/refs/heads/master/candy.cfg)对应.
+When there is no configuration, click "File" => "New" to populate the default configuration. After clicking "Save", the configuration takes effect and the client starts connecting to the server.
 
-日志保存在 `C:/ProgramData/Cake/logs`, 反馈 Windows 相关问题请带着日志和配置截图.
+The GUI configuration corresponds to the [default configuration](https://raw.githubusercontent.com/lanthora/candy/refs/heads/master/candy.cfg).
+
+Logs are saved in `C:/ProgramData/Cake/logs`. When reporting Windows-related issues, please include logs and configuration screenshots.
 
 ![cake](images/cake.png)
 
-## 命令行
+## Command Line
 
-使用命令行版本请自行解决遇到的任何问题,我们不对 Windows 命令行提供任何技术支持.
+If you use the command-line version, please solve any problems you encounter on your own. We do not provide any technical support for the Windows command line.
 
-Windows 7 用户只能使用[命令行版本](https://github.com/lanthora/candy/releases/latest)
+Windows 7 users can only use the [command-line version](https://github.com/lanthora/candy/releases/latest).

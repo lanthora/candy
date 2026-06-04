@@ -1,5 +1,7 @@
-# 部署 CLI 服务端
+# Deploy CLI Server
 
-根据帮助信息 `candy --help` 和配置文件描述部署.
+**[中文文档](deploy-cli-server.zh-CN.md)**
 
-非专业用户请[部署 Web 服务端](https://docs.canets.org/deploy-web-server).
+Deploy according to the help information `candy --help` and configuration file description.
+
+Non-professional users should [deploy the web server](deploy-web-server.md).

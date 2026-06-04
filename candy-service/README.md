@@ -1,34 +1,36 @@
 # candy-service
 
-Candy 客户端的另一个实现.
+**[中文文档](README.zh-CN.md)**
 
-- **无状态**: 进程本身不持久化任何数据, 进程重启后数据丢失，需要外部维护网络配置信息
-- **API 交互**: 对外提供 HTTP API 交互接口,可以远程控制和访问
+Another implementation of the Candy client.
+
+- **Stateless**: The process itself does not persist any data. Data is lost after process restart and requires external maintenance of network configuration information
+- **API Interaction**: Provides HTTP API interaction interface externally, enabling remote control and access
 
 ## API
 
-### 帮助
+### Help
 
-Linux
+Linux:
 
 ```bash
 candy-service --help
 ```
 
-Windows 
-  
+Windows:
+
 ```bat
 candy-service /help
 ```
 
-请求响应中的 **id** 用于标识网络连接, 通过不同标识可以同时加入多个网络, 这个标识用于查看状态和关闭网络.
+The **id** in the request response is used to identify the network connection. Different identifiers can be used to join multiple networks simultaneously. This identifier is used to view status and close networks.
 
 ### Run
 
-启动参数的含义与[配置文件](../candy.cfg)相同,此外还有两个额外的配置项.
+The meaning of startup parameters is the same as the [configuration file](../candy.cfg), with two additional configuration items:
 
-- vmac: 用于标识唯一设备,当同一网络中有两台不同 vmac 的设备申请相同 IP 地址时, 后者会报告 IP 冲突. 为 16 个字符的随机数字字母字符串, 需要持久化存储, 建议在首次启动进程时生成.
-- expt: 期望使用的 IP 地址, 这个参数用于实现有优先分配曾经使用过的地址, 由客户端主动向服务器报告, 可以为空. 建议由服务端随机分配地址的情况下, 通过 `/api/status` 查看分配的地址并保存, 下次连接时携带这个地址.
+- **vmac**: Used to identify a unique device. When two devices with different vmac in the same network apply for the same IP address, the latter will report an IP conflict. It is a 16-character random alphanumeric string that needs to be persisted. It is recommended to generate it when starting the process for the first time.
+- **expt**: The expected IP address to use. This parameter is used to implement priority allocation of previously used addresses. It is actively reported to the server by the client and can be empty. It is recommended that when the server randomly assigns an address, view the assigned address through `/api/status` and save it, and carry this address when connecting next time.
 
 `POST /api/run`
 
@@ -53,10 +55,12 @@ candy-service /help
 }
 ```
 
+Response:
+
 ```json
 {
-    "id": "test",
-    "message": "success"
+  "id": "test",
+  "message": "success"
 }
 ```
 
@@ -69,6 +73,8 @@ candy-service /help
   "id": "test"
 }
 ```
+
+Response:
 
 ```json
 {
@@ -90,9 +96,11 @@ candy-service /help
 }
 ```
 
+Response:
+
 ```json
 {
-    "id": "test",
-    "message": "success"
+  "id": "test",
+  "message": "success"
 }
 ```
