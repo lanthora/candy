@@ -133,7 +133,7 @@ int PeerManager::handlePeerQueue() {
             handlePubInfo(std::move(msg));
             break;
         default:
-            spdlog::warn("unexcepted peer message type: {}", static_cast<int>(msg.kind));
+            spdlog::warn("unexpected peer message type: {}", static_cast<int>(msg.kind));
             break;
         }
     } catch (const Poco::Exception &e) {
@@ -159,13 +159,14 @@ int PeerManager::sendPacket(IP4 dst, const Msg &msg) {
 int PeerManager::sendPacketDirect(IP4 dst, const Msg &msg) {
     std::shared_lock ipPeerLock(this->ipPeerMutex);
     auto it = this->ipPeerMap.find(dst);
-    if (it != this->ipPeerMap.end()) {
-        auto &peer = it->second;
-        if (peer.isConnected()) {
-            return peer.sendEncrypted(PeerMsg::Forward::create(msg.data));
-        }
+    if (it == this->ipPeerMap.end()) {
+        return -1;
     }
-    return -1;
+    auto &peer = it->second;
+    if (!peer.isConnected()) {
+        return -1;
+    }
+    return peer.sendEncrypted(PeerMsg::Forward::create(msg.data));
 }
 
 int PeerManager::sendPacketRelay(IP4 dst, const Msg &msg) {

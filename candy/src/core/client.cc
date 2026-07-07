@@ -62,6 +62,10 @@ MsgQueue &Client::getWsMsgQueue() {
     return this->wsMsgQueue;
 }
 
+MsgQueue &Client::getNetstackMsgQueue() {
+    return this->netstackMsgQueue;
+}
+
 void Client::setPassword(const std::string &password) {
     ws.setPassword(password);
     peerManager.setPassword(password);
@@ -107,6 +111,10 @@ void Client::setMtu(int mtu) {
     tun.setMTU(mtu);
 }
 
+int Client::getMtu() {
+    return tun.getMTU();
+}
+
 void Client::run() {
     this->running.store(true);
 
@@ -119,14 +127,19 @@ void Client::run() {
     if (peerManager.run(this)) {
         return;
     }
+    if (netstack.run(this)) {
+        return;
+    }
 
     ws.wait();
     tun.wait();
     peerManager.wait();
+    netstack.wait();
 
     wsMsgQueue.clear();
     tunMsgQueue.clear();
     peerMsgQueue.clear();
+    netstackMsgQueue.clear();
 }
 
 bool Client::isRunning() {

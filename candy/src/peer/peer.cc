@@ -3,7 +3,6 @@
 #include "core/client.h"
 #include "core/message.h"
 #include "peer/manager.h"
-#include "peer/peer.h"
 #include "utils/time.h"
 #include <Poco/Net/IPAddress.h>
 #include <Poco/Net/SocketAddress.h>

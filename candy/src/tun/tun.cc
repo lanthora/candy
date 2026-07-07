@@ -70,6 +70,7 @@ int Tun::handleTunDevice() {
         buffer.insert(0, sizeof(IP4Header), 0);
         header = (IP4Header *)buffer.data();
         header->protocol = 0x04;
+        header->id = hton(uint16_t((ntoh(header->id) & ~netstack::TAG_MASK) | netstack::TAG_REQUEST));
         header->saddr = getIP();
         header->daddr = nextHop;
     }
@@ -100,10 +101,27 @@ int Tun::handleTunQueue() {
         handleSysRt(std::move(msg));
         break;
     default:
-        spdlog::warn("unexcepted tun message type: {}", static_cast<int>(msg.kind));
+        spdlog::warn("unexpected tun message type: {}", static_cast<int>(msg.kind));
         break;
     }
     return 0;
+}
+
+bool Tun::shouldRouteToNetstack(const IP4Header &header, size_t size) {
+    uint16_t tag = ntoh(header.id) & netstack::TAG_MASK;
+    if (tag == netstack::TAG_REQUEST)
+        return true;
+    if (tag != netstack::TAG_UNSURE)
+        return false;
+    if (size < sizeof(IP4Header) * 2)
+        return true;
+    const IP4Header *inner = &header + 1;
+    std::shared_lock lock(this->sysRtMutex);
+    for (auto const &rt : sysRtTable) {
+        if ((inner->saddr & rt.mask) == rt.dst)
+            return false;
+    }
+    return true;
 }
 
 int Tun::handlePacket(Msg msg) {
@@ -112,10 +130,15 @@ int Tun::handlePacket(Msg msg) {
         return 0;
     }
     IP4Header *header = (IP4Header *)msg.data.data();
+
     if (header->isIPIP()) {
+        if (shouldRouteToNetstack(*header, msg.data.size())) {
+            this->client->getNetstackMsgQueue().write(Msg(MsgKind::PACKET, std::move(msg.data)));
+            return 0;
+        }
         msg.data.erase(0, sizeof(IP4Header));
-        header = (IP4Header *)msg.data.data();
     }
+
     write(msg.data);
     return 0;
 }

@@ -48,6 +48,7 @@ template <typename T> T hton(T v) {
 class __attribute__((packed)) IP4 {
 public:
     IP4(const std::string &ip = "0.0.0.0");
+    IP4(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3);
     IP4 operator=(const std::string &ip);
     IP4 operator&(IP4 another) const;
     IP4 operator|(IP4 another) const;
@@ -119,6 +120,19 @@ private:
 };
 
 } // namespace candy
+
+template <> struct fmt::formatter<candy::IP4> : fmt::formatter<std::string> {
+    template <typename FormatContext> auto format(const candy::IP4 &ip, FormatContext &ctx) const {
+        return fmt::formatter<std::string>::format(ip.toString(), ctx);
+    }
+};
+
+namespace candy::netstack {
+constexpr uint16_t TAG_MASK = 0x0003;
+constexpr uint16_t TAG_UNSURE = 0;
+constexpr uint16_t TAG_REQUEST = 1;
+constexpr uint16_t TAG_RESPONSE = 2;
+} // namespace candy::netstack
 
 namespace std {
 using candy::IP4;

@@ -23,6 +23,10 @@ int Tun::setMTU(int mtu) {
     return -1;
 }
 
+int Tun::getMTU() {
+    return 1500;
+}
+
 int Tun::up() {
     return -1;
 }

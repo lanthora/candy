@@ -7,14 +7,20 @@ on:
 jobs:
   format:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        path:
+          - 'candy'
+          - 'candy-cli'
+          - 'candy-service'
     steps:
       - name: checkout
         uses: actions/checkout@v4
       - name: check format
         uses: jidicula/clang-format-action@v4.11.0
         with:
-          check-path: 'src'
-          exclude-regex: 'argparse.h'
+          check-path: ${{ matrix.path }}
+          exclude-regex: '(argparse.h|lwip)'
 
   linux:
     runs-on: ubuntu-latest

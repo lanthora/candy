@@ -52,6 +52,10 @@ public:
         return 0;
     }
 
+    int getMTU() {
+        return this->mtu;
+    }
+
     int up() {
         // 创建设备,操作系统不允许自定义设备名,只能由内核分配
         this->tunFd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
@@ -257,7 +261,7 @@ private:
     char ifname[IFNAMSIZ] = {0};
     IP4 ip;
     IP4 mask;
-    int mtu;
+    int mtu{1280};
     int timeout;
     int tunFd;
 
@@ -315,6 +319,12 @@ int Tun::setMTU(int mtu) {
         return -1;
     }
     return 0;
+}
+
+int Tun::getMTU() {
+    std::shared_ptr<MacTun> tun;
+    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
+    return tun->getMTU();
 }
 
 int Tun::up() {

@@ -127,7 +127,6 @@ void WebSocketClient::handleWsQueue() {
 
 void WebSocketClient::handlePacket(Msg msg) {
     IP4Header *header = (IP4Header *)msg.data.data();
-
     msg.data.insert(0, 1, WsMsgKind::FORWARD);
     sendFrame(msg.data);
 }

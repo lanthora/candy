@@ -3,6 +3,7 @@
 #define CANDY_CORE_CLIENT_H
 
 #include "core/message.h"
+#include "netstack/netstack.h"
 #include "peer/manager.h"
 #include "tun/tun.h"
 #include "utils/atomic.h"
@@ -38,6 +39,7 @@ public:
     void setPort(int port);
     void setLocalhost(std::string ip);
     void setMtu(int mtu);
+    int getMtu();
 
     void setExptTunAddress(const std::string &cidr);
     void setVirtualMac(const std::string &vmac);
@@ -57,13 +59,15 @@ public:
     MsgQueue &getTunMsgQueue();
     MsgQueue &getPeerMsgQueue();
     MsgQueue &getWsMsgQueue();
+    MsgQueue &getNetstackMsgQueue();
 
 private:
-    MsgQueue tunMsgQueue, peerMsgQueue, wsMsgQueue;
+    MsgQueue tunMsgQueue, peerMsgQueue, wsMsgQueue, netstackMsgQueue;
 
     Tun tun;
     PeerManager peerManager;
     WebSocketClient ws;
+    Netstack netstack;
 
 private:
     std::string tunName;

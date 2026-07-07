@@ -91,6 +91,11 @@ else()
     find_package(Poco REQUIRED COMPONENTS Foundation XML JSON Net NetSSL Util)
 endif()
 
+set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/candy/src/netstack/lwip)
+set(LWIP_INCLUDE_DIRS ${LWIP_DIR}/src/include)
+include(${LWIP_DIR}/src/Filelists.cmake)
+target_include_directories(lwipcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/candy/src/netstack)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 

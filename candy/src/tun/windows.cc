@@ -114,6 +114,10 @@ public:
         return 0;
     }
 
+    int getMTU() {
+        return this->mtu;
+    }
+
     int up() {
         if (!Holder::Ok()) {
             spdlog::critical("init wintun failed");
@@ -252,7 +256,7 @@ private:
     std::string name;
     IP4 ip;
     uint32_t prefix;
-    int mtu;
+    int mtu{1280};
     int timeout;
     NET_IFINDEX ifindex;
     std::stack<MIB_IPFORWARDROW> routes;
@@ -312,6 +316,12 @@ int Tun::setMTU(int mtu) {
         return -1;
     }
     return 0;
+}
+
+int Tun::getMTU() {
+    std::shared_ptr<WindowsTun> tun;
+    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
+    return tun->getMTU();
 }
 
 int Tun::up() {

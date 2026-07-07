@@ -21,6 +21,7 @@ public:
 
     int setName(const std::string &name);
     int setMTU(int mtu);
+    int getMTU();
 
     int run(Client *client);
     int wait();
@@ -38,6 +39,8 @@ private:
     int handlePacket(Msg msg);
     int handleTunAddr(Msg msg);
     int handleSysRt(Msg msg);
+
+    bool shouldRouteToNetstack(const IP4Header &header, size_t size);
 
     std::string tunAddress;
     std::thread tunThread;

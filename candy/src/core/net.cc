@@ -10,6 +10,13 @@ IP4::IP4(const std::string &ip) {
     fromString(ip);
 }
 
+IP4::IP4(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
+    raw[0] = b0;
+    raw[1] = b1;
+    raw[2] = b2;
+    raw[3] = b3;
+}
+
 IP4 IP4::operator=(const std::string &ip) {
     fromString(ip);
     return *this;

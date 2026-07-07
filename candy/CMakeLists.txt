@@ -50,6 +50,11 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     include_directories(${CMAKE_CURRENT_BINARY_DIR}/wintun/include)
 endif()
 
+set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/netstack/lwip)
+target_link_libraries(candy-library PRIVATE lwipcore)
+target_include_directories(candy-library PRIVATE ${LWIP_DIR}/src/include)
+target_include_directories(candy-library PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/netstack)
+
 set_target_properties(candy-library PROPERTIES OUTPUT_NAME "candy")
 
 add_library(Candy::Library ALIAS candy-library)

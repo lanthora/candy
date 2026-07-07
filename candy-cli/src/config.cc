@@ -53,8 +53,7 @@ int arguments::parse(int argc, char *argv[]) {
     program.add_argument("-w", "--websocket")
         .help("WebSocket signaling address (e.g. \"ws://host:port/ws\").\n"
               "Client supports ws:// and wss://; server supports ws:// only.")
-        .metavar("<url>")
-        .required();
+        .metavar("<url>");
 
     program.add_argument("-p", "--password")
         .help("pre-shared key for authentication and P2P encryption.\n"

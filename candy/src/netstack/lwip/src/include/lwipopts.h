@@ -1,0 +1,72 @@
+#ifndef CANDY_LWIPOPTS_H
+#define CANDY_LWIPOPTS_H
+
+#define NO_SYS 1
+#define LWIP_SOCKET 0
+#define LWIP_NETCONN 0
+
+#define LWIP_IPV4 1
+#define LWIP_IPV6 0
+
+#define LWIP_RAW 0
+#define LWIP_UDP 1
+#define LWIP_TCP 1
+#define LWIP_DHCP 0
+#define LWIP_AUTOIP 0
+#define LWIP_DNS 0
+#define LWIP_IGMP 0
+#define LWIP_ICMP 1
+
+#define LWIP_NETIF_HOSTNAME 0
+#define LWIP_NETIF_API 0
+#define LWIP_NETIF_STATUS_CALLBACK 1
+#define LWIP_NETIF_LINK_CALLBACK 1
+#define LWIP_NETIF_REMOVE_CALLBACK 0
+
+#define LWIP_HAVE_LOOPIF 0
+
+#define MEM_LIBC_MALLOC 1
+#define MEMP_MEM_MALLOC 1
+#define MEM_USE_POOLS 0
+
+#define MEM_ALIGNMENT 4
+
+#define LWIP_STATS 0
+#define LWIP_STATS_DISPLAY 0
+
+#define SYS_LIGHTWEIGHT_PROT 0
+#define LWIP_TIMERS 1
+
+#define CHECKSUM_GEN_IP 1
+#define CHECKSUM_GEN_TCP 1
+#define CHECKSUM_GEN_UDP 1
+#define CHECKSUM_CHECK_IP 0
+#define CHECKSUM_CHECK_TCP 0
+#define CHECKSUM_CHECK_UDP 0
+
+#define LWIP_DEBUG 0
+
+#ifdef TCP_MSS
+#undef TCP_MSS
+#endif
+#define TCP_MSS 1460
+#ifdef TCP_WND
+#undef TCP_WND
+#endif
+#define TCP_WND (8 * TCP_MSS)
+#ifdef TCP_SND_BUF
+#undef TCP_SND_BUF
+#endif
+#define TCP_SND_BUF (8 * TCP_MSS)
+#ifdef PBUF_POOL_BUFSIZE
+#undef PBUF_POOL_BUFSIZE
+#endif
+#define PBUF_POOL_BUFSIZE 1600
+#ifdef PBUF_POOL_SIZE
+#undef PBUF_POOL_SIZE
+#endif
+#define PBUF_POOL_SIZE 32
+
+#define LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS 1
+
+#endif
