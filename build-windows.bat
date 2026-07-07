@@ -67,7 +67,7 @@ for /f "delims=" %%F in ('where cmake 2^>nul') do (
     set "CMAKE_EXE=%%F"
     exit /b 0
 )
-for /f "delims=" %%F in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$roots=@('C:\Program Files\Microsoft Visual Studio','C:\Program Files (x86)\Microsoft Visual Studio') | ? { Test-Path $_ }; $p=Get-ChildItem $roots -Recurse -Filter cmake.exe -ErrorAction SilentlyContinue | ? { $_.FullName -like '*CommonExtensions*Microsoft*CMake*CMake*bin*' } | Select-Object -First 1 -ExpandProperty FullName; if($p){$p}" 2^>nul') do (
+for /f "delims=" %%F in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$roots=@($env:ProgramFiles,$env:ProgramW6432,${env:ProgramFiles(x86)}) | Where-Object { $_ } | ForEach-Object { Join-Path $_ 'Microsoft Visual Studio' } | Where-Object { Test-Path $_ }; $vswhere=@((Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'),(Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\vswhere.exe')) | Where-Object { Test-Path $_ } | Select-Object -First 1; $p=$null; if($vswhere){ $install=& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath 2>$null; if($install){ $candidate=Join-Path $install 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'; if(Test-Path $candidate){ $p=$candidate } } }; if(-not $p -and $roots){ $p=Get-ChildItem $roots -Recurse -Filter cmake.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*CommonExtensions*Microsoft*CMake*CMake*bin*' } | Select-Object -First 1 -ExpandProperty FullName }; if($p){$p}" 2^>nul') do (
     set "CMAKE_EXE=%%F"
     exit /b 0
 )
@@ -80,7 +80,7 @@ for /f "delims=" %%F in ('where ninja 2^>nul') do (
     set "NINJA_EXE=%%F"
     exit /b 0
 )
-for /f "delims=" %%F in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$roots=@('C:\Program Files\Microsoft Visual Studio','C:\Program Files (x86)\Microsoft Visual Studio') | ? { Test-Path $_ }; $p=Get-ChildItem $roots -Recurse -Filter ninja.exe -ErrorAction SilentlyContinue | ? { $_.FullName -like '*CommonExtensions*Microsoft*CMake*Ninja*' } | Select-Object -First 1 -ExpandProperty FullName; if($p){$p}" 2^>nul') do (
+for /f "delims=" %%F in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$roots=@($env:ProgramFiles,$env:ProgramW6432,${env:ProgramFiles(x86)}) | Where-Object { $_ } | ForEach-Object { Join-Path $_ 'Microsoft Visual Studio' } | Where-Object { Test-Path $_ }; $vswhere=@((Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'),(Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\vswhere.exe')) | Where-Object { Test-Path $_ } | Select-Object -First 1; $p=$null; if($vswhere){ $install=& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath 2>$null; if($install){ $candidate=Join-Path $install 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'; if(Test-Path $candidate){ $p=$candidate } } }; if(-not $p -and $roots){ $p=Get-ChildItem $roots -Recurse -Filter ninja.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*CommonExtensions*Microsoft*CMake*Ninja*' } | Select-Object -First 1 -ExpandProperty FullName }; if($p){$p}" 2^>nul') do (
     set "NINJA_EXE=%%F"
     exit /b 0
 )
@@ -93,22 +93,21 @@ if defined CXX if exist "%CXX%" set "CXX_EXE=%CXX%"
 if defined CC_EXE if defined CXX_EXE goto mingw_prefix
 for /f "delims=" %%F in ('where gcc 2^>nul') do (
     set "CC_EXE=%%F"
-    goto find_gxx
-)
-for %%D in ("D:\msys64\mingw64\bin" "C:\msys64\mingw64\bin") do (
-    if exist "%%~D\gcc.exe" (
-        set "CC_EXE=%%~D\gcc.exe"
-        goto find_gxx
+    for %%I in ("%%F") do if exist "%%~dpIg++.exe" (
+        set "CXX_EXE=%%~dpIg++.exe"
+        goto mingw_prefix
     )
+    goto find_gxx
 )
 :find_gxx
 for /f "delims=" %%F in ('where g++ 2^>nul') do (
     set "CXX_EXE=%%F"
     goto mingw_prefix
 )
-for %%D in ("D:\msys64\mingw64\bin" "C:\msys64\mingw64\bin") do (
-    if exist "%%~D\g++.exe" (
-        set "CXX_EXE=%%~D\g++.exe"
+for /f "tokens=1,* delims==" %%A in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$bins=New-Object System.Collections.Generic.List[string]; function AddBin($p){ if([string]::IsNullOrWhiteSpace($p)){ return }; try{ $full=[System.IO.Path]::GetFullPath($p) } catch { return }; if((Test-Path (Join-Path $full 'gcc.exe')) -and (Test-Path (Join-Path $full 'g++.exe')) -and -not $bins.Contains($full)){ [void]$bins.Add($full) } }; ($env:PATH -split ';') | ForEach-Object { AddBin $_ }; @($env:MINGW_PREFIX,$env:MSYSTEM_PREFIX) | ForEach-Object { if($_){ AddBin (Join-Path $_ 'bin') } }; @($env:MSYS2_ROOT,$env:MSYS2_HOME,$env:SCOOP) | ForEach-Object { if($_){ AddBin (Join-Path $_ 'mingw64\bin'); AddBin (Join-Path $_ 'ucrt64\bin'); AddBin (Join-Path $_ 'clang64\bin'); AddBin (Join-Path $_ 'apps\msys2\current\mingw64\bin'); AddBin (Join-Path $_ 'apps\msys2\current\ucrt64\bin') } }; Get-PSDrive -PSProvider FileSystem | ForEach-Object { $r=$_.Root; AddBin (Join-Path $r 'msys64\mingw64\bin'); AddBin (Join-Path $r 'msys64\ucrt64\bin'); AddBin (Join-Path $r 'msys64\clang64\bin'); AddBin (Join-Path $r 'mingw64\bin') }; foreach($b in $bins){ $gcc=Join-Path $b 'gcc.exe'; $target=& $gcc -dumpmachine 2>$null; if($target -match 'mingw|w64'){ Write-Output ('CC_EXE=' + $gcc); Write-Output ('CXX_EXE=' + (Join-Path $b 'g++.exe')); break } }" 2^>nul') do (
+    if /i "%%A"=="CC_EXE" set "CC_EXE=%%B"
+    if /i "%%A"=="CXX_EXE" set "CXX_EXE=%%B"
+    if defined CC_EXE if defined CXX_EXE (
         goto mingw_prefix
     )
 )
