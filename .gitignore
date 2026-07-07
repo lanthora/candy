@@ -34,3 +34,5 @@
 # CMake Build files
 .cache
 build
+build-*/
+output/
