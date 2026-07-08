@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "core/net.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 #include <Poco/Net/IPAddress.h>
 #include <cstring>
 #include <exception>
@@ -151,7 +153,7 @@ int Address::fromCidr(const std::string &cidr) {
         host.fromString(cidr.substr(0UL, pos));
         mask.fromPrefix(std::stoi(cidr.substr(pos + 1)));
     } catch (std::exception &e) {
-        spdlog::warn("address parse cidr failed: {}: {}", e.what(), cidr);
+        candy::logger().warning(Poco::format("address parse cidr failed: %s: %s", std::string(e.what()), cidr));
         return -1;
     }
     return 0;

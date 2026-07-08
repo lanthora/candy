@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/message.h"
+#include "utils/log.h"
 #include "utils/time.h"
+#include <Poco/Format.h>
 #include <cstring>
 
 namespace candy {
@@ -24,7 +26,7 @@ bool Auth::check(const std::string &password) {
     int64_t localTime = unixTime();
     int64_t remoteTime = ntoh(this->timestamp);
     if (std::abs(localTime - remoteTime) > 300) {
-        spdlog::warn("auth header timestamp check failed: server {} client {}", localTime, remoteTime);
+        candy::logger().warning(Poco::format("auth header timestamp check failed: server %Ld client %Ld", localTime, remoteTime));
     }
 
     uint8_t reported[SHA256_DIGEST_LENGTH];
@@ -33,7 +35,7 @@ bool Auth::check(const std::string &password) {
     updateHash(password);
 
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("auth header hash check failed");
+        candy::logger().warning("auth header hash check failed");
         return false;
     }
     return true;
@@ -60,7 +62,8 @@ bool ExptTun::check(const std::string &password) {
     int64_t localTime = unixTime();
     int64_t remoteTime = ntoh(this->timestamp);
     if (std::abs(localTime - remoteTime) > 300) {
-        spdlog::warn("expected address header timestamp check failed: server {} client {}", localTime, remoteTime);
+        candy::logger().warning(
+            Poco::format("expected address header timestamp check failed: server %Ld client %Ld", localTime, remoteTime));
     }
 
     uint8_t reported[SHA256_DIGEST_LENGTH];
@@ -69,7 +72,7 @@ bool ExptTun::check(const std::string &password) {
     updateHash(password);
 
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("expected address header hash check failed");
+        candy::logger().warning("expected address header hash check failed");
         return false;
     }
     return true;
@@ -101,7 +104,8 @@ bool VMac::check(const std::string &password) {
     int64_t localTime = unixTime();
     int64_t remoteTime = ntoh(this->timestamp);
     if (std::abs(localTime - remoteTime) > 300) {
-        spdlog::warn("vmac message timestamp check failed: server {} client {}", localTime, remoteTime);
+        candy::logger().warning(
+            Poco::format("vmac message timestamp check failed: server %Ld client %Ld", localTime, remoteTime));
     }
 
     uint8_t reported[SHA256_DIGEST_LENGTH];
@@ -110,7 +114,7 @@ bool VMac::check(const std::string &password) {
     updateHash(password);
 
     if (std::memcmp(reported, this->hash, SHA256_DIGEST_LENGTH)) {
-        spdlog::warn("vmac message hash check failed");
+        candy::logger().warning("vmac message hash check failed");
         return false;
     }
     return true;

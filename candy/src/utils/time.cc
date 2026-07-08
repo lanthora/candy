@@ -6,8 +6,6 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
-#include <spdlog/fmt/bin_to_hex.h>
-#include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
 #include <unistd.h>

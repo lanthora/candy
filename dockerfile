@@ -1,9 +1,9 @@
 FROM alpine AS base
 RUN apk update
-RUN apk add spdlog openssl poco
+RUN apk add openssl poco
 
 FROM base AS build
-RUN apk add git cmake ninja pkgconf g++ spdlog-dev openssl-dev poco-dev linux-headers
+RUN apk add git cmake ninja pkgconf g++ openssl-dev poco-dev linux-headers
 COPY . candy
 RUN cd candy && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build && cmake --install build
 
