@@ -15,7 +15,6 @@ else()
     target_link_libraries(candy-library PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
-target_link_libraries(candy-library PRIVATE spdlog::spdlog)
 target_link_libraries(candy-library PRIVATE Poco::Foundation Poco::JSON Poco::Net Poco::NetSSL)
 target_link_libraries(candy-library PRIVATE Threads::Threads)
 

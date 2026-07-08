@@ -7,8 +7,6 @@
 #include "utils/codecvt.h"
 #include <memory>
 #include <openssl/sha.h>
-#include <spdlog/fmt/bin_to_hex.h>
-#include <spdlog/spdlog.h>
 #include <stack>
 #include <string>
 // clang-format off
@@ -28,6 +26,9 @@
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #include <wintun.h>
 #pragma GCC diagnostic pop
+#include "utils/hex.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 
 namespace candy {
 
@@ -57,7 +58,7 @@ private:
     Holder() {
         this->wintun = LoadLibraryExW(L"wintun.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
         if (!this->wintun) {
-            spdlog::critical("load wintun.dll failed");
+            candy::logger().fatal("load wintun.dll failed");
             return;
         }
 #pragma GCC diagnostic push
@@ -70,7 +71,7 @@ private:
 #undef X
 #pragma GCC diagnostic pop
         {
-            spdlog::critical("get function from wintun.dll failed");
+            candy::logger().fatal("get function from wintun.dll failed");
             FreeLibrary(this->wintun);
             this->wintun = NULL;
             return;
@@ -116,7 +117,7 @@ public:
 
     int up() {
         if (!Holder::Ok()) {
-            spdlog::critical("init wintun failed");
+            candy::logger().fatal("init wintun failed");
             return -1;
         }
 
@@ -127,7 +128,7 @@ public:
         memcpy(&Guid, hash, sizeof(Guid));
         this->adapter = WintunCreateAdapter(UTF8ToUTF16(this->name).c_str(), L"Candy", &Guid);
         if (!this->adapter) {
-            spdlog::critical("create wintun adapter failed: {}", GetLastError());
+            candy::logger().fatal(Poco::format("create wintun adapter failed: %lu", GetLastError()));
             return -1;
         }
         int Error;
@@ -140,7 +141,7 @@ public:
         AddressRow.DadState = IpDadStatePreferred;
         Error = CreateUnicastIpAddressEntry(&AddressRow);
         if (Error != ERROR_SUCCESS) {
-            spdlog::critical("create unicast ip address entry failed: {}", Error);
+            candy::logger().fatal(Poco::format("create unicast ip address entry failed: %d", Error));
             return -1;
         }
 
@@ -149,7 +150,7 @@ public:
         Interface.InterfaceLuid = AddressRow.InterfaceLuid;
         Error = GetIpInterfaceEntry(&Interface);
         if (Error != NO_ERROR) {
-            spdlog::critical("get ip interface entry failed: {}", Error);
+            candy::logger().fatal(Poco::format("get ip interface entry failed: %d", Error));
             return -1;
         }
         this->ifindex = Interface.InterfaceIndex;
@@ -157,13 +158,13 @@ public:
         Interface.NlMtu = this->mtu;
         Error = SetIpInterfaceEntry(&Interface);
         if (Error != NO_ERROR) {
-            spdlog::critical("set ip interface entry failed: {}", Error);
+            candy::logger().fatal(Poco::format("set ip interface entry failed: %d", Error));
             return -1;
         }
 
         this->session = WintunStartSession(this->adapter, WINTUN_MIN_RING_CAPACITY);
         if (!this->session) {
-            spdlog::critical("start wintun session failed: {}", GetLastError());
+            candy::logger().fatal(Poco::format("start wintun session failed: %lu", GetLastError()));
             return -1;
         }
         return 0;
@@ -199,7 +200,7 @@ public:
                 WaitForSingleObject(WintunGetReadWaitEvent(this->session), 1000);
                 return 0;
             }
-            spdlog::error("wintun read failed: {}", GetLastError());
+            candy::logger().error(Poco::format("wintun read failed: %lu", GetLastError()));
         }
         return -1;
     }
@@ -215,7 +216,7 @@ public:
             if (GetLastError() == ERROR_BUFFER_OVERFLOW) {
                 return 0;
             }
-            spdlog::error("wintun write failed: {}", GetLastError());
+            candy::logger().error(Poco::format("wintun write failed: %lu", GetLastError()));
         }
         return -1;
     }
@@ -242,7 +243,7 @@ public:
         if (result == NO_ERROR) {
             routes.push(route);
         } else {
-            spdlog::error("add route failed: {}", result);
+            candy::logger().error(Poco::format("add route failed: %lu", result));
         }
 
         return 0;
@@ -288,7 +289,7 @@ int Tun::setAddress(const std::string &cidr) {
     if (address.fromCidr(cidr)) {
         return -1;
     }
-    spdlog::info("client address: {}", address.toCidr());
+    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
     tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
     if (tun->setIP(address.Host())) {
         return -1;

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "websocket/server.h"
 #include "core/net.h"
+#include "utils/hex.h"
+#include "utils/log.h"
 #include "utils/time.h"
 #include "websocket/message.h"
+#include <Poco/Format.h>
 #include <Poco/Net/HTTPRequestHandler.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServerRequest.h>
@@ -16,8 +19,6 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
-#include <spdlog/fmt/bin_to_hex.h>
-#include <spdlog/spdlog.h>
 #include <sstream>
 
 /**
@@ -72,14 +73,14 @@ int WebSocketServer::setWebSocket(const std::string &uri) {
     try {
         Poco::URI parser(uri);
         if (parser.getScheme() != "ws") {
-            spdlog::critical("websocket server only support ws");
+            candy::logger().fatal("websocket server only support ws");
             return -1;
         }
         this->host = parser.getHost();
         this->port = parser.getPort();
         return 0;
     } catch (std::exception &e) {
-        spdlog::critical("invalid websocket uri: {}: {}", uri, e.what());
+        candy::logger().fatal(Poco::format("invalid websocket uri: %s: %s", uri, std::string(e.what())));
         return -1;
     }
 }
@@ -108,20 +109,21 @@ int WebSocketServer::setSdwan(const std::string &sdwan) {
         std::stringstream ss(route);
         // dev
         if (!std::getline(ss, addr, ',') || rt.dev.fromCidr(addr) || rt.dev.Host() != rt.dev.Net()) {
-            spdlog::critical("invalid route device: {}", route);
+            candy::logger().fatal(Poco::format("invalid route device: %s", route));
             return -1;
         }
         // dst
         if (!std::getline(ss, addr, ',') || rt.dst.fromCidr(addr) || rt.dst.Host() != rt.dst.Net()) {
-            spdlog::critical("invalid route dest: {}", route);
+            candy::logger().fatal(Poco::format("invalid route dest: %s", route));
             return -1;
         }
         // next
         if (!std::getline(ss, addr, ',') || rt.next.fromString(addr)) {
-            spdlog::critical("invalid route nexthop: {}", route);
+            candy::logger().fatal(Poco::format("invalid route nexthop: %s", route));
             return -1;
         }
-        spdlog::info("route: dev={} dst={} next={}", rt.dev.toCidr(), rt.dst.toCidr(), rt.next.toString());
+        candy::logger().information(
+            Poco::format("route: dev=%s dst=%s next=%s", rt.dev.toCidr(), rt.dst.toCidr(), rt.next.toString()));
         this->routes.push_back(rt);
     }
     return 0;
@@ -170,14 +172,14 @@ void WebSocketServer::handleMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::Auth)) {
-        spdlog::warn("invalid auth message: len {}", ctx.buffer.length());
+        candy::logger().warning(Poco::format("invalid auth message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
 
     WsMsg::Auth *header = (WsMsg::Auth *)ctx.buffer.data();
     if (!header->check(this->password)) {
-        spdlog::warn("auth header check failed: buffer {:n}", spdlog::to_hex(ctx.buffer));
+        candy::logger().warning(Poco::format("auth header check failed: buffer %s", to_hex(ctx.buffer)));
         ctx.status = -1;
         return;
     }
@@ -189,9 +191,9 @@ void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
         auto it = ipCtxMap.find(header->ip);
         if (it != ipCtxMap.end()) {
             it->second->status = -1;
-            spdlog::info("reconnect: {}", it->second->ip.toString());
+            candy::logger().information(Poco::format("reconnect: %s", it->second->ip.toString()));
         } else {
-            spdlog::info("connect: {}", ctx.ip.toString());
+            candy::logger().information(Poco::format("connect: %s", ctx.ip.toString()));
         }
         ipCtxMap[header->ip] = &ctx;
     }
@@ -201,13 +203,13 @@ void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
-        spdlog::debug("unauthorized forward websocket client");
+        candy::logger().debug("unauthorized forward websocket client");
         ctx.status = -1;
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Forward)) {
-        spdlog::debug("invalid forawrd message: len {}", ctx.buffer.length());
+        candy::logger().debug(Poco::format("invalid forawrd message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
@@ -257,30 +259,31 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
         return;
     }
 
-    spdlog::debug("forward failed: source {} dest {}", header->iph.saddr.toString(), header->iph.daddr.toString());
+    candy::logger().debug(
+        Poco::format("forward failed: source %s dest %s", header->iph.saddr.toString(), header->iph.daddr.toString()));
     return;
 }
 
 void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::ExptTun)) {
-        spdlog::warn("invalid dynamic address message: len {}", ctx.buffer.length());
+        candy::logger().warning(Poco::format("invalid dynamic address message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
     WsMsg::ExptTun *header = (WsMsg::ExptTun *)ctx.buffer.data();
     if (!header->check(this->password)) {
-        spdlog::warn("dynamic address header check failed: buffer {:n}", spdlog::to_hex(ctx.buffer));
+        candy::logger().warning(Poco::format("dynamic address header check failed: buffer %s", to_hex(ctx.buffer)));
         ctx.status = -1;
         return;
     }
     if (this->dhcp.empty()) {
-        spdlog::warn("unable to allocate dynamic address");
+        candy::logger().warning("unable to allocate dynamic address");
         ctx.status = -1;
         return;
     }
     Address exptTun;
     if (exptTun.fromCidr(header->cidr)) {
-        spdlog::warn("dynamic address header cidr invalid: buffer {:n}", spdlog::to_hex(ctx.buffer));
+        candy::logger().warning(Poco::format("dynamic address header cidr invalid: buffer %s", to_hex(ctx.buffer)));
         ctx.status = -1;
         return;
     }
@@ -302,7 +305,7 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
         do {
             exptTun = exptTun.Next();
             if (exptTun.Host() == this->dhcp.Host()) {
-                spdlog::warn("all addresses in the network are assigned");
+                candy::logger().warning("all addresses in the network are assigned");
                 ctx.status = -1;
                 return;
             }
@@ -317,27 +320,29 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
-        spdlog::debug("unauthorized peer websocket client");
+        candy::logger().debug("unauthorized peer websocket client");
         ctx.status = -1;
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Conn)) {
-        spdlog::warn("invalid peer conn message: len {}", ctx.buffer.length());
+        candy::logger().warning(Poco::format("invalid peer conn message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
 
     WsMsg::Conn *header = (WsMsg::Conn *)ctx.buffer.data();
     if (ctx.ip != header->src) {
-        spdlog::debug("peer source address does not match: auth {} source {}", ctx.ip.toString(), header->src.toString());
+        candy::logger().debug(
+            Poco::format("peer source address does not match: auth %s source %s", ctx.ip.toString(), header->src.toString()));
         ctx.status = -1;
         return;
     }
     std::shared_lock lock(this->ipCtxMutex);
     auto it = this->ipCtxMap.find(header->dst);
     if (it == this->ipCtxMap.end()) {
-        spdlog::debug("peer dest address not logged in: source {} dst {}", header->src.toString(), header->dst.toString());
+        candy::logger().debug(
+            Poco::format("peer dest address not logged in: source %s dst %s", header->src.toString(), header->dst.toString()));
         return;
     }
     it->second->sendFrame(ctx.buffer);
@@ -346,14 +351,14 @@ void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleVMacMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::VMac)) {
-        spdlog::warn("invalid vmac message: len {}", ctx.buffer.length());
+        candy::logger().warning(Poco::format("invalid vmac message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
 
     WsMsg::VMac *header = (WsMsg::VMac *)ctx.buffer.data();
     if (!header->check(this->password)) {
-        spdlog::warn("vmac message check failed: buffer {:n}", spdlog::to_hex(ctx.buffer));
+        candy::logger().warning(Poco::format("vmac message check failed: buffer %s", to_hex(ctx.buffer)));
         ctx.status = -1;
         return;
     }
@@ -364,20 +369,21 @@ void WebSocketServer::handleVMacMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
-        spdlog::debug("unauthorized discovery websocket client");
+        candy::logger().debug("unauthorized discovery websocket client");
         ctx.status = -1;
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Discovery)) {
-        spdlog::debug("invalid discovery message: len {}", ctx.buffer.length());
+        candy::logger().debug(Poco::format("invalid discovery message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
 
     WsMsg::Discovery *header = (WsMsg::Discovery *)ctx.buffer.data();
     if (ctx.ip != header->src) {
-        spdlog::debug("discovery source address does not match: auth {} source {}", ctx.ip.toString(), header->src.toString());
+        candy::logger().debug(Poco::format("discovery source address does not match: auth %s source %s", ctx.ip.toString(),
+                                           header->src.toString()));
         ctx.status = -1;
         return;
     }
@@ -400,13 +406,13 @@ void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
 
 void WebSocketServer::HandleGeneralMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
-        spdlog::debug("unauthorized general websocket client");
+        candy::logger().debug("unauthorized general websocket client");
         ctx.status = -1;
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::General)) {
-        spdlog::debug("invalid general message: len {}", ctx.buffer.length());
+        candy::logger().debug(Poco::format("invalid general message: len %zu", ctx.buffer.length()));
         ctx.status = -1;
         return;
     }
@@ -414,7 +420,8 @@ void WebSocketServer::HandleGeneralMsg(WsCtx &ctx) {
     WsMsg::General *header = (WsMsg::General *)ctx.buffer.data();
 
     if (ctx.ip != header->src) {
-        spdlog::debug("general source address does not match: auth {} source {}", ctx.ip.toString(), header->src.toString());
+        candy::logger().debug(
+            Poco::format("general source address does not match: auth %s source %s", ctx.ip.toString(), header->src.toString()));
         ctx.status = -1;
         return;
     }
@@ -474,10 +481,10 @@ int WebSocketServer::listen() {
         WebSocketHandler wsHandler = [this](Poco::Net::WebSocket &ws) { handleWebsocket(ws); };
         this->httpServer = std::make_shared<Poco::Net::HTTPServer>(new HTTPRequestHandlerFactory(wsHandler), socket, params);
         this->httpServer->start();
-        spdlog::info("listen on: {}:{}", host, port);
+        candy::logger().information(Poco::format("listen on: %s:%d", host, port));
         return 0;
     } catch (std::exception &e) {
-        spdlog::critical("listen failed: {}", e.what());
+        candy::logger().fatal(Poco::format("listen failed: %s", std::string(e.what())));
         return -1;
     }
 }
@@ -523,7 +530,7 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
             continue;
         } catch (std::exception &e) {
             // 未知异常,退出这个客户端
-            spdlog::debug("handle websocket failed: {}", e.what());
+            candy::logger().debug(Poco::format("handle websocket failed: %s", std::string(e.what())));
             break;
         }
     }
@@ -533,7 +540,7 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
         auto it = ipCtxMap.find(ctx.ip);
         if (it != ipCtxMap.end() && it->second == &ctx) {
             ipCtxMap.erase(it);
-            spdlog::info("disconnect: {}", ctx.ip.toString());
+            candy::logger().information(Poco::format("disconnect: %s", ctx.ip.toString()));
         }
     }
 }

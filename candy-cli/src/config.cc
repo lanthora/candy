@@ -2,7 +2,14 @@
 #include "config.h"
 #include "argparse.h"
 #include "candy/candy.h"
+#include "utils/log.h"
+#include <Poco/ConsoleChannel.h>
+#include <Poco/Format.h>
+#include <Poco/FormattingChannel.h>
 #include <Poco/JSON/Object.h>
+#include <Poco/Logger.h>
+#include <Poco/Message.h>
+#include <Poco/PatternFormatter.h>
 #include <Poco/Platform.h>
 #include <Poco/String.h>
 #include <filesystem>
@@ -10,7 +17,6 @@
 #include <functional>
 #include <iostream>
 #include <map>
-#include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
 
@@ -53,8 +59,7 @@ int arguments::parse(int argc, char *argv[]) {
     program.add_argument("-w", "--websocket")
         .help("WebSocket signaling address (e.g. \"ws://host:port/ws\").\n"
               "Client supports ws:// and wss://; server supports ws:// only.")
-        .metavar("<url>")
-        .required();
+        .metavar("<url>");
 
     program.add_argument("-p", "--password")
         .help("pre-shared key for authentication and P2P encryption.\n"
@@ -192,11 +197,23 @@ int arguments::parse(int argc, char *argv[]) {
             exit(1);
         }
 
+        // Set up default console channel with pattern
         if (this->noTimestamp) {
-            spdlog::set_pattern("[%^%l%$] %v");
+            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("[%q] %t");
+            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
+            Poco::AutoPtr<Poco::ConsoleChannel> pConsoleChannel = new Poco::ConsoleChannel;
+            pFormattingChannel->setChannel(pConsoleChannel);
+            Poco::Logger::root().setChannel(pFormattingChannel);
+        } else {
+            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("%Y-%m-%d %H:%M:%S [%q] %t");
+            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
+            Poco::AutoPtr<Poco::ConsoleChannel> pConsoleChannel = new Poco::ConsoleChannel;
+            pFormattingChannel->setChannel(pConsoleChannel);
+            Poco::Logger::root().setChannel(pFormattingChannel);
         }
+
         if (this->debug) {
-            spdlog::set_level(spdlog::level::debug);
+            Poco::Logger::root().setLevel(Poco::Message::PRIO_DEBUG);
         }
         return 0;
     } catch (const std::exception &e) {
@@ -235,11 +252,11 @@ void arguments::parseFile(std::string cfgFile) {
             if (handler != cfgHandlers.end()) {
                 handler->second(trim(cfg.second));
             } else {
-                spdlog::warn("unknown config: {}={}", cfg.first, cfg.second);
+                candy::logger().warning(Poco::format("unknown config: %s=%s", cfg.first, cfg.second));
             }
         }
     } catch (std::exception &e) {
-        spdlog::error("parse config file failed: {}", e.what());
+        candy::logger().error(Poco::format("parse config file failed: %s", std::string(e.what())));
         exit(1);
     }
 }
@@ -276,7 +293,7 @@ int saveTunAddress(const std::string &name, const std::string &cidr) {
         }
         return 0;
     } catch (std::exception &e) {
-        spdlog::critical("save latest address failed: {}", e.what());
+        candy::logger().fatal(Poco::format("save latest address failed: %s", std::string(e.what())));
         return -1;
     }
 }
@@ -329,7 +346,7 @@ std::string initVirtualMac() {
         }
         return vmac;
     } catch (std::exception &e) {
-        spdlog::critical("init vmac failed: {}", e.what());
+        candy::logger().fatal(Poco::format("init vmac failed: %s", std::string(e.what())));
         return "";
     }
 }

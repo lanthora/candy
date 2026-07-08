@@ -4,7 +4,6 @@
 
 #include <array>
 #include <cstdint>
-#include <spdlog/spdlog.h>
 #include <string>
 #include <type_traits>
 
@@ -90,7 +89,6 @@ struct __attribute__((packed)) SysRouteEntry {
     IP4 nexthop;
 };
 
-/* 用于表示地址和掩码的组合,用于判断主机是否属于某个网络 */
 class Address {
 public:
     Address();
@@ -100,10 +98,8 @@ public:
     IP4 &Mask();
     IP4 Net();
 
-    // 当前网络内的下一个地址
     Address Next();
 
-    // 判断是否是有效的主机地址
     bool isValid();
 
     int fromCidr(const std::string &cidr);

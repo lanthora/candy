@@ -4,14 +4,15 @@
 #include "core/message.h"
 #include "peer/manager.h"
 #include "peer/peer.h"
+#include "utils/log.h"
 #include "utils/time.h"
+#include <Poco/Format.h>
 #include <Poco/Net/IPAddress.h>
 #include <Poco/Net/SocketAddress.h>
 #include <algorithm>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
-#include <spdlog/spdlog.h>
 
 namespace {
 
@@ -23,7 +24,7 @@ bool isLocalNetwork(const SocketAddress &addr) {
     if (ip.isV4()) {
         return ip.isSiteLocal() || ip.isLinkLocal() || ip.isSiteLocalMC();
     } else if (ip.isV6()) {
-        spdlog::error("unexpected ipv6 local address");
+        candy::logger().error("unexpected ipv6 local address");
     }
 
     return false;
@@ -65,7 +66,7 @@ std::optional<std::string> Peer::encrypt(const std::string &plaintext) {
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
 
     if (!RAND_bytes(iv, AES_256_GCM_IV_LEN)) {
-        spdlog::debug("generate random iv failed");
+        candy::logger().debug("generate random iv failed");
         return std::nullopt;
     }
 
@@ -73,29 +74,29 @@ std::optional<std::string> Peer::encrypt(const std::string &plaintext) {
     auto ctx = this->encryptCtx.get();
 
     if (!EVP_CIPHER_CTX_reset(ctx)) {
-        spdlog::debug("encrypt reset cipher context failed");
+        candy::logger().debug("encrypt reset cipher context failed");
         return std::nullopt;
     }
     if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)key.data(), iv)) {
-        spdlog::debug("encrypt initialize cipher context failed");
+        candy::logger().debug("encrypt initialize cipher context failed");
         return std::nullopt;
     }
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
-        spdlog::debug("set iv length failed");
+        candy::logger().debug("set iv length failed");
         return std::nullopt;
     }
     if (!EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)plaintext.data(), plaintext.size())) {
-        spdlog::debug("encrypt update failed");
+        candy::logger().debug("encrypt update failed");
         return std::nullopt;
     }
     ciphertextLen = len;
     if (!EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
-        spdlog::debug("encrypt final failed");
+        candy::logger().debug("encrypt final failed");
         return std::nullopt;
     }
     ciphertextLen += len;
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AES_256_GCM_TAG_LEN, tag)) {
-        spdlog::debug("get tag failed");
+        candy::logger().debug("get tag failed");
         return std::nullopt;
     }
 
@@ -131,7 +132,7 @@ bool Peer::updateState(PeerState state) {
         return false;
     }
 
-    spdlog::debug("state: {} {} => {}", this->addr.toString(), stateString(), stateString(state));
+    candy::logger().debug(Poco::format("state: %s %s => %s", this->addr.toString(), stateString(), stateString(state)));
 
     if (state == PeerState::INIT || state == PeerState::WAITING || state == PeerState::FAILED) {
         resetState();
@@ -182,7 +183,8 @@ void Peer::handlePubInfo(IP4 ip, uint16_t port, bool local) {
 
         this->wide = SocketAddress(ip.toString(), port);
     } catch (const Poco::Exception &e) {
-        spdlog::warn("peer handle pubinfo failed: ip={}, port={}, error={}", ip.toString(), port, e.message());
+        candy::logger().warning(
+            Poco::format("peer handle pubinfo failed: ip=%s, port=%hu, error=%s", ip.toString(), port, e.message()));
         return;
     }
 
@@ -269,7 +271,7 @@ void Peer::tick() {
 
 void Peer::handleHeartbeatMessage(const SocketAddress &address, uint8_t heartbeatAck) {
     if (this->state == PeerState::INIT || this->state == PeerState::WAITING || this->state == PeerState::FAILED) {
-        spdlog::debug("heartbeat peer state invalid: {} {}", this->addr.toString(), stateString());
+        candy::logger().debug(Poco::format("heartbeat peer state invalid: %s %s", this->addr.toString(), stateString()));
         return;
     }
 
@@ -306,7 +308,7 @@ int Peer::send(const std::string &buffer) {
             }
         }
     } catch (std::exception &e) {
-        spdlog::debug("peer send failed: {}", e.what());
+        candy::logger().debug(Poco::format("peer send failed: %s", std::string(e.what())));
     }
     return -1;
 }

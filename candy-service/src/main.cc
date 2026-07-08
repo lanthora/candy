@@ -1,8 +1,16 @@
 #include "candy/client.h"
+#include "utils/log.h"
+#include <Poco/AutoPtr.h>
+#include <Poco/ConsoleChannel.h>
 #include <Poco/Exception.h>
 #include <Poco/File.h>
+#include <Poco/FileChannel.h>
+#include <Poco/Format.h>
+#include <Poco/FormattingChannel.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/JSON/Parser.h>
+#include <Poco/Logger.h>
+#include <Poco/Message.h>
 #include <Poco/Net/HTTPRequestHandler.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServer.h>
@@ -10,6 +18,7 @@
 #include <Poco/Net/HTTPServerResponse.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/SocketAddress.h>
+#include <Poco/PatternFormatter.h>
 #include <Poco/StreamCopier.h>
 #include <Poco/Timestamp.h>
 #include <Poco/Util/HelpFormatter.h>
@@ -20,8 +29,6 @@
 #include <iterator>
 #include <map>
 #include <mutex>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/spdlog.h>
 #include <sstream>
 #include <thread>
 
@@ -222,12 +229,38 @@ protected:
 
         if (!logdir.empty()) {
             Poco::File(logdir).createDirectories();
-            auto logger = spdlog::rotating_logger_mt("app", logdir + "/app.log", 10 * 1024 * 1024, 5, true);
-            spdlog::set_default_logger(logger);
+            Poco::AutoPtr<Poco::FileChannel> pFileChannel = new Poco::FileChannel(logdir + "/app.log");
+            pFileChannel->setProperty("rotation", "10 M");
+            pFileChannel->setProperty("archive", "number");
+            pFileChannel->setProperty("purgeCount", "5");
+            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("%Y-%m-%d %H:%M:%S [%q] %t");
+            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
+            pFormattingChannel->setChannel(pFileChannel);
+            Poco::Logger::root().setChannel(pFormattingChannel);
+        } else {
+            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("%Y-%m-%d %H:%M:%S [%q] %t");
+            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
+            Poco::AutoPtr<Poco::ConsoleChannel> pConsoleChannel = new Poco::ConsoleChannel;
+            pFormattingChannel->setChannel(pConsoleChannel);
+            Poco::Logger::root().setChannel(pFormattingChannel);
         }
 
         if (!loglevel.empty()) {
-            spdlog::set_level(spdlog::level::from_str(loglevel));
+            if (loglevel == "debug") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_DEBUG);
+            } else if (loglevel == "information" || loglevel == "info") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_INFORMATION);
+            } else if (loglevel == "warning" || loglevel == "warn") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_WARNING);
+            } else if (loglevel == "error") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_ERROR);
+            } else if (loglevel == "fatal" || loglevel == "critical") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_FATAL);
+            } else if (loglevel == "trace") {
+                Poco::Logger::root().setLevel(Poco::Message::PRIO_TRACE);
+            } else {
+                candy::logger().warning(Poco::format("unknown log level: %s", loglevel));
+            }
         }
 
         if (bindAddress.empty()) {
@@ -247,10 +280,10 @@ protected:
             Poco::Net::HTTPServer server(new JSONRequestHandlerFactory, socket, params);
 
             server.start();
-            spdlog::info("bind: {}:{}", bindAddress, port);
+            candy::logger().information(Poco::format("bind: %s:%d", bindAddress, port));
 
             waitForTerminationRequest();
-            spdlog::info("exit signal detected");
+            candy::logger().information("exit signal detected");
 
             server.stop();
 

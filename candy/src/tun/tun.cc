@@ -3,16 +3,18 @@
 #include "core/client.h"
 #include "core/message.h"
 #include "core/net.h"
+#include "utils/hex.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 #include <mutex>
 #include <shared_mutex>
-#include <spdlog/fmt/bin_to_hex.h>
 
 namespace candy {
 
 int Tun::run(Client *client) {
     this->client = client;
     this->msgThread = std::thread([&] {
-        spdlog::debug("start thread: tun msg");
+        candy::logger().debug("start thread: tun msg");
         try {
             while (getClient().isRunning()) {
                 if (handleTunQueue()) {
@@ -21,10 +23,10 @@ int Tun::run(Client *client) {
             }
             getClient().shutdown();
         } catch (const std::exception &e) {
-            spdlog::error("tun msg thread exception: {}", e.what());
+            candy::logger().error(Poco::format("tun msg thread exception: %s", std::string(e.what())));
             getClient().shutdown();
         }
-        spdlog::debug("stop thread: tun msg");
+        candy::logger().debug("stop thread: tun msg");
     });
     return 0;
 }
@@ -100,7 +102,7 @@ int Tun::handleTunQueue() {
         handleSysRt(std::move(msg));
         break;
     default:
-        spdlog::warn("unexcepted tun message type: {}", static_cast<int>(msg.kind));
+        candy::logger().warning(Poco::format("unexcepted tun message type: %d", static_cast<int>(msg.kind)));
         break;
     }
     return 0;
@@ -108,7 +110,7 @@ int Tun::handleTunQueue() {
 
 int Tun::handlePacket(Msg msg) {
     if (msg.data.size() < sizeof(IP4Header)) {
-        spdlog::warn("invalid IPv4 packet: {:n}", spdlog::to_hex(msg.data));
+        candy::logger().warning(Poco::format("invalid IPv4 packet: %s", to_hex(msg.data)));
         return 0;
     }
     IP4Header *header = (IP4Header *)msg.data.data();
@@ -126,12 +128,12 @@ int Tun::handleTunAddr(Msg msg) {
     }
 
     if (up()) {
-        spdlog::critical("tun up failed");
+        candy::logger().fatal("tun up failed");
         return -1;
     }
 
     this->tunThread = std::thread([&] {
-        spdlog::debug("start thread: tun");
+        candy::logger().debug("start thread: tun");
         try {
             while (getClient().isRunning()) {
                 if (handleTunDevice()) {
@@ -139,14 +141,14 @@ int Tun::handleTunAddr(Msg msg) {
                 }
             }
             getClient().shutdown();
-            spdlog::debug("stop thread: tun");
+            candy::logger().debug("stop thread: tun");
 
             if (down()) {
-                spdlog::critical("tun down failed");
+                candy::logger().fatal("tun down failed");
                 return;
             }
         } catch (const std::exception &e) {
-            spdlog::error("tun thread exception: {}", e.what());
+            candy::logger().error(Poco::format("tun thread exception: %s", std::string(e.what())));
             getClient().shutdown();
         }
     });
@@ -157,7 +159,8 @@ int Tun::handleTunAddr(Msg msg) {
 int Tun::handleSysRt(Msg msg) {
     SysRouteEntry *rt = (SysRouteEntry *)msg.data.data();
     if (rt->nexthop != getIP()) {
-        spdlog::info("route: {}/{} via {}", rt->dst.toString(), rt->mask.toPrefix(), rt->nexthop.toString());
+        candy::logger().information(
+            Poco::format("route: %s/%d via %s", rt->dst.toString(), rt->mask.toPrefix(), rt->nexthop.toString()));
         if (setSysRtTable(*rt)) {
             return -1;
         }

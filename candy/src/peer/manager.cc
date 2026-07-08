@@ -4,14 +4,15 @@
 #include "core/message.h"
 #include "core/net.h"
 #include "peer/message.h"
+#include "utils/hex.h"
+#include "utils/log.h"
 #include "utils/time.h"
+#include <Poco/Format.h>
 #include <Poco/Net/NetException.h>
 #include <Poco/Net/NetworkInterface.h>
 #include <Poco/Timespan.h>
 #include <openssl/sha.h>
 #include <shared_mutex>
-#include <spdlog/fmt/bin_to_hex.h>
-#include <spdlog/spdlog.h>
 
 namespace candy {
 
@@ -58,19 +59,19 @@ int PeerManager::run(Client *client) {
     this->localP2PDisabled = false;
 
     if (this->stun.update()) {
-        spdlog::critical("update stun failed");
+        candy::logger().fatal("update stun failed");
         return -1;
     }
 
     this->msgThread = std::thread([&] {
-        spdlog::debug("start thread: peer manager msg");
+        candy::logger().debug("start thread: peer manager msg");
         while (getClient().isRunning()) {
             if (handlePeerQueue()) {
                 break;
             }
         }
         getClient().shutdown();
-        spdlog::debug("stop thread: peer manager msg");
+        candy::logger().debug("stop thread: peer manager msg");
     });
 
     return 0;
@@ -133,14 +134,16 @@ int PeerManager::handlePeerQueue() {
             handlePubInfo(std::move(msg));
             break;
         default:
-            spdlog::warn("unexcepted peer message type: {}", static_cast<int>(msg.kind));
+            candy::logger().warning(Poco::format("unexcepted peer message type: %d", static_cast<int>(msg.kind)));
             break;
         }
     } catch (const Poco::Exception &e) {
-        spdlog::warn("peer manager handle queue failed: msg_kind={}, error={}", static_cast<int>(msg.kind), e.message());
+        candy::logger().warning(
+            Poco::format("peer manager handle queue failed: msg_kind=%d, error=%s", static_cast<int>(msg.kind), e.message()));
         return 0;
     } catch (const std::exception &e) {
-        spdlog::warn("peer manager handle queue failed: msg_kind={}, error={}", static_cast<int>(msg.kind), e.what());
+        candy::logger().warning(Poco::format("peer manager handle queue failed: msg_kind=%d, error=%s",
+                                             static_cast<int>(msg.kind), std::string(e.what())));
         return 0;
     }
     return 0;
@@ -208,7 +211,7 @@ int PeerManager::handlePacket(Msg msg) {
 
 int PeerManager::handleTunAddr(Msg msg) {
     if (this->tunAddr.fromCidr(msg.data)) {
-        spdlog::error("set tun addr failed: {}", msg.data);
+        candy::logger().error(Poco::format("set tun addr failed: %s", msg.data));
         return -1;
     }
 
@@ -243,7 +246,7 @@ int PeerManager::handleTryP2P(Msg msg) {
         }
     }
 
-    spdlog::warn("can not find peer: {}", src.toString());
+    candy::logger().warning(Poco::format("can not find peer: %s", src.toString()));
     return 0;
 }
 
@@ -251,7 +254,8 @@ int PeerManager::handlePubInfo(Msg msg) {
     auto info = (CoreMsg::PubInfo *)(msg.data.data());
 
     if (info->src == getClient().address() || info->dst != getClient().address()) {
-        spdlog::warn("invalid public info: src=[{}] dst=[{}]", info->src.toString(), info->dst.toString());
+        candy::logger().warning(
+            Poco::format("invalid public info: src=[%s] dst=[%s]", info->src.toString(), info->dst.toString()));
         return 0;
     }
 
@@ -275,11 +279,12 @@ int PeerManager::handlePubInfo(Msg msg) {
             }
         }
     } catch (const Poco::Exception &e) {
-        spdlog::warn("peer manager handle pubinfo failed: src={}, ip={}, port={}, error={}", info->src.toString(),
-                     info->ip.toString(), info->port, e.message());
+        candy::logger().warning(Poco::format("peer manager handle pubinfo failed: src=%s, ip=%s, port=%hu, error=%s",
+                                             info->src.toString(), info->ip.toString(), info->port, e.message()));
         return 0;
     } catch (const std::exception &e) {
-        spdlog::warn("peer manager handle pubinfo failed: src={}, error={}", info->src.toString(), e.what());
+        candy::logger().warning(
+            Poco::format("peer manager handle pubinfo failed: src=%s, error=%s", info->src.toString(), std::string(e.what())));
         return 0;
     }
 
@@ -294,12 +299,12 @@ int PeerManager::startTickThread() {
                     iface.type() != iface.NI_TYPE_OTHER) {
                     auto firstAddress = iface.firstAddress(Poco::Net::IPAddress::IPv4);
                     memcpy(&this->localhost, firstAddress.addr(), sizeof(this->localhost));
-                    spdlog::debug("localhost: {}", this->localhost.toString());
+                    candy::logger().debug(Poco::format("localhost: %s", this->localhost.toString()));
                     break;
                 }
             }
         } catch (std::exception &e) {
-            spdlog::warn("local ip failed: {}", e.what());
+            candy::logger().warning(Poco::format("local ip failed: %s", std::string(e.what())));
         }
     }
 
@@ -307,7 +312,7 @@ int PeerManager::startTickThread() {
         return -1;
     }
     this->tickThread = std::thread([&] {
-        spdlog::debug("start thread: peer manager tick");
+        candy::logger().debug("start thread: peer manager tick");
         try {
             while (getClient().isRunning()) {
                 auto wake_time = std::chrono::system_clock::now() + std::chrono::seconds(1);
@@ -318,10 +323,10 @@ int PeerManager::startTickThread() {
             }
             getClient().shutdown();
         } catch (const std::exception &e) {
-            spdlog::error("tick thread exception: {}", e.what());
+            candy::logger().error(Poco::format("tick thread exception: %s", std::string(e.what())));
             getClient().shutdown();
         }
-        spdlog::debug("stop thread: peer manager tick");
+        candy::logger().debug("stop thread: peer manager tick");
     });
     return 0;
 }
@@ -355,23 +360,23 @@ int PeerManager::initSocket() {
         this->socket.bind(SocketAddress(AddressFamily::IPv4, this->listenPort));
         this->socket.setSendBufferSize(16 * 1024 * 1024);
         this->socket.setReceiveBufferSize(16 * 1024 * 1024);
-        spdlog::debug("listen port: {}", this->socket.address().port());
+        candy::logger().debug(Poco::format("listen port: %u", this->socket.address().port()));
     } catch (Poco::Net::NetException &e) {
-        spdlog::critical("peer socket init failed: {}: {}", e.what(), e.message());
+        candy::logger().fatal(Poco::format("peer socket init failed: %s: %s", std::string(e.what()), e.message()));
         return -1;
     }
 
     this->decryptCtx = std::shared_ptr<EVP_CIPHER_CTX>(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
 
     this->pollThread = std::thread([&]() {
-        spdlog::debug("start thread: peer manager poll");
+        candy::logger().debug("start thread: peer manager poll");
         while (getClient().isRunning()) {
             if (poll()) {
                 break;
             }
         }
         getClient().shutdown();
-        spdlog::debug("stop thread: peer manager poll");
+        candy::logger().debug("stop thread: peer manager poll");
     });
     return 0;
 }
@@ -380,21 +385,21 @@ void PeerManager::sendStunRequest() {
     try {
         StunRequest request;
         if (sendTo(&request, sizeof(request), this->stun.address) != sizeof(request)) {
-            spdlog::warn("the stun request was not completely sent");
+            candy::logger().warning("the stun request was not completely sent");
         }
     } catch (std::exception &e) {
-        spdlog::debug("send stun request failed: {}", e.what());
+        candy::logger().debug(Poco::format("send stun request failed: %s", std::string(e.what())));
     }
 }
 
 void PeerManager::handleStunResponse(std::string buffer) {
     if (buffer.length() < sizeof(StunResponse)) {
-        spdlog::debug("invalid stun response length: {}", buffer.length());
+        candy::logger().debug(Poco::format("invalid stun response length: %zu", buffer.length()));
         return;
     }
     auto response = (StunResponse *)buffer.c_str();
     if (ntoh(response->type) != 0x0101) {
-        spdlog::debug("invalid stun reponse type: {}", ntoh(response->type));
+        candy::logger().debug(Poco::format("invalid stun reponse type: %hu", ntoh(response->type)));
         return;
     }
 
@@ -425,7 +430,7 @@ void PeerManager::handleStunResponse(std::string buffer) {
         pos += 2 + ntoh(*(uint16_t *)(attr + pos));
     }
     if (!ip || !port) {
-        spdlog::warn("stun response parse failed: {:n}", spdlog::to_hex(buffer));
+        candy::logger().warning(Poco::format("stun response parse failed: %s", to_hex(buffer)));
         return;
     }
 
@@ -459,14 +464,14 @@ void PeerManager::handleMessage(std::string buffer, const SocketAddress &address
         }
         break;
     default:
-        spdlog::info("udp4 unknown message: {}", address.toString());
+        candy::logger().information(Poco::format("udp4 unknown message: %s", address.toString()));
         break;
     }
 }
 
 void PeerManager::handleHeartbeatMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Heartbeat)) {
-        spdlog::debug("udp4 heartbeat failed: len {} address {}", buffer.length(), address.toString());
+        candy::logger().debug(Poco::format("udp4 heartbeat failed: len %zu address %s", buffer.length(), address.toString()));
         return;
     }
 
@@ -474,7 +479,7 @@ void PeerManager::handleHeartbeatMessage(std::string buffer, const SocketAddress
     std::shared_lock lock(this->ipPeerMutex);
     auto it = this->ipPeerMap.find(heartbeat->tunip);
     if (it == this->ipPeerMap.end()) {
-        spdlog::debug("udp4 heartbeat find peer failed: tun ip {}", heartbeat->tunip.toString());
+        candy::logger().debug(Poco::format("udp4 heartbeat find peer failed: tun ip %s", heartbeat->tunip.toString()));
         return;
     }
     it->second.handleHeartbeatMessage(address, heartbeat->ack);
@@ -482,7 +487,7 @@ void PeerManager::handleHeartbeatMessage(std::string buffer, const SocketAddress
 
 void PeerManager::handleForwardMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Forward)) {
-        spdlog::warn("invalid forward message: {:n}", spdlog::to_hex(buffer));
+        candy::logger().warning(Poco::format("invalid forward message: %s", to_hex(buffer)));
         return;
     }
     buffer.erase(0, 1);
@@ -496,7 +501,7 @@ void PeerManager::handleForwardMessage(std::string buffer, const SocketAddress &
 
 void PeerManager::handleDelayMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Delay)) {
-        spdlog::warn("invalid delay message: {:n}", spdlog::to_hex(buffer));
+        candy::logger().warning(Poco::format("invalid delay message: %s", to_hex(buffer)));
         return;
     }
 
@@ -532,7 +537,7 @@ void PeerManager::handleRouteMessage(std::string buffer, const SocketAddress &ad
     }
 
     if (buffer.size() < sizeof(PeerMsg::Route)) {
-        spdlog::warn("invalid delay message: {:n}", spdlog::to_hex(buffer));
+        candy::logger().warning(Poco::format("invalid delay message: %s", to_hex(buffer)));
         return;
     }
     auto header = (PeerMsg::Route *)buffer.data();
@@ -564,7 +569,7 @@ int PeerManager::poll() {
     } catch (Poco::Net::ConnectionResetException &e) {
         // 忽略 UDP 的连接 Reset, Windows 特有的问题
     } catch (std::exception &e) {
-        spdlog::warn("peer_manager poll failed: {}", e.what());
+        candy::logger().warning(Poco::format("peer_manager poll failed: %s", std::string(e.what())));
         return -1;
     }
     return 0;
@@ -579,12 +584,12 @@ std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
 
     if (this->key.size() != AES_256_GCM_KEY_LEN) {
-        spdlog::debug("invalid key length: {}", this->key.size());
+        candy::logger().debug(Poco::format("invalid key length: %zu", this->key.size()));
         return std::nullopt;
     }
 
     if (ciphertext.size() < AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN) {
-        spdlog::debug("invalid ciphertext length: {}", ciphertext.size());
+        candy::logger().debug(Poco::format("invalid ciphertext length: %zu", ciphertext.size()));
         return std::nullopt;
     }
 
@@ -592,7 +597,7 @@ std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
     auto ctx = this->decryptCtx.get();
 
     if (!EVP_CIPHER_CTX_reset(ctx)) {
-        spdlog::debug("decrypt reset cipher context failed");
+        candy::logger().debug("decrypt reset cipher context failed");
         return std::nullopt;
     }
 
@@ -602,25 +607,25 @@ std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
     enc += AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN;
 
     if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)key.data(), iv)) {
-        spdlog::debug("initialize cipher context failed");
+        candy::logger().debug("initialize cipher context failed");
         return std::nullopt;
     }
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, AES_256_GCM_IV_LEN, NULL)) {
-        spdlog::debug("set iv length failed");
+        candy::logger().debug("set iv length failed");
         return std::nullopt;
     }
     if (!EVP_DecryptUpdate(ctx, plaintext, &len, enc, ciphertext.size() - AES_256_GCM_IV_LEN - AES_256_GCM_TAG_LEN)) {
-        spdlog::debug("decrypt update failed");
+        candy::logger().debug("decrypt update failed");
         return std::nullopt;
     }
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AES_256_GCM_TAG_LEN, tag)) {
-        spdlog::debug("set tag failed");
+        candy::logger().debug("set tag failed");
         return std::nullopt;
     }
 
     plaintextLen = len;
     if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
-        spdlog::debug("decrypt final failed");
+        candy::logger().debug("decrypt final failed");
         return std::nullopt;
     }
 
@@ -636,10 +641,10 @@ int PeerManager::sendTo(const void *buffer, int length, const SocketAddress &add
     try {
         return this->socket.sendTo(buffer, length, address);
     } catch (const Poco::Net::NetException &e) {
-        spdlog::debug("socket sendTo failed: {}", e.message());
+        candy::logger().debug(Poco::format("socket sendTo failed: %s", e.message()));
         return -1;
     } catch (const std::exception &e) {
-        spdlog::debug("socket sendTo failed: {}", e.what());
+        candy::logger().debug(Poco::format("socket sendTo failed: %s", std::string(e.what())));
         return -1;
     }
 }
@@ -658,7 +663,7 @@ Client &PeerManager::getClient() {
 
 void PeerManager::showRtChange(const PeerRouteEntry &entry) {
     std::string rtt = (entry.rtt == RTT_LIMIT) ? "[deleted]" : std::to_string(entry.rtt);
-    spdlog::debug("route: dst={} next={} delay={}", entry.dst.toString(), entry.next.toString(), rtt);
+    candy::logger().debug(Poco::format("route: dst=%s next=%s delay=%s", entry.dst.toString(), entry.next.toString(), rtt));
 }
 
 int PeerManager::sendRtMessage(IP4 dst, int32_t rtt) {

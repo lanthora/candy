@@ -2,6 +2,8 @@
 #include "candy/client.h"
 #include "core/client.h"
 #include "utils/atomic.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/JSON/Stringifier.h>
 #include <map>
@@ -9,7 +11,6 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
-#include <spdlog/spdlog.h>
 
 namespace candy {
 namespace client {
@@ -56,7 +57,7 @@ std::optional<std::shared_ptr<Instance>> try_create_instance(const std::string &
     std::unique_lock lock(instance_mutex);
     auto it = instance_map.find(id);
     if (it != instance_map.end()) {
-        spdlog::warn("instance already exists: id={}", id);
+        candy::logger().warning(Poco::format("instance already exists: id=%s", id));
         return std::nullopt;
     }
     auto manager = std::make_shared<Instance>();
@@ -83,7 +84,7 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
         return oss.str();
     };
 
-    spdlog::info("run enter: id={} config={}", id, toString(config));
+    candy::logger().information(Poco::format("run enter: id=%s config=%s", id, toString(config)));
     while ((*instance)->is_running()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         auto client = (*instance)->create_client();
@@ -100,7 +101,7 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
         client->setLocalhost(config.getValue<std::string>("localhost"));
         client->run();
     }
-    spdlog::info("run exit: id={} ", id);
+    candy::logger().information(Poco::format("run exit: id=%s ", id));
 
     return try_erase_instance(id);
 }
@@ -109,7 +110,7 @@ bool shutdown(const std::string &id) {
     std::shared_lock lock(instance_mutex);
     auto it = instance_map.find(id);
     if (it == instance_map.end()) {
-        spdlog::warn("instance not found: id={}", id);
+        candy::logger().warning(Poco::format("instance not found: id=%s", id));
         return false;
     }
     if (auto instance = it->second) {

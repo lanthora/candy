@@ -6,6 +6,8 @@
 #include "core/net.h"
 #include "peer/message.h"
 #include "peer/peer.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 #include <Poco/Net/DatagramSocket.h>
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
@@ -44,7 +46,7 @@ struct Stun {
             }
             return 0;
         } catch (std::exception &e) {
-            spdlog::warn("set stun server address failed: {}", e.what());
+            candy::logger().warning(Poco::format("set stun server address failed: %s", std::string(e.what())));
             return -1;
         }
     }
@@ -82,7 +84,6 @@ public:
     int updateRtTable(PeerRouteEntry entry);
 
 private:
-    // 处理来自消息队列的数据
     int handlePeerQueue();
     int handlePacket(Msg msg);
     int handleTunAddr(Msg msg);
@@ -131,7 +132,6 @@ private:
     std::mutex decryptCtxMutex;
     std::string key;
 
-    // 默认监听端口,如果不配置,随机监听
     uint16_t listenPort = 0;
 
 public:

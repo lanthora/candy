@@ -1,7 +1,7 @@
 #include "candy/candy.h"
 #include "config.h"
 #include <signal.h>
-#include <spdlog/spdlog.h>
+#include <thread>
 
 int main(int argc, char *argv[]) {
     arguments args;

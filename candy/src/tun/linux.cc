@@ -4,13 +4,14 @@
 
 #include "core/net.h"
 #include "tun/tun.h"
+#include "utils/log.h"
+#include <Poco/Format.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <linux/if_tun.h>
 #include <memory>
 #include <net/if.h>
 #include <net/route.h>
-#include <spdlog/spdlog.h>
 #include <string>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -47,19 +48,19 @@ public:
     int up() {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
-            spdlog::critical("open /dev/net/tun failed: {}", strerror(errno));
+            candy::logger().fatal(Poco::format("open /dev/net/tun failed: %s", strerror(errno)));
             close(this->tunFd);
             return -1;
         }
         int flags = fcntl(this->tunFd, F_GETFL, 0);
         if (flags < 0) {
-            spdlog::error("get tun flags failed: {}", strerror(errno));
+            candy::logger().error(Poco::format("get tun flags failed: %s", strerror(errno)));
             close(this->tunFd);
             return -1;
         }
         flags |= O_NONBLOCK;
         if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
-            spdlog::error("set non-blocking tun failed: {}", strerror(errno));
+            candy::logger().error(Poco::format("set non-blocking tun failed: %s", strerror(errno)));
             close(this->tunFd);
             return -1;
         }
@@ -70,7 +71,7 @@ public:
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
-            spdlog::critical("set tun interface failed: {}", strerror(errno));
+            candy::logger().fatal(Poco::format("set tun interface failed: %s", strerror(errno)));
             close(this->tunFd);
             return -1;
         }
@@ -81,7 +82,7 @@ public:
         addr->sin_family = AF_INET;
         int sockfd = socket(addr->sin_family, SOCK_DGRAM, 0);
         if (sockfd == -1) {
-            spdlog::critical("create socket failed");
+            candy::logger().fatal("create socket failed");
             close(this->tunFd);
             return -1;
         }
@@ -89,7 +90,7 @@ public:
         // 设置地址
         addr->sin_addr.s_addr = this->ip;
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
-            spdlog::critical("set ip address failed: ip {}", this->ip.toString());
+            candy::logger().fatal(Poco::format("set ip address failed: ip %s", this->ip.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -98,7 +99,7 @@ public:
         // 设置掩码
         addr->sin_addr.s_addr = this->mask;
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
-            spdlog::critical("set mask failed: mask {}", this->mask.toString());
+            candy::logger().fatal(Poco::format("set mask failed: mask %s", this->mask.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -107,7 +108,7 @@ public:
         // 设置 MTU
         ifr.ifr_mtu = this->mtu;
         if (ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
-            spdlog::critical("set mtu failed: mtu {}", this->mtu);
+            candy::logger().fatal(Poco::format("set mtu failed: mtu %d", this->mtu));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -115,14 +116,14 @@ public:
 
         // 设置 flags
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
-            spdlog::critical("get interface flags failed");
+            candy::logger().fatal("get interface flags failed");
             close(sockfd);
             close(this->tunFd);
             return -1;
         }
         ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
         if (ioctl(sockfd, SIOCSIFFLAGS, &ifr) == -1) {
-            spdlog::critical("set interface flags failed");
+            candy::logger().fatal("set interface flags failed");
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -156,7 +157,7 @@ public:
             select(this->tunFd + 1, &set, NULL, NULL, &timeout);
             return 0;
         }
-        spdlog::warn("tun read failed: {}", strerror(errno));
+        candy::logger().warning(Poco::format("tun read failed: %s", strerror(errno)));
         return -1;
     }
 
@@ -167,7 +168,7 @@ public:
     int setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
         int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd == -1) {
-            spdlog::error("set route failed: create socket failed");
+            candy::logger().error("set route failed: create socket failed");
             return -1;
         }
 
@@ -189,7 +190,7 @@ public:
 
         route.rt_flags = RTF_UP | RTF_GATEWAY;
         if (ioctl(sockfd, SIOCADDRT, &route) == -1) {
-            spdlog::error("set route failed: ioctl failed");
+            candy::logger().error("set route failed: ioctl failed");
             close(sockfd);
             return -1;
         }
@@ -234,7 +235,7 @@ int Tun::setAddress(const std::string &cidr) {
     if (address.fromCidr(cidr)) {
         return -1;
     }
-    spdlog::info("client address: {}", address.toCidr());
+    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     if (tun->setIP(address.Host())) {
         return -1;
