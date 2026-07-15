@@ -559,7 +559,7 @@ int PeerManager::poll() {
             if (size > 0) {
                 buffer.resize(size);
 
-                if (this->stun.address == address) {
+                if (this->stun.address.port() == address.port() && buffer.size() >= 2 && buffer[0] == 0x01 && buffer[1] == 0x01) {
                     handleStunResponse(buffer);
                 } else if (auto plaintext = decrypt(buffer)) {
                     handleMessage(std::move(*plaintext), address);
