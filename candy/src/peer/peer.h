@@ -37,7 +37,6 @@ enum class PeerState {
 class Peer {
 public:
     Peer(const IP4 &addr, PeerManager *peerManager);
-    ~Peer();
 
     void tick();
     void tryConnecct();

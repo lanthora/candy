@@ -32,6 +32,10 @@ void MsgQueue::clear() {
     }
 }
 
+Client::~Client() {
+    waitForThreads();
+}
+
 void Client::setName(const std::string &name) {
     this->tunName = name;
     tun.setName(name);
@@ -107,6 +111,18 @@ void Client::setMtu(int mtu) {
     tun.setMTU(mtu);
 }
 
+// Called from both run() and ~Client():
+//   run() calls it after normal completion to block until all child threads exit.
+//   ~Client() calls it as a safety net when run() returned early due to submodule
+//   init failure, ensuring already-started threads are joined to prevent
+//   std::terminate from destroying a joinable std::thread.
+// Each wait() internally checks joinable(), so duplicate calls are no-ops.
+void Client::waitForThreads() {
+    ws.wait();
+    tun.wait();
+    peerManager.wait();
+}
+
 void Client::run() {
     this->running.store(true);
 
@@ -120,9 +136,7 @@ void Client::run() {
         return;
     }
 
-    ws.wait();
-    tun.wait();
-    peerManager.wait();
+    waitForThreads();
 
     wsMsgQueue.clear();
     tunMsgQueue.clear();

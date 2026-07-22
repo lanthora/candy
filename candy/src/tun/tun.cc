@@ -32,11 +32,11 @@ int Tun::run(Client *client) {
 }
 
 int Tun::wait() {
-    if (this->tunThread.joinable()) {
-        this->tunThread.join();
-    }
     if (this->msgThread.joinable()) {
         this->msgThread.join();
+    }
+    if (this->tunThread.joinable()) {
+        this->tunThread.join();
     }
     {
         std::unique_lock lock(this->sysRtMutex);

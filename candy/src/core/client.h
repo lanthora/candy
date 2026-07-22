@@ -28,6 +28,8 @@ private:
 
 class Client {
 public:
+    ~Client();
+
     void setName(const std::string &name);
     void setPassword(const std::string &password);
     void setWebSocket(const std::string &uri);
@@ -57,6 +59,8 @@ public:
     MsgQueue &getTunMsgQueue();
     MsgQueue &getPeerMsgQueue();
     MsgQueue &getWsMsgQueue();
+
+    void waitForThreads();
 
 private:
     MsgQueue tunMsgQueue, peerMsgQueue, wsMsgQueue;

@@ -46,8 +46,6 @@ Peer::Peer(const IP4 &addr, PeerManager *peerManager) : peerManager(peerManager)
     this->encryptCtx = std::shared_ptr<EVP_CIPHER_CTX>(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
 }
 
-Peer::~Peer() {}
-
 void Peer::tryConnecct() {
     if (this->state == PeerState::INIT) {
         updateState(PeerState::PREPARING);
