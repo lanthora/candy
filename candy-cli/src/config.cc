@@ -353,17 +353,17 @@ std::string initVirtualMac() {
 
 std::string virtualMac(const std::string &name) {
     std::string path;
-    // 兼容老版本,优先获取与配置网卡名对应的 vmac
+    // Compatibility with older versions: prefer interface-name-specific vmac
     path = virtualMacHelper(name);
     if (!path.empty()) {
         return path;
     }
-    // 获取网卡名无关的全局 vmac
+    // Fall back to global vmac (unrelated to interface name)
     path = virtualMacHelper();
     if (!path.empty()) {
         return path;
     }
-    // 初次启动,生成全局 vmac
+    // First run: generate a global vmac
     return initVirtualMac();
 }
 

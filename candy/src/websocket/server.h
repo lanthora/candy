@@ -26,9 +26,9 @@ struct WsCtx {
 };
 
 struct SysRoute {
-    // 通过地址和掩码确定策略下发给哪些客户端
+    // Determines which clients to send the policy to based on address and mask
     Address dev;
-    // 系统路由策略中的地址掩码和下一跳
+    // Address, mask, and next-hop in the system route policy
     Address dst;
     IP4 next;
 };
@@ -59,20 +59,20 @@ private:
     void handleDiscoveryMsg(WsCtx &ctx);
     void HandleGeneralMsg(WsCtx &ctx);
 
-    // 更新客户端系统路由
+    // Update client system route
     void updateSysRoute(WsCtx &ctx);
 
-    // 保存 IP 到对应连接指针的映射
+    // Map of IP to corresponding connection pointer
     std::unordered_map<IP4, WsCtx *> ipCtxMap;
-    // 操作 map 时需要加锁,以确保操作时指针有效
+    // Lock when accessing the map to keep pointers valid
     std::shared_mutex ipCtxMutex;
 
     bool running;
 
 private:
-    // 开始监听,新的请求将调用 handleWebsocket
+    // Start listening; new requests will invoke handleWebsocket
     int listen();
-    // 同步的处理每个客户独的请求,函数返回后连接将断开
+    // Synchronously handle each client request; connection is released on return
     void handleWebsocket(Poco::Net::WebSocket &ws);
 
     std::shared_ptr<Poco::Net::HTTPServer> httpServer;

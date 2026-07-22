@@ -22,8 +22,9 @@
 #include <sstream>
 
 /**
- * Poco 的 WebSocket 服务端接口有点难用,简单封装一下,并对外提供一个回调函数,回调函数的参数表示独立的
- * WebSocket客户端,函数返回会释放连接
+ * Poco's WebSocket server API is somewhat awkward, so we wrap it simply and expose
+ * a callback. The callback parameter represents an individual WebSocket client;
+ * the connection is released when the callback returns.
  */
 namespace {
 
@@ -226,23 +227,23 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
     }
 
     bool broadcast = [&] {
-        // 多播地址
+        // Multicast address
         if ((header->iph.daddr & IP4("240.0.0.0")) == IP4("224.0.0.0")) {
             return true;
         }
-        // 广播
+        // Broadcast
         if (header->iph.daddr == IP4("255.255.255.255")) {
             return true;
         }
-        // 服务端没有配置动态分配地址的范围,没法检查是否为定向广播
+        // Server has no dynamic address range configured; cannot check directed broadcast
         if (this->dhcp.empty()) {
             return false;
         }
-        // 网络号不同,不是定向广播
+        // Different network number; not a directed broadcast
         if ((this->dhcp.Mask() & header->iph.daddr) != this->dhcp.Net()) {
             return false;
         }
-        // 主机号部分不全为 1,不是定向广播
+        // Host part is not all ones; not a directed broadcast
         if (~((header->iph.daddr & ~this->dhcp.Mask()) ^ this->dhcp.Mask())) {
             return false;
         }
@@ -287,7 +288,7 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
         ctx.status = -1;
         return;
     }
-    // 判断能否直接使用申请的地址
+    // Check whether the requested address can be used directly
     bool direct = [&]() {
         if (dhcp.Net() != exptTun.Net()) {
             return false;
@@ -457,7 +458,7 @@ void WebSocketServer::updateSysRoute(WsCtx &ctx) {
             ctx.buffer.append((char *)(&item), sizeof(item));
             header->size += 1;
         }
-        // 100 条路由报文大小是 1204 字节,超过 100 条后分批发送
+        // 100 route messages == 1204 bytes; batch-send beyond 100
         if (header->size > 100) {
             ctx.sendFrame(ctx.buffer);
             ctx.buffer.resize(sizeof(WsMsg::SysRoute));
@@ -502,34 +503,34 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
             length = ws.receiveFrame(buffer.data(), buffer.size(), flags);
             int frameOp = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
 
-            // 响应 Ping 报文
+            // Respond to Ping frame
             if (frameOp == Poco::Net::WebSocket::FRAME_OP_PING) {
                 flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
                 ws.sendFrame(buffer.data(), buffer.size(), flags);
                 continue;
             }
 
-            // 客户端主动关闭连接
+            // Client-initiated close
             if ((length == 0 && flags == 0) || frameOp == Poco::Net::WebSocket::FRAME_OP_CLOSE) {
                 break;
             }
 
             if (frameOp == Poco::Net::WebSocket::FRAME_OP_BINARY && length > 0) {
-                // 调整 buffer 为真实大小并移动到 ctx
+                // Resize buffer to actual length and move into ctx
                 buffer.resize(length);
                 ctx.buffer = std::move(buffer);
 
-                // 处理客户端请求
+                // Process client request
                 handleMsg(ctx);
 
-                // 重新初始化 buffer
+                // Reinitialize buffer
                 buffer = std::string();
             }
         } catch (Poco::TimeoutException const &e) {
-            // 超时异常,不做处理
+            // Timeout exception; ignore
             continue;
         } catch (std::exception &e) {
-            // 未知异常,退出这个客户端
+            // Unknown exception; disconnect this client
             candy::logger().debug(Poco::format("handle websocket failed: %s", std::string(e.what())));
             break;
         }

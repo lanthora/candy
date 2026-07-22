@@ -44,7 +44,7 @@ public:
         return 0;
     }
 
-    // 配置网卡,设置路由
+    // Configure the interface and set up routing
     int up() {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
@@ -65,7 +65,7 @@ public:
             return -1;
         }
 
-        // 设置设备名
+        // Set device name
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
@@ -76,7 +76,7 @@ public:
             return -1;
         }
 
-        // 创建 socket, 并通过这个 socket 更新网卡的其他配置
+        // Create a socket for configuring additional interface settings
         struct sockaddr_in *addr;
         addr = (struct sockaddr_in *)&ifr.ifr_addr;
         addr->sin_family = AF_INET;
@@ -87,7 +87,7 @@ public:
             return -1;
         }
 
-        // 设置地址
+        // Set address
         addr->sin_addr.s_addr = this->ip;
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
             candy::logger().fatal(Poco::format("set ip address failed: ip %s", this->ip.toString()));
@@ -96,7 +96,7 @@ public:
             return -1;
         }
 
-        // 设置掩码
+        // Set mask
         addr->sin_addr.s_addr = this->mask;
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
             candy::logger().fatal(Poco::format("set mask failed: mask %s", this->mask.toString()));
@@ -105,7 +105,7 @@ public:
             return -1;
         }
 
-        // 设置 MTU
+        // Set MTU
         ifr.ifr_mtu = this->mtu;
         if (ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr) == -1) {
             candy::logger().fatal(Poco::format("set mtu failed: mtu %d", this->mtu));
@@ -114,7 +114,7 @@ public:
             return -1;
         }
 
-        // 设置 flags
+        // Set flags
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
             candy::logger().fatal("get interface flags failed");
             close(sockfd);

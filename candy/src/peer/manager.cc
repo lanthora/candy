@@ -410,23 +410,23 @@ void PeerManager::handleStunResponse(std::string buffer) {
     while (pos < ntoh(response->length)) {
         // mapped address
         if (ntoh(*(uint16_t *)(attr + pos)) == 0x0001) {
-            pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
+            pos += 6; // skip 2B type, 2B length, 1B reserved, 1B IP version -> port
             port = ntoh(*(uint16_t *)(attr + pos));
-            pos += 2; // 跳过2字节端口号,指向地址
+            pos += 2; // skip 2B port -> address
             ip = *(uint32_t *)(attr + pos);
             break;
         }
         // xor mapped address
         if (ntoh(*(uint16_t *)(attr + pos)) == 0x0020) {
-            pos += 6; // 跳过 2 字节类型, 2 字节长度, 1 字节保留, 1 字节IP版本号,指向端口号
+            pos += 6; // skip 2B type, 2B length, 1B reserved, 1B IP version -> port
             port = ntoh(*(uint16_t *)(attr + pos)) ^ 0x2112;
-            pos += 2; // 跳过2字节端口号,指向地址
+            pos += 2; // skip 2B port -> address
             ip = (*(uint32_t *)(attr + pos)) ^ hton(0x2112a442);
             break;
         }
-        // 跳过 2 字节类型,指向属性长度
+        // skip 2B type -> attribute length
         pos += 2;
-        // 跳过 2 字节长度和用该属性其他内容
+        // skip 2B length and remaining attribute content
         pos += 2 + ntoh(*(uint16_t *)(attr + pos));
     }
     if (!ip || !port) {
@@ -567,7 +567,7 @@ int PeerManager::poll() {
             }
         }
     } catch (Poco::Net::ConnectionResetException &e) {
-        // 忽略 UDP 的连接 Reset, Windows 特有的问题
+        // Ignore UDP connection reset; Windows-specific issue
     } catch (std::exception &e) {
         candy::logger().warning(Poco::format("peer_manager poll failed: %s", std::string(e.what())));
         return -1;

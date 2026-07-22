@@ -242,13 +242,14 @@ void WebSocketClient::handleForwardMsg(std::string buffer) {
         candy::logger().warning(Poco::format("invalid forward message: %s", to_hex(buffer)));
         return;
     }
-    // 移除一个字节的类型
+    // Remove the 1-byte type field
     buffer.erase(0, 1);
-    // 尝试与源地址建立对等连接
+    // Try to establish a peer-to-peer connection with the source address
     IP4Header *header = (IP4Header *)buffer.data();
-    // 每次通过服务端转发收到报文都触发一次尝试 P2P 连接, 用于暗示通过服务端转发是个非常耗时的操作
+    // Each relayed packet from the server triggers a P2P attempt,
+    // since server forwarding is a high-latency operation
     this->client->getPeerMsgQueue().write(Msg(MsgKind::TRYP2P, header->saddr.toString()));
-    // 最后把报文移动到 TUN 模块, 因为有移动操作所以必须在最后执行
+    // Move the packet to the TUN module last, since std::move is destructive
     this->client->getTunMsgQueue().write(Msg(MsgKind::PACKET, std::move(buffer)));
 }
 

@@ -54,7 +54,7 @@ public:
     }
 
     int up() {
-        // 创建设备,操作系统不允许自定义设备名,只能由内核分配
+        // Create the device; macOS does not allow custom device names (kernel-assigned)
         this->tunFd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
         if (this->tunFd < 0) {
             candy::logger().fatal(Poco::format("create socket failed: %s", strerror(errno)));
@@ -108,7 +108,7 @@ public:
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
-        // 创建 socket, 并通过这个 socket 更新网卡的其他配置
+        // Create a socket for configuring additional interface settings
         struct sockaddr_in *addr;
         addr = (struct sockaddr_in *)&ifr.ifr_addr;
         addr->sin_family = AF_INET;
@@ -119,7 +119,7 @@ public:
             return -1;
         }
 
-        // 设置地址和掩码
+        // Set address and mask
         struct ifaliasreq areq;
         memset(&areq, 0, sizeof(areq));
         strncpy(areq.ifra_name, ifname, IFNAMSIZ);
@@ -143,7 +143,7 @@ public:
             return -1;
         }
 
-        // 设置 MTU
+        // Set MTU
         ifr.ifr_mtu = this->mtu;
         if (ioctl(sockfd, SIOCSIFMTU, &ifr) == -1) {
             candy::logger().fatal(Poco::format("set mtu failed: mtu %d", this->mtu));
@@ -152,7 +152,7 @@ public:
             return -1;
         }
 
-        // 设置 flags
+        // Set flags
         if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
             candy::logger().fatal("get interface flags failed");
             close(sockfd);
@@ -168,7 +168,7 @@ public:
         }
         close(sockfd);
 
-        // 设置路由
+        // Set route
         if (setSysRtTable(this->ip & this->mask, this->mask, this->ip)) {
             close(this->tunFd);
             return -1;

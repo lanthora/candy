@@ -30,10 +30,10 @@ public:
 private:
     int setAddress(const std::string &cidr);
 
-    // 处理来自 TUN 设备的数据
+    // Process data from the TUN device
     int handleTunDevice();
 
-    // 处理来自消息队列的数据
+    // Process data from the message queue
     int handleTunQueue();
     int handlePacket(Msg msg);
     int handleTunAddr(Msg msg);
