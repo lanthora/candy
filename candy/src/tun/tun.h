@@ -26,6 +26,7 @@ public:
     int wait();
 
     IP4 getIP();
+    bool inTunNetwork(IP4 addr) const;
 
 private:
     int setAddress(const std::string &cidr);

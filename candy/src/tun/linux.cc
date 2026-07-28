@@ -34,6 +34,10 @@ public:
         return this->ip;
     }
 
+    IP4 getMask() {
+        return this->mask;
+    }
+
     int setMask(IP4 mask) {
         this->mask = mask;
         return 0;
@@ -251,6 +255,12 @@ IP4 Tun::getIP() {
     std::shared_ptr<LinuxTun> tun;
     tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
     return tun->getIP();
+}
+
+bool Tun::inTunNetwork(IP4 addr) const {
+    std::shared_ptr<LinuxTun> tun;
+    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
+    return (addr & tun->getMask()) == (tun->getIP() & tun->getMask());
 }
 
 int Tun::setMTU(int mtu) {

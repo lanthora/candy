@@ -39,6 +39,10 @@ int Tun::write(const std::string &buffer) {
     return -1;
 }
 
+bool Tun::inTunNetwork(IP4 addr) const {
+    return false;
+}
+
 int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
     return -1;
 }

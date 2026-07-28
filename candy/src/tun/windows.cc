@@ -105,6 +105,10 @@ public:
         return this->ip;
     }
 
+    uint32_t getPrefix() {
+        return this->prefix;
+    }
+
     int setPrefix(uint32_t prefix) {
         this->prefix = prefix;
         return 0;
@@ -304,6 +308,14 @@ IP4 Tun::getIP() {
     std::shared_ptr<WindowsTun> tun;
     tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
     return tun->getIP();
+}
+
+bool Tun::inTunNetwork(IP4 addr) const {
+    std::shared_ptr<WindowsTun> tun;
+    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
+    IP4 mask;
+    mask.fromPrefix(tun->getPrefix());
+    return (addr & mask) == (tun->getIP() & mask);
 }
 
 int Tun::setMTU(int mtu) {

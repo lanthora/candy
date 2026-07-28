@@ -59,6 +59,11 @@ int Tun::handleTunDevice() {
         return 0;
     }
 
+    if (header->daddr == getIP()) {
+        write(buffer);
+        return 0;
+    }
+
     IP4 nextHop = [&]() {
         std::shared_lock lock(this->sysRtMutex);
         for (auto const &rt : sysRtTable) {
@@ -68,6 +73,7 @@ int Tun::handleTunDevice() {
         }
         return IP4();
     }();
+
     if (!nextHop.empty()) {
         buffer.insert(0, sizeof(IP4Header), 0);
         header = (IP4Header *)buffer.data();
@@ -76,8 +82,9 @@ int Tun::handleTunDevice() {
         header->daddr = nextHop;
     }
 
-    if (header->daddr == getIP()) {
-        write(buffer);
+    if (!inTunNetwork(header->saddr) || !inTunNetwork(header->daddr)) {
+        candy::logger().warning(Poco::format("packet src=%s or dst=%s not in tun network, dropping",
+            header->saddr.toString(), header->daddr.toString()));
         return 0;
     }
 
