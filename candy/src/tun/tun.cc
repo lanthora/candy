@@ -82,9 +82,9 @@ int Tun::handleTunDevice() {
         header->daddr = nextHop;
     }
 
-    if (!inTunNetwork(header->saddr) || !inTunNetwork(header->daddr)) {
-        candy::logger().warning(Poco::format("packet src=%s or dst=%s not in tun network, dropping",
-            header->saddr.toString(), header->daddr.toString()));
+    if (invalidSrcDst(*header)) {
+        candy::logger().debug(Poco::format("packet src=%s or dst=%s not in tun network, dropping", header->saddr.toString(),
+                                           header->daddr.toString()));
         return 0;
     }
 
@@ -179,6 +179,44 @@ int Tun::setSysRtTable(const SysRouteEntry &entry) {
     std::unique_lock lock(this->sysRtMutex);
     this->sysRtTable.push_back(entry);
     return setSysRtTable(entry.dst, entry.mask, entry.nexthop);
+}
+
+int Tun::setAddress(const std::string &cidr) {
+    Address address;
+
+    if (address.fromCidr(cidr)) {
+        return -1;
+    }
+    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
+    this->ip = address.Host();
+    this->mask = address.Mask();
+    this->tunAddress = cidr;
+    return 0;
+}
+
+IP4 Tun::getIP() const {
+    return this->ip;
+}
+
+IP4 Tun::getMask() const {
+    return this->mask;
+}
+
+bool Tun::inTunNetwork(IP4 addr) const {
+    return (addr & this->mask) == (this->ip & this->mask);
+}
+
+bool Tun::invalidSrcDst(const IP4Header &header) const {
+    if (inTunNetwork(header.saddr) && inTunNetwork(header.daddr)) {
+        return false;
+    }
+    if (header.daddr == IP4("255.255.255.255")) {
+        return false;
+    }
+    if ((header.daddr & IP4("240.0.0.0")) == IP4("224.0.0.0")) {
+        return false;
+    }
+    return true;
 }
 
 Client &Tun::getClient() {
