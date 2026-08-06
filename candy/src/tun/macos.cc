@@ -41,18 +41,18 @@ struct Tun::Impl {
         // Create the device; macOS does not allow custom device names (kernel-assigned)
         this->tunFd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
         if (this->tunFd < 0) {
-            candy::logger().fatal(Poco::format("create socket failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("create socket failed: %s", std::string(strerror(errno))));
             return -1;
         }
         int flags = fcntl(this->tunFd, F_GETFL, 0);
         if (flags < 0) {
-            candy::logger().error(Poco::format("get tun flags failed: %s", strerror(errno)));
+            candy::logger().error(Poco::format("get tun flags failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
         flags |= O_NONBLOCK;
         if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
-            candy::logger().error(Poco::format("set non-blocking tun failed: %s", strerror(errno)));
+            candy::logger().error(Poco::format("set non-blocking tun failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
@@ -61,7 +61,7 @@ struct Tun::Impl {
         memset(&info, 0, sizeof(info));
         strncpy(info.ctl_name, UTUN_CONTROL_NAME, MAX_KCTL_NAME);
         if (ioctl(this->tunFd, CTLIOCGINFO, &info) == -1) {
-            candy::logger().fatal(Poco::format("get control id failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("get control id failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
@@ -74,19 +74,19 @@ struct Tun::Impl {
         ctl.sc_id = info.ctl_id;
         ctl.sc_unit = 0;
         if (connect(this->tunFd, (struct sockaddr *)&ctl, sizeof(ctl)) == -1) {
-            candy::logger().fatal(Poco::format("connect to control failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("connect to control failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
 
         socklen_t ifname_len = sizeof(ifname);
         if (getsockopt(this->tunFd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, ifname, &ifname_len) == -1) {
-            candy::logger().fatal(Poco::format("get interface name failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("get interface name failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
 
-        candy::logger().debug(Poco::format("created utun interface: %s", ifname));
+        candy::logger().debug(Poco::format("created utun interface: %s", std::string(ifname)));
 
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
@@ -120,8 +120,8 @@ struct Tun::Impl {
         ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = (ip & mask);
 
         if (ioctl(sockfd, SIOCAIFADDR, (void *)&areq) == -1) {
-            candy::logger().fatal(
-                Poco::format("set ip mask failed: %s: ip %s mask %s", strerror(errno), ip.toString(), mask.toString()));
+            candy::logger().fatal(Poco::format("set ip mask failed: %s: ip %s mask %s", std::string(strerror(errno)),
+                                               ip.toString(), mask.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -226,11 +226,11 @@ struct Tun::Impl {
 
         int routefd = socket(AF_ROUTE, SOCK_RAW, 0);
         if (routefd < 0) {
-            candy::logger().error(Poco::format("create route fd failed: %s", strerror(routefd)));
+            candy::logger().error(Poco::format("create route fd failed: %s", std::string(strerror(routefd))));
             return -1;
         }
         if (::write(routefd, &msg, sizeof(msg)) == -1) {
-            candy::logger().error(Poco::format("add route failed: %s", strerror(errno)));
+            candy::logger().error(Poco::format("add route failed: %s", std::string(strerror(errno))));
             close(routefd);
             return -1;
         }

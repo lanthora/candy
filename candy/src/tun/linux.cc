@@ -33,19 +33,19 @@ struct Tun::Impl {
     int up(IP4 ip, IP4 mask) {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
-            candy::logger().fatal(Poco::format("open /dev/net/tun failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("open /dev/net/tun failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
         int flags = fcntl(this->tunFd, F_GETFL, 0);
         if (flags < 0) {
-            candy::logger().error(Poco::format("get tun flags failed: %s", strerror(errno)));
+            candy::logger().error(Poco::format("get tun flags failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
         flags |= O_NONBLOCK;
         if (fcntl(this->tunFd, F_SETFL, flags) < 0) {
-            candy::logger().error(Poco::format("set non-blocking tun failed: %s", strerror(errno)));
+            candy::logger().error(Poco::format("set non-blocking tun failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
@@ -56,7 +56,7 @@ struct Tun::Impl {
         strncpy(ifr.ifr_name, this->name.c_str(), IFNAMSIZ);
         ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
         if (ioctl(this->tunFd, TUNSETIFF, &ifr) == -1) {
-            candy::logger().fatal(Poco::format("set tun interface failed: %s", strerror(errno)));
+            candy::logger().fatal(Poco::format("set tun interface failed: %s", std::string(strerror(errno))));
             close(this->tunFd);
             return -1;
         }
@@ -142,7 +142,7 @@ struct Tun::Impl {
             select(this->tunFd + 1, &set, NULL, NULL, &timeout);
             return 0;
         }
-        candy::logger().warning(Poco::format("tun read failed: %s", strerror(errno)));
+        candy::logger().warning(Poco::format("tun read failed: %s", std::string(strerror(errno))));
         return -1;
     }
 
