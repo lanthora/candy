@@ -18,28 +18,9 @@
 
 namespace candy {
 
-class LinuxTun {
-public:
+struct Tun::Impl {
     int setName(const std::string &name) {
         this->name = name.empty() ? "candy" : "candy-" + name;
-        return 0;
-    }
-
-    int setIP(IP4 ip) {
-        this->ip = ip;
-        return 0;
-    }
-
-    IP4 getIP() {
-        return this->ip;
-    }
-
-    IP4 getMask() {
-        return this->mask;
-    }
-
-    int setMask(IP4 mask) {
-        this->mask = mask;
         return 0;
     }
 
@@ -49,7 +30,7 @@ public:
     }
 
     // Configure the interface and set up routing
-    int up() {
+    int up(IP4 ip, IP4 mask) {
         this->tunFd = open("/dev/net/tun", O_RDWR);
         if (this->tunFd < 0) {
             candy::logger().fatal(Poco::format("open /dev/net/tun failed: %s", strerror(errno)));
@@ -92,18 +73,18 @@ public:
         }
 
         // Set address
-        addr->sin_addr.s_addr = this->ip;
+        addr->sin_addr.s_addr = ip;
         if (ioctl(sockfd, SIOCSIFADDR, (caddr_t)&ifr) == -1) {
-            candy::logger().fatal(Poco::format("set ip address failed: ip %s", this->ip.toString()));
+            candy::logger().fatal(Poco::format("set ip address failed: ip %s", ip.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
         }
 
         // Set mask
-        addr->sin_addr.s_addr = this->mask;
+        addr->sin_addr.s_addr = mask;
         if (ioctl(sockfd, SIOCSIFNETMASK, (caddr_t)&ifr) == -1) {
-            candy::logger().fatal(Poco::format("set mask failed: mask %s", this->mask.toString()));
+            candy::logger().fatal(Poco::format("set mask failed: mask %s", mask.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -205,101 +186,42 @@ public:
 
 private:
     std::string name;
-    IP4 ip;
-    IP4 mask;
     int mtu;
-    int timeout;
     int tunFd;
 };
 
-} // namespace candy
-
-namespace candy {
-
 Tun::Tun() {
-    this->impl = std::make_shared<LinuxTun>();
+    this->impl = std::make_unique<Impl>();
 }
 
-Tun::~Tun() {
-    this->impl.reset();
-}
+Tun::~Tun() {}
 
 int Tun::setName(const std::string &name) {
-    std::shared_ptr<LinuxTun> tun;
-
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    tun->setName(name);
-    return 0;
-}
-
-int Tun::setAddress(const std::string &cidr) {
-    std::shared_ptr<LinuxTun> tun;
-    Address address;
-
-    if (address.fromCidr(cidr)) {
-        return -1;
-    }
-    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    if (tun->setIP(address.Host())) {
-        return -1;
-    }
-    if (tun->setMask(address.Mask())) {
-        return -1;
-    }
-    this->tunAddress = cidr;
-    return 0;
-}
-
-IP4 Tun::getIP() {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->getIP();
-}
-
-bool Tun::inTunNetwork(IP4 addr) const {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return (addr & tun->getMask()) == (tun->getIP() & tun->getMask());
+    return this->impl->setName(name);
 }
 
 int Tun::setMTU(int mtu) {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    if (tun->setMTU(mtu)) {
-        return -1;
-    }
-    return 0;
+    return this->impl->setMTU(mtu);
 }
 
 int Tun::up() {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->up();
+    return this->impl->up(this->ip, this->mask);
 }
 
 int Tun::down() {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->down();
+    return this->impl->down();
 }
 
 int Tun::read(std::string &buffer) {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->read(buffer);
+    return this->impl->read(buffer);
 }
 
 int Tun::write(const std::string &buffer) {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->write(buffer);
+    return this->impl->write(buffer);
 }
 
 int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
-    std::shared_ptr<LinuxTun> tun;
-    tun = std::any_cast<std::shared_ptr<LinuxTun>>(this->impl);
-    return tun->setSysRtTable(dst, mask, nexthop);
+    return this->impl->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace candy

@@ -89,28 +89,9 @@ private:
     HMODULE wintun = NULL;
 };
 
-class WindowsTun {
-public:
+struct Tun::Impl {
     int setName(const std::string &name) {
         this->name = name.empty() ? "candy" : name;
-        return 0;
-    }
-
-    int setIP(IP4 ip) {
-        this->ip = ip;
-        return 0;
-    }
-
-    IP4 getIP() {
-        return this->ip;
-    }
-
-    uint32_t getPrefix() {
-        return this->prefix;
-    }
-
-    int setPrefix(uint32_t prefix) {
-        this->prefix = prefix;
         return 0;
     }
 
@@ -119,7 +100,7 @@ public:
         return 0;
     }
 
-    int up() {
+    int up(IP4 ip, IP4 mask) {
         if (!Holder::Ok()) {
             candy::logger().fatal("init wintun failed");
             return -1;
@@ -140,8 +121,8 @@ public:
         InitializeUnicastIpAddressEntry(&AddressRow);
         WintunGetAdapterLUID(this->adapter, &AddressRow.InterfaceLuid);
         AddressRow.Address.Ipv4.sin_family = AF_INET;
-        AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = this->ip;
-        AddressRow.OnLinkPrefixLength = this->prefix;
+        AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = ip;
+        AddressRow.OnLinkPrefixLength = mask.toPrefix();
         AddressRow.DadState = IpDadStatePreferred;
         Error = CreateUnicastIpAddressEntry(&AddressRow);
         if (Error != ERROR_SUCCESS) {
@@ -255,10 +236,7 @@ public:
 
 private:
     std::string name;
-    IP4 ip;
-    uint32_t prefix;
     int mtu;
-    int timeout;
     NET_IFINDEX ifindex;
     std::stack<MIB_IPFORWARDROW> routes;
 
@@ -266,95 +244,38 @@ private:
     WINTUN_SESSION_HANDLE session = NULL;
 };
 
-} // namespace candy
-
-namespace candy {
-
 Tun::Tun() {
-    this->impl = std::make_shared<WindowsTun>();
+    this->impl = std::make_unique<Impl>();
 }
 
-Tun::~Tun() {
-    this->impl.reset();
-}
+Tun::~Tun() {}
 
 int Tun::setName(const std::string &name) {
-    std::shared_ptr<WindowsTun> tun;
-
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    tun->setName(name);
-    return 0;
-}
-
-int Tun::setAddress(const std::string &cidr) {
-    std::shared_ptr<WindowsTun> tun;
-    Address address;
-
-    if (address.fromCidr(cidr)) {
-        return -1;
-    }
-    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    if (tun->setIP(address.Host())) {
-        return -1;
-    }
-    if (tun->setPrefix(address.Mask().toPrefix())) {
-        return -1;
-    }
-    return 0;
-}
-
-IP4 Tun::getIP() {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->getIP();
-}
-
-bool Tun::inTunNetwork(IP4 addr) const {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    IP4 mask;
-    mask.fromPrefix(tun->getPrefix());
-    return (addr & mask) == (tun->getIP() & mask);
+    return this->impl->setName(name);
 }
 
 int Tun::setMTU(int mtu) {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    if (tun->setMTU(mtu)) {
-        return -1;
-    }
-    return 0;
+    return this->impl->setMTU(mtu);
 }
 
 int Tun::up() {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->up();
+    return this->impl->up(this->ip, this->mask);
 }
 
 int Tun::down() {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->down();
+    return this->impl->down();
 }
 
 int Tun::read(std::string &buffer) {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->read(buffer);
+    return this->impl->read(buffer);
 }
 
 int Tun::write(const std::string &buffer) {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->write(buffer);
+    return this->impl->write(buffer);
 }
 
 int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
-    std::shared_ptr<WindowsTun> tun;
-    tun = std::any_cast<std::shared_ptr<WindowsTun>>(this->impl);
-    return tun->setSysRtTable(dst, mask, nexthop);
+    return this->impl->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace candy

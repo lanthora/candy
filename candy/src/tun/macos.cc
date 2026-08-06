@@ -27,28 +27,8 @@
 
 namespace candy {
 
-class MacTun {
-public:
+struct Tun::Impl {
     int setName(const std::string &name) {
-        this->name = name.empty() ? "candy" : "candy-" + name;
-        return 0;
-    }
-
-    int setIP(IP4 ip) {
-        this->ip = ip;
-        return 0;
-    }
-
-    IP4 getIP() {
-        return this->ip;
-    }
-
-    IP4 getMask() {
-        return this->mask;
-    }
-
-    int setMask(IP4 mask) {
-        this->mask = mask;
         return 0;
     }
 
@@ -57,7 +37,7 @@ public:
         return 0;
     }
 
-    int up() {
+    int up(IP4 ip, IP4 mask) {
         // Create the device; macOS does not allow custom device names (kernel-assigned)
         this->tunFd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
         if (this->tunFd < 0) {
@@ -129,19 +109,19 @@ public:
         strncpy(areq.ifra_name, ifname, IFNAMSIZ);
         ((struct sockaddr_in *)&areq.ifra_addr)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_addr)->sin_len = sizeof(areq.ifra_addr);
-        ((struct sockaddr_in *)&areq.ifra_addr)->sin_addr.s_addr = this->ip;
+        ((struct sockaddr_in *)&areq.ifra_addr)->sin_addr.s_addr = ip;
 
         ((struct sockaddr_in *)&areq.ifra_mask)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_mask)->sin_len = sizeof(areq.ifra_mask);
-        ((struct sockaddr_in *)&areq.ifra_mask)->sin_addr.s_addr = this->mask;
+        ((struct sockaddr_in *)&areq.ifra_mask)->sin_addr.s_addr = mask;
 
         ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_family = AF_INET;
         ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_len = sizeof(areq.ifra_broadaddr);
-        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = (this->ip & this->mask);
+        ((struct sockaddr_in *)&areq.ifra_broadaddr)->sin_addr.s_addr = (ip & mask);
 
         if (ioctl(sockfd, SIOCAIFADDR, (void *)&areq) == -1) {
-            candy::logger().fatal(Poco::format("set ip mask failed: %s: ip %s mask %s", strerror(errno), this->ip.toString(),
-                                               this->mask.toString()));
+            candy::logger().fatal(
+                Poco::format("set ip mask failed: %s: ip %s mask %s", strerror(errno), ip.toString(), mask.toString()));
             close(sockfd);
             close(this->tunFd);
             return -1;
@@ -173,7 +153,7 @@ public:
         close(sockfd);
 
         // Set route
-        if (setSysRtTable(this->ip & this->mask, this->mask, this->ip)) {
+        if (setSysRtTable(ip & mask, mask, ip)) {
             close(this->tunFd);
             return -1;
         }
@@ -220,7 +200,8 @@ public:
         iov[0].iov_len = sizeof(this->packetinfo);
         iov[1].iov_base = (void *)buffer.data();
         iov[1].iov_len = buffer.size();
-        return ::writev(this->tunFd, iov, sizeof(iov) / sizeof(iov[0])) - sizeof(sizeof(this->packetinfo));
+        auto size = ::writev(this->tunFd, iov, sizeof(iov) / sizeof(iov[0]));
+        return size - sizeof(this->packetinfo);
     }
 
     int setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
@@ -258,104 +239,45 @@ public:
     }
 
 private:
-    std::string name;
     char ifname[IFNAMSIZ] = {0};
-    IP4 ip;
-    IP4 mask;
     int mtu;
-    int timeout;
     int tunFd;
 
     uint8_t packetinfo[4] = {0x00, 0x00, 0x00, 0x02};
 };
 
-} // namespace candy
-
-namespace candy {
-
 Tun::Tun() {
-    this->impl = std::make_shared<MacTun>();
+    this->impl = std::make_unique<Impl>();
 }
 
-Tun::~Tun() {
-    this->impl.reset();
-}
+Tun::~Tun() {}
 
 int Tun::setName(const std::string &name) {
-    std::shared_ptr<MacTun> tun;
-
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    tun->setName(name);
-    return 0;
-}
-
-int Tun::setAddress(const std::string &cidr) {
-    std::shared_ptr<MacTun> tun;
-    Address address;
-
-    if (address.fromCidr(cidr)) {
-        return -1;
-    }
-    candy::logger().information(Poco::format("client address: %s", address.toCidr()));
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    if (tun->setIP(address.Host())) {
-        return -1;
-    }
-    if (tun->setMask(address.Mask())) {
-        return -1;
-    }
-    return 0;
-}
-
-IP4 Tun::getIP() {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->getIP();
-}
-
-bool Tun::inTunNetwork(IP4 addr) const {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return (addr & tun->getMask()) == (tun->getIP() & tun->getMask());
+    return this->impl->setName(name);
 }
 
 int Tun::setMTU(int mtu) {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    if (tun->setMTU(mtu)) {
-        return -1;
-    }
-    return 0;
+    return this->impl->setMTU(mtu);
 }
 
 int Tun::up() {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->up();
+    return this->impl->up(this->ip, this->mask);
 }
 
 int Tun::down() {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->down();
+    return this->impl->down();
 }
 
 int Tun::read(std::string &buffer) {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->read(buffer);
+    return this->impl->read(buffer);
 }
 
 int Tun::write(const std::string &buffer) {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->write(buffer);
+    return this->impl->write(buffer);
 }
 
 int Tun::setSysRtTable(IP4 dst, IP4 mask, IP4 nexthop) {
-    std::shared_ptr<MacTun> tun;
-    tun = std::any_cast<std::shared_ptr<MacTun>>(this->impl);
-    return tun->setSysRtTable(dst, mask, nexthop);
+    return this->impl->setSysRtTable(dst, mask, nexthop);
 }
 
 } // namespace candy
