@@ -15,6 +15,8 @@ constexpr uint8_t UDP4CONN = 3;
 constexpr uint8_t VMAC = 4;
 constexpr uint8_t DISCOVERY = 5;
 constexpr uint8_t ROUTE = 6;
+constexpr uint8_t MULTI = 7;
+constexpr uint8_t JOIN = 8;
 constexpr uint8_t GENERAL = 255;
 } // namespace WsMsgKind
 
@@ -23,6 +25,12 @@ constexpr uint8_t LOCALUDP4CONN = 0;
 }
 
 namespace WsMsg {
+
+struct Multi {
+    uint8_t type = WsMsgKind::MULTI;
+    uint8_t count = 0; // Number of additional data connections (at most 7).
+    char key[32] = {};
+};
 
 struct __attribute__((packed)) Auth {
     uint8_t type;

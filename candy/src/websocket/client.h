@@ -4,11 +4,13 @@
 
 #include "core/message.h"
 #include "core/net.h"
+#include "websocket/relay.h"
 #include <Poco/Net/WebSocket.h>
 #include <functional>
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace candy {
 
@@ -19,6 +21,7 @@ public:
     int setName(const std::string &name);
     int setPassword(const std::string &password);
     int setWsServerUri(const std::string &uri);
+    void setConnections(int count);
     int setExptTunAddress(const std::string &cidr);
     int setAddress(const std::string &cidr);
     int setVirtualMac(const std::string &vmac);
@@ -63,6 +66,13 @@ private:
 
 private:
     int connect();
+    std::shared_ptr<Poco::Net::WebSocket> open();
+    void handleMultiMsg(std::string buffer);
+    void connectData(std::string buffer);
+    int connections = 1;
+    std::shared_ptr<WsRelay> relay = std::make_shared<WsRelay>();
+    std::vector<std::thread> dataThreads;
+    std::mutex sendMutex;
     int disconnect();
 
     std::shared_ptr<Poco::Net::WebSocket> ws;

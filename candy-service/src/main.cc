@@ -58,9 +58,42 @@ public:
             return;
         }
 
-        auto json = readRequest(request);
-        auto id = json->getValue<std::string>("id");
-        auto config = json->getObject("config");
+        Poco::JSON::Object::Ptr json;
+        Poco::JSON::Object::Ptr config;
+        std::string id;
+        try {
+            json = readRequest(request);
+            if (!json || !json->get("id").isString()) {
+                throw Poco::InvalidArgumentException("missing or invalid parameter: id");
+            }
+            id = json->getValue<std::string>("id");
+            config = json->getObject("config");
+            if (!config) {
+                throw Poco::InvalidArgumentException("missing or invalid parameter: config");
+            }
+            for (const char *field : {"name", "password", "websocket", "tun", "vmac", "expt", "stun", "localhost"}) {
+                if (!config->get(field).isString()) {
+                    throw Poco::InvalidArgumentException(std::string("missing or invalid string parameter: config.") + field);
+                }
+            }
+            for (const char *field : {"connections", "discovery", "route", "mtu", "port"}) {
+                auto value = config->get(field);
+                if (!value.isInteger() || value.isBoolean()) {
+                    throw Poco::InvalidArgumentException(std::string("missing or invalid integer parameter: config.") + field);
+                }
+                try {
+                    config->getValue<int>(field);
+                } catch (const Poco::Exception &) {
+                    throw Poco::InvalidArgumentException(std::string("integer parameter out of range: config.") + field);
+                }
+            }
+        } catch (const Poco::Exception &e) {
+            response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            Poco::JSON::Object::Ptr error = new Poco::JSON::Object;
+            error->set("message", e.displayText());
+            sendResponse(response, error);
+            return;
+        }
         json->remove("config");
 
         std::lock_guard lock(threadMutex);

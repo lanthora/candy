@@ -2,35 +2,8 @@
 #include "core/client.h"
 #include "core/message.h"
 #include <Poco/String.h>
-#include <chrono>
 
 namespace candy {
-
-Msg MsgQueue::read() {
-    std::unique_lock lock(msgMutex);
-    if (!msgCondition.wait_for(lock, std::chrono::seconds(1), [this] { return !msgQueue.empty(); })) {
-        return Msg(MsgKind::TIMEOUT);
-    }
-
-    Msg msg = std::move(msgQueue.front());
-    msgQueue.pop();
-    return msg;
-}
-
-void MsgQueue::write(Msg msg) {
-    {
-        std::unique_lock lock(this->msgMutex);
-        msgQueue.push(std::move(msg));
-    }
-    msgCondition.notify_one();
-}
-
-void MsgQueue::clear() {
-    std::unique_lock lock(this->msgMutex);
-    while (!msgQueue.empty()) {
-        msgQueue.pop();
-    }
-}
 
 Client::~Client() {
     waitForThreads();
@@ -69,6 +42,10 @@ MsgQueue &Client::getWsMsgQueue() {
 void Client::setPassword(const std::string &password) {
     ws.setPassword(password);
     peerManager.setPassword(password);
+}
+
+void Client::setConnections(int count) {
+    ws.setConnections(count);
 }
 
 void Client::setWebSocket(const std::string &uri) {

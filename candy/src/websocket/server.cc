@@ -14,10 +14,12 @@
 #include <Poco/Net/WebSocket.h>
 #include <Poco/Timespan.h>
 #include <Poco/URI.h>
+#include <algorithm>
 #include <exception>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <openssl/rand.h>
 #include <shared_mutex>
 #include <sstream>
 
@@ -67,7 +69,16 @@ private:
 namespace candy {
 
 void WsCtx::sendFrame(const std::string &frame, int flags) {
+    std::unique_lock lock(sendMutex);
     this->ws->sendFrame(frame.data(), frame.size(), flags);
+}
+
+void WsCtx::sendPacket(const std::string &frame) {
+    if (relay && relay->connections > 0) {
+        relay->queue.write(Msg(MsgKind::PACKET, frame), 1024);
+    } else {
+        sendFrame(frame);
+    }
 }
 
 int WebSocketServer::setWebSocket(const std::string &uri) {
@@ -136,7 +147,7 @@ int WebSocketServer::run() {
 }
 
 int WebSocketServer::shutdown() {
-    this->running = false;
+    this->running.store(false);
     if (this->httpServer) {
         this->httpServer->stopAll();
     }
@@ -147,6 +158,10 @@ int WebSocketServer::shutdown() {
 void WebSocketServer::handleMsg(WsCtx &ctx) {
     uint8_t msgKind = ctx.buffer.front();
     switch (msgKind) {
+    case WsMsgKind::MULTI:
+    case WsMsgKind::JOIN:
+        handleMultiMsg(ctx);
+        break;
     case WsMsgKind::AUTH:
         handleAuthMsg(ctx);
         break;
@@ -171,17 +186,56 @@ void WebSocketServer::handleMsg(WsCtx &ctx) {
     }
 }
 
+void WebSocketServer::handleMultiMsg(WsCtx &ctx) {
+    if (ctx.buffer.size() != sizeof(WsMsg::Multi)) {
+        ctx.status.store(-1);
+        return;
+    }
+    auto *header = (WsMsg::Multi *)ctx.buffer.data();
+    std::unique_lock lock(ipCtxMutex);
+    if (header->type == WsMsgKind::MULTI) {
+        if (ctx.ip.empty() || ctx.relay) {
+            return;
+        }
+        auto relay = std::make_shared<WsRelay>();
+        header->count = std::min<int>(header->count, 7);
+        if (!header->count || RAND_bytes((unsigned char *)header->key, sizeof(header->key)) != 1) {
+            return;
+        }
+        relay->key.assign(header->key, sizeof(header->key));
+        relay->limit = header->count;
+        ctx.relay = relay;
+        ctx.sendFrame(ctx.buffer);
+    } else if (ctx.ip.empty()) {
+        std::string key(header->key, sizeof(header->key));
+        for (auto &entry : ipCtxMap) {
+            auto relay = entry.second->relay;
+            if (relay && relay->running.load() && relay->key == key && relay->limit > 0) {
+                ctx.ip = entry.first;
+                ctx.relay = relay;
+                ctx.data = true;
+                --relay->limit;
+                ctx.sendFrame(ctx.buffer);
+                return;
+            }
+        }
+        ctx.status.store(-1);
+    } else {
+        ctx.status.store(-1);
+    }
+}
+
 void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::Auth)) {
         candy::logger().warning(Poco::format("invalid auth message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     WsMsg::Auth *header = (WsMsg::Auth *)ctx.buffer.data();
     if (!header->check(this->password)) {
         candy::logger().warning(Poco::format("auth header check failed: buffer %s", to_hex(ctx.buffer)));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -191,7 +245,10 @@ void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
         std::unique_lock lock(ipCtxMutex);
         auto it = ipCtxMap.find(header->ip);
         if (it != ipCtxMap.end()) {
-            it->second->status = -1;
+            it->second->status.store(-1);
+            if (it->second->relay) {
+                it->second->relay->running.store(false);
+            }
             candy::logger().information(Poco::format("reconnect: %s", it->second->ip.toString()));
         } else {
             candy::logger().information(Poco::format("connect: %s", ctx.ip.toString()));
@@ -205,13 +262,13 @@ void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
 void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
         candy::logger().debug("unauthorized forward websocket client");
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Forward)) {
         candy::logger().debug(Poco::format("invalid forawrd message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -221,7 +278,7 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
         std::shared_lock lock(this->ipCtxMutex);
         auto it = this->ipCtxMap.find(header->iph.daddr);
         if (it != this->ipCtxMap.end()) {
-            it->second->sendFrame(ctx.buffer);
+            it->second->sendPacket(ctx.buffer);
             return;
         }
     }
@@ -254,7 +311,7 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
         std::shared_lock lock(this->ipCtxMutex);
         for (auto c : this->ipCtxMap) {
             if (c.second->ip != ctx.ip) {
-                c.second->sendFrame(ctx.buffer);
+                c.second->sendPacket(ctx.buffer);
             }
         }
         return;
@@ -268,24 +325,24 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
 void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::ExptTun)) {
         candy::logger().warning(Poco::format("invalid dynamic address message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
     WsMsg::ExptTun *header = (WsMsg::ExptTun *)ctx.buffer.data();
     if (!header->check(this->password)) {
         candy::logger().warning(Poco::format("dynamic address header check failed: buffer %s", to_hex(ctx.buffer)));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
     if (this->dhcp.empty()) {
         candy::logger().warning("unable to allocate dynamic address");
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
     Address exptTun;
     if (exptTun.fromCidr(header->cidr)) {
         candy::logger().warning(Poco::format("dynamic address header cidr invalid: buffer %s", to_hex(ctx.buffer)));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
     // Check whether the requested address can be used directly
@@ -307,7 +364,7 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
             exptTun = exptTun.Next();
             if (exptTun.Host() == this->dhcp.Host()) {
                 candy::logger().warning("all addresses in the network are assigned");
-                ctx.status = -1;
+                ctx.status.store(-1);
                 return;
             }
         } while (!exptTun.isValid() && this->ipCtxMap.find(exptTun.Host()) != this->ipCtxMap.end());
@@ -322,13 +379,13 @@ void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
 void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
         candy::logger().debug("unauthorized peer websocket client");
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Conn)) {
         candy::logger().warning(Poco::format("invalid peer conn message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -336,7 +393,7 @@ void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
     if (ctx.ip != header->src) {
         candy::logger().debug(
             Poco::format("peer source address does not match: auth %s source %s", ctx.ip.toString(), header->src.toString()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
     std::shared_lock lock(this->ipCtxMutex);
@@ -353,14 +410,14 @@ void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
 void WebSocketServer::handleVMacMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::VMac)) {
         candy::logger().warning(Poco::format("invalid vmac message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     WsMsg::VMac *header = (WsMsg::VMac *)ctx.buffer.data();
     if (!header->check(this->password)) {
         candy::logger().warning(Poco::format("vmac message check failed: buffer %s", to_hex(ctx.buffer)));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -371,13 +428,13 @@ void WebSocketServer::handleVMacMsg(WsCtx &ctx) {
 void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
         candy::logger().debug("unauthorized discovery websocket client");
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Discovery)) {
         candy::logger().debug(Poco::format("invalid discovery message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -385,7 +442,7 @@ void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
     if (ctx.ip != header->src) {
         candy::logger().debug(Poco::format("discovery source address does not match: auth %s source %s", ctx.ip.toString(),
                                            header->src.toString()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -408,13 +465,13 @@ void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
 void WebSocketServer::HandleGeneralMsg(WsCtx &ctx) {
     if (ctx.ip.empty()) {
         candy::logger().debug("unauthorized general websocket client");
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::General)) {
         candy::logger().debug(Poco::format("invalid general message: len %zu", ctx.buffer.length()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -423,7 +480,7 @@ void WebSocketServer::HandleGeneralMsg(WsCtx &ctx) {
     if (ctx.ip != header->src) {
         candy::logger().debug(
             Poco::format("general source address does not match: auth %s source %s", ctx.ip.toString(), header->src.toString()));
-        ctx.status = -1;
+        ctx.status.store(-1);
         return;
     }
 
@@ -478,7 +535,7 @@ int WebSocketServer::listen() {
         Poco::Net::HTTPServerParams *params = new Poco::Net::HTTPServerParams();
         params->setMaxThreads(0x00FFFFFF);
 
-        this->running = true;
+        this->running.store(true);
         WebSocketHandler wsHandler = [this](Poco::Net::WebSocket &ws) { handleWebsocket(ws); };
         this->httpServer = std::make_shared<Poco::Net::HTTPServer>(new HTTPRequestHandlerFactory(wsHandler), socket, params);
         this->httpServer->start();
@@ -492,12 +549,13 @@ int WebSocketServer::listen() {
 
 void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
     ws.setReceiveTimeout(Poco::Timespan(1, 0));
+    ws.setSendTimeout(Poco::Timespan(3, 0));
     WsCtx ctx = {.ws = &ws};
 
     int flags = 0;
     int length = 0;
     std::string buffer;
-    while (this->running && ctx.status == 0) {
+    while (this->running.load() && ctx.status.load() == 0) {
         try {
             buffer.resize(1500);
             length = ws.receiveFrame(buffer.data(), buffer.size(), flags);
@@ -506,7 +564,7 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
             // Respond to Ping frame
             if (frameOp == Poco::Net::WebSocket::FRAME_OP_PING) {
                 flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PONG;
-                ws.sendFrame(buffer.data(), buffer.size(), flags);
+                ctx.sendFrame(std::string(buffer.data(), length), flags);
                 continue;
             }
 
@@ -522,6 +580,16 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
 
                 // Process client request
                 handleMsg(ctx);
+                if (ctx.data) {
+                    ctx.relay->run(
+                        ws,
+                        [&](std::string packet) {
+                            ctx.buffer = std::move(packet);
+                            handleForwardMsg(ctx);
+                        },
+                        [&] { return this->running.load(); });
+                    return;
+                }
 
                 // Reinitialize buffer
                 buffer = std::string();
@@ -538,6 +606,9 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
 
     {
         std::unique_lock lock(ipCtxMutex);
+        if (ctx.relay && !ctx.data) {
+            ctx.relay->running.store(false);
+        }
         auto it = ipCtxMap.find(ctx.ip);
         if (it != ipCtxMap.end() && it->second == &ctx) {
             ipCtxMap.erase(it);

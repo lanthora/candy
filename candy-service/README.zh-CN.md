@@ -49,11 +49,14 @@ candy-service /help
     "port": 0,
     "localhost": "",
     "mtu": 1400,
+    "connections": 1,
     "expt": "",
     "vmac": "16-char rand str"
   }
 }
 ```
+
+上例中的客户端配置字段均需传入（未使用的 `mode` 除外）。字段缺失、类型错误或整数超出 `int` 范围时，返回 HTTP 400，`message` 说明错误，不会启动客户端。
 
 ```json
 {

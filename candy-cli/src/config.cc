@@ -34,6 +34,7 @@ Poco::JSON::Object arguments::json() {
         config.set("discovery", this->discovery);
         config.set("route", this->routeCost);
         config.set("mtu", this->mtu);
+        config.set("connections", this->connections);
         config.set("port", this->port);
         config.set("vmac", virtualMac(this->name));
         config.set("expt", loadTunAddress(this->name));
@@ -92,6 +93,13 @@ int arguments::parse(int argc, char *argv[]) {
         .metavar("<int>")
         .scan<'i', int>()
         .default_value(0)
+        .nargs(1);
+
+    program.add_argument("--connections")
+        .help("WebSocket connection count, including the control connection (1-8, default 1). (client only)")
+        .metavar("<int>")
+        .scan<'i', int>()
+        .default_value(1)
         .nargs(1);
 
     program.add_argument("--mtu")
@@ -180,6 +188,7 @@ int arguments::parse(int argc, char *argv[]) {
         program.set_if_used("--localhost", this->localhost);
         program.set_if_used("--port", this->port);
         program.set_if_used("--mtu", this->mtu);
+        program.set_if_used("--connections", this->connections);
         program.set_if_used("--discovery", this->discovery);
         program.set_if_used("--route", this->routeCost);
 
@@ -237,6 +246,7 @@ void arguments::parseFile(std::string cfgFile) {
             {"discovery", [&](const std::string &value) { this->discovery = std::stoi(value); }},
             {"route", [&](const std::string &value) { this->routeCost = std::stoi(value); }},
             {"port", [&](const std::string &value) { this->port = std::stoi(value); }},
+            {"connections", [&](const std::string &value) { this->connections = std::stoi(value); }},
             {"mtu", [&](const std::string &value) { this->mtu = std::stoi(value); }},
             {"localhost", [&](const std::string &value) { this->localhost = value; }},
         };

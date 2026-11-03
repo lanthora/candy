@@ -3,7 +3,10 @@
 #define CANDY_CORE_MESSAGE_H
 
 #include "core/net.h"
+#include <condition_variable>
 #include <cstring>
+#include <mutex>
+#include <queue>
 #include <string>
 
 namespace candy {
@@ -28,6 +31,18 @@ struct Msg {
     Msg(MsgKind kind = MsgKind::TIMEOUT, std::string = "");
     Msg(Msg &&packet);
     Msg &operator=(Msg &&packet);
+};
+
+class MsgQueue {
+public:
+    Msg read();
+    void write(Msg msg, size_t limit = 0);
+    void clear();
+
+private:
+    std::queue<Msg> msgQueue;
+    std::mutex msgMutex;
+    std::condition_variable msgCondition;
 };
 
 namespace CoreMsg {

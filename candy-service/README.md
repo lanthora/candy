@@ -49,11 +49,14 @@ The meaning of startup parameters is the same as the [configuration file](../can
     "port": 0,
     "localhost": "",
     "mtu": 1400,
+    "connections": 1,
     "expt": "",
     "vmac": "16-char rand str"
   }
 }
 ```
+
+All client configuration fields shown above are required (except `mode`, which is unused). Missing fields, invalid types, or integers outside the `int` range return HTTP 400 with a `message` identifying the error; no client is started.
 
 Response:
 
