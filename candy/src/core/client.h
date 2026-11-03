@@ -7,24 +7,9 @@
 #include "tun/tun.h"
 #include "utils/atomic.h"
 #include "websocket/client.h"
-#include <condition_variable>
-#include <mutex>
-#include <queue>
 #include <string>
 
 namespace candy {
-
-class MsgQueue {
-public:
-    Msg read();
-    void write(Msg msg);
-    void clear();
-
-private:
-    std::queue<Msg> msgQueue;
-    std::mutex msgMutex;
-    std::condition_variable msgCondition;
-};
 
 class Client {
 public:
@@ -33,6 +18,7 @@ public:
     void setName(const std::string &name);
     void setPassword(const std::string &password);
     void setWebSocket(const std::string &uri);
+    void setConnections(int count);
     void setTunAddress(const std::string &cidr);
     void setStun(const std::string &stun);
     void setDiscoveryInterval(int interval);

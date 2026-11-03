@@ -91,6 +91,7 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
         client->setName(config.getValue<std::string>("name"));
         client->setPassword(config.getValue<std::string>("password"));
         client->setWebSocket(config.getValue<std::string>("websocket"));
+        client->setConnections(config.getValue<int>("connections"));
         client->setTunAddress(config.getValue<std::string>("tun"));
         client->setVirtualMac(config.getValue<std::string>("vmac"));
         client->setExptTunAddress(config.getValue<std::string>("expt"));

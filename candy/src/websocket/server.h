@@ -3,6 +3,7 @@
 #define CANDY_WEBSOCKET_SERVER_H
 
 #include "core/net.h"
+#include "websocket/relay.h"
 #include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/WebSocket.h>
 #include <list>
@@ -17,12 +18,16 @@ struct WsCtx {
     Poco::Net::WebSocket *ws;
 
     std::string buffer;
-    int status;
+    Utils::Atomic<int> status{0};
+    std::mutex sendMutex;
+    std::shared_ptr<WsRelay> relay;
+    bool data = false;
 
     IP4 ip;
     std::string vmac;
 
     void sendFrame(const std::string &frame, int flags = Poco::Net::WebSocket::FRAME_BINARY);
+    void sendPacket(const std::string &frame);
 };
 
 struct SysRoute {
@@ -52,6 +57,7 @@ private:
 private:
     void handleMsg(WsCtx &ctx);
     void handleAuthMsg(WsCtx &ctx);
+    void handleMultiMsg(WsCtx &ctx);
     void handleForwardMsg(WsCtx &ctx);
     void handleExptTunMsg(WsCtx &ctx);
     void handleUdp4ConnMsg(WsCtx &ctx);
@@ -67,7 +73,7 @@ private:
     // Lock when accessing the map to keep pointers valid
     std::shared_mutex ipCtxMutex;
 
-    bool running;
+    Utils::Atomic<bool> running{false};
 
 private:
     // Start listening; new requests will invoke handleWebsocket
