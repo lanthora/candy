@@ -26,6 +26,7 @@ private:
 
     std::string name;
     std::string tun;
+    bool strict = false;
     std::string stun;
     std::string localhost;
     int port = 0;

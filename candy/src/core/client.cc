@@ -88,6 +88,10 @@ void Client::setMtu(int mtu) {
     tun.setMTU(mtu);
 }
 
+void Client::setStrict(bool strict) {
+    tun.setStrict(strict);
+}
+
 // Called from both run() and ~Client():
 //   run() calls it after normal completion to block until all child threads exit.
 //   ~Client() calls it as a safety net when run() returned early due to submodule

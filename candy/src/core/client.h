@@ -26,6 +26,7 @@ public:
     void setPort(int port);
     void setLocalhost(std::string ip);
     void setMtu(int mtu);
+    void setStrict(bool strict);
 
     void setExptTunAddress(const std::string &cidr);
     void setVirtualMac(const std::string &vmac);

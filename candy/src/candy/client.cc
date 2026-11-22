@@ -85,6 +85,13 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
     };
 
     candy::logger().information(Poco::format("run enter: id=%s config=%s", id, toString(config)));
+    // Optional: callers that predate opt-in validation omit this key, which
+    // keeps the original forwarding behavior.
+    bool strict = false;
+    if (config.has("strict") && config.get("strict").isBoolean()) {
+        strict = config.getValue<bool>("strict");
+    }
+    candy::logger().information(Poco::format("strict packet validation: %s", std::string(strict ? "enabled" : "disabled")));
     while ((*instance)->is_running()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         auto client = (*instance)->create_client();
@@ -98,6 +105,7 @@ bool run(const std::string &id, const Poco::JSON::Object &config) {
         client->setStun(config.getValue<std::string>("stun"));
         client->setDiscoveryInterval(config.getValue<int>("discovery"));
         client->setRouteCost(config.getValue<int>("route")), client->setMtu(config.getValue<int>("mtu"));
+        client->setStrict(strict);
         client->setPort(config.getValue<int>("port"));
         client->setLocalhost(config.getValue<std::string>("localhost"));
         client->run();

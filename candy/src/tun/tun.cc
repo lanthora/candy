@@ -31,6 +31,11 @@ int Tun::run(Client *client) {
     return 0;
 }
 
+int Tun::setStrict(bool strict) {
+    this->strict = strict;
+    return 0;
+}
+
 int Tun::wait() {
     if (this->msgThread.joinable()) {
         this->msgThread.join();
@@ -59,7 +64,9 @@ int Tun::handleTunDevice() {
         return 0;
     }
 
-    if (header->daddr == getIP()) {
+    // Strict mode keeps the enhanced ordering: packets addressed to the local
+    // TUN address are delivered locally before the route lookup.
+    if (this->strict && header->daddr == getIP()) {
         write(buffer);
         return 0;
     }
@@ -80,6 +87,13 @@ int Tun::handleTunDevice() {
         header->protocol = 0x04;
         header->saddr = getIP();
         header->daddr = nextHop;
+    }
+
+    // Non-strict mode keeps the original ordering: the self check runs after
+    // the route lookup and encapsulation.
+    if (!this->strict && header->daddr == getIP()) {
+        write(buffer);
+        return 0;
     }
 
     if (invalidSrcDst(*header)) {
@@ -207,6 +221,11 @@ bool Tun::inTunNetwork(IP4 addr) const {
 }
 
 bool Tun::invalidSrcDst(const IP4Header &header) const {
+    // Validation is opt-in: without strict mode every packet takes the
+    // original forwarding path.
+    if (!this->strict) {
+        return false;
+    }
     if (inTunNetwork(header.saddr) && inTunNetwork(header.daddr)) {
         return false;
     }
