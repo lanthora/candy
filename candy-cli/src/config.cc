@@ -4,6 +4,8 @@
 #include "candy/candy.h"
 #include "utils/log.h"
 #include <Poco/ConsoleChannel.h>
+#include <Poco/File.h>
+#include <Poco/FileChannel.h>
 #include <Poco/Format.h>
 #include <Poco/FormattingChannel.h>
 #include <Poco/JSON/Object.h>
@@ -155,6 +157,8 @@ int arguments::parse(int argc, char *argv[]) {
 
     program.add_argument("--debug").help("enable debug-level logging.").implicit_value(true);
 
+    program.add_argument("--logdir").help("write logs to <dir>/app.log instead of stderr (10 MiB x 5).").metavar("<path>");
+
     program.add_epilog("Examples:\n"
                        "  Client with static address:\n"
                        "    candy -m client -w wss://server.example.com/ws -p mysecret -t 192.168.202.1/24\n"
@@ -180,6 +184,7 @@ int arguments::parse(int argc, char *argv[]) {
         program.set_if_used("--password", this->password);
         program.set_if_used("--no-timestamp", this->noTimestamp);
         program.set_if_used("--debug", this->debug);
+        program.set_if_used("--logdir", this->logDir);
         program.set_if_used("--dhcp", this->dhcp);
         program.set_if_used("--sdwan", this->sdwan);
         program.set_if_used("--name", this->name);
@@ -206,20 +211,21 @@ int arguments::parse(int argc, char *argv[]) {
             exit(1);
         }
 
-        // Set up default console channel with pattern
-        if (this->noTimestamp) {
-            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("[%q] %t");
-            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
-            Poco::AutoPtr<Poco::ConsoleChannel> pConsoleChannel = new Poco::ConsoleChannel;
-            pFormattingChannel->setChannel(pConsoleChannel);
-            Poco::Logger::root().setChannel(pFormattingChannel);
-        } else {
-            Poco::AutoPtr<Poco::PatternFormatter> pFormatter = new Poco::PatternFormatter("%Y-%m-%d %H:%M:%S [%q] %t");
-            Poco::AutoPtr<Poco::FormattingChannel> pFormattingChannel = new Poco::FormattingChannel(pFormatter);
-            Poco::AutoPtr<Poco::ConsoleChannel> pConsoleChannel = new Poco::ConsoleChannel;
-            pFormattingChannel->setChannel(pConsoleChannel);
-            Poco::Logger::root().setChannel(pFormattingChannel);
-        }
+        // Log to the console by default; --logdir switches to a rotated file
+        auto makeChannel = [this]() -> Poco::AutoPtr<Poco::Channel> {
+            const std::string pattern = this->noTimestamp ? "[%q] %t" : "%Y-%m-%d %H:%M:%S [%q] %t";
+            if (this->logDir.empty()) {
+                return new Poco::FormattingChannel(new Poco::PatternFormatter(pattern), new Poco::ConsoleChannel);
+            }
+            Poco::File(this->logDir).createDirectories();
+            Poco::AutoPtr<Poco::FileChannel> pFileChannel = new Poco::FileChannel(this->logDir + "/app.log");
+            pFileChannel->setProperty("rotation", "10 M");
+            pFileChannel->setProperty("archive", "number");
+            pFileChannel->setProperty("purgeCount", "5");
+            return new Poco::FormattingChannel(new Poco::PatternFormatter(pattern), pFileChannel);
+        };
+
+        Poco::Logger::root().setChannel(makeChannel());
 
         if (this->debug) {
             Poco::Logger::root().setLevel(Poco::Message::PRIO_DEBUG);
