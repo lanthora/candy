@@ -21,6 +21,7 @@ public:
 
     int setName(const std::string &name);
     int setMTU(int mtu);
+    int setStrict(bool strict);
 
     int run(Client *client);
     int wait();
@@ -64,6 +65,7 @@ private:
     std::unique_ptr<Impl> impl;
     IP4 ip;
     IP4 mask;
+    bool strict = false;
 
 private:
     Client &getClient();

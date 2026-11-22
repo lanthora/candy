@@ -31,6 +31,7 @@ Poco::JSON::Object arguments::json() {
     if (this->mode == "client") {
         config.set("name", this->name);
         config.set("tun", this->tun);
+        config.set("strict", this->strict);
         config.set("stun", this->stun);
         config.set("localhost", this->localhost);
         config.set("discovery", this->discovery);
@@ -80,6 +81,13 @@ int arguments::parse(int argc, char *argv[]) {
         .help("static TUN address in CIDR notation (e.g. \"192.168.202.1/24\").\n"
               "If omitted, the client requests a dynamic address from the server via DHCP. (client only)")
         .metavar("<cidr>");
+
+    program.add_argument("--strict")
+        .help("enable strict validation of packets entering the tunnel.\n"
+              "Packets whose source or destination is outside the TUN network are dropped.\n"
+              "This can break static /32 addresses and LAN-to-VPN gateway forwarding.\n"
+              "Default is off: packets follow the original forwarding path. (client only)")
+        .implicit_value(true);
 
     program.add_argument("-s", "--stun")
         .help("STUN server address for NAT traversal (e.g. \"stun://stun.example.org\").\n"
@@ -189,6 +197,7 @@ int arguments::parse(int argc, char *argv[]) {
         program.set_if_used("--sdwan", this->sdwan);
         program.set_if_used("--name", this->name);
         program.set_if_used("--tun", this->tun);
+        program.set_if_used("--strict", this->strict);
         program.set_if_used("--stun", this->stun);
         program.set_if_used("--localhost", this->localhost);
         program.set_if_used("--port", this->port);
@@ -247,6 +256,7 @@ void arguments::parseFile(std::string cfgFile) {
             {"dhcp", [&](const std::string &value) { this->dhcp = value; }},
             {"sdwan", [&](const std::string &value) { this->sdwan = value; }},
             {"tun", [&](const std::string &value) { this->tun = value; }},
+            {"strict", [&](const std::string &value) { this->strict = (value == "true"); }},
             {"stun", [&](const std::string &value) { this->stun = value; }},
             {"name", [&](const std::string &value) { this->name = value; }},
             {"discovery", [&](const std::string &value) { this->discovery = std::stoi(value); }},
