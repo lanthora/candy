@@ -19,6 +19,7 @@ private:
     std::string password;
     bool noTimestamp = false;
     bool debug = false;
+    std::string logDir;
 
     std::string dhcp;
     std::string sdwan;
