@@ -248,7 +248,7 @@ void WebSocketClient::handleWsMsg(std::string buffer) {
         handleGeneralMsg(std::move(buffer));
         break;
     default:
-        candy::logger().debug(Poco::format("unknown websocket message kind: %u", msgKind));
+        candy::logger().debug(Poco::format("unknown websocket message kind: %?u", msgKind));
         break;
     }
 }

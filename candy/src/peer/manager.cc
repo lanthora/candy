@@ -394,7 +394,7 @@ void PeerManager::sendStunRequest() {
 
 void PeerManager::handleStunResponse(std::string buffer) {
     if (buffer.length() < sizeof(StunResponse)) {
-        candy::logger().debug(Poco::format("invalid stun response length: %zu", buffer.length()));
+        candy::logger().debug(Poco::format("invalid stun response length: %z", buffer.length()));
         return;
     }
     auto response = (StunResponse *)buffer.c_str();
@@ -471,7 +471,7 @@ void PeerManager::handleMessage(std::string buffer, const SocketAddress &address
 
 void PeerManager::handleHeartbeatMessage(std::string buffer, const SocketAddress &address) {
     if (buffer.size() < sizeof(PeerMsg::Heartbeat)) {
-        candy::logger().debug(Poco::format("udp4 heartbeat failed: len %zu address %s", buffer.length(), address.toString()));
+        candy::logger().debug(Poco::format("udp4 heartbeat failed: len %z address %s", buffer.length(), address.toString()));
         return;
     }
 
@@ -584,12 +584,12 @@ std::optional<std::string> PeerManager::decrypt(const std::string &ciphertext) {
     unsigned char tag[AES_256_GCM_TAG_LEN] = {0};
 
     if (this->key.size() != AES_256_GCM_KEY_LEN) {
-        candy::logger().debug(Poco::format("invalid key length: %zu", this->key.size()));
+        candy::logger().debug(Poco::format("invalid key length: %z", this->key.size()));
         return std::nullopt;
     }
 
     if (ciphertext.size() < AES_256_GCM_IV_LEN + AES_256_GCM_TAG_LEN) {
-        candy::logger().debug(Poco::format("invalid ciphertext length: %zu", ciphertext.size()));
+        candy::logger().debug(Poco::format("invalid ciphertext length: %z", ciphertext.size()));
         return std::nullopt;
     }
 

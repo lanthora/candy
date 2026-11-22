@@ -227,7 +227,7 @@ void WebSocketServer::handleMultiMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleAuthMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::Auth)) {
-        candy::logger().warning(Poco::format("invalid auth message: len %zu", ctx.buffer.length()));
+        candy::logger().warning(Poco::format("invalid auth message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -267,7 +267,7 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Forward)) {
-        candy::logger().debug(Poco::format("invalid forawrd message: len %zu", ctx.buffer.length()));
+        candy::logger().debug(Poco::format("invalid forawrd message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -324,7 +324,7 @@ void WebSocketServer::handleForwardMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleExptTunMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::ExptTun)) {
-        candy::logger().warning(Poco::format("invalid dynamic address message: len %zu", ctx.buffer.length()));
+        candy::logger().warning(Poco::format("invalid dynamic address message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -384,7 +384,7 @@ void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Conn)) {
-        candy::logger().warning(Poco::format("invalid peer conn message: len %zu", ctx.buffer.length()));
+        candy::logger().warning(Poco::format("invalid peer conn message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -409,7 +409,7 @@ void WebSocketServer::handleUdp4ConnMsg(WsCtx &ctx) {
 
 void WebSocketServer::handleVMacMsg(WsCtx &ctx) {
     if (ctx.buffer.length() < sizeof(WsMsg::VMac)) {
-        candy::logger().warning(Poco::format("invalid vmac message: len %zu", ctx.buffer.length()));
+        candy::logger().warning(Poco::format("invalid vmac message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -433,7 +433,7 @@ void WebSocketServer::handleDiscoveryMsg(WsCtx &ctx) {
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::Discovery)) {
-        candy::logger().debug(Poco::format("invalid discovery message: len %zu", ctx.buffer.length()));
+        candy::logger().debug(Poco::format("invalid discovery message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -470,7 +470,7 @@ void WebSocketServer::HandleGeneralMsg(WsCtx &ctx) {
     }
 
     if (ctx.buffer.length() < sizeof(WsMsg::General)) {
-        candy::logger().debug(Poco::format("invalid general message: len %zu", ctx.buffer.length()));
+        candy::logger().debug(Poco::format("invalid general message: len %z", ctx.buffer.length()));
         ctx.status.store(-1);
         return;
     }
@@ -539,7 +539,7 @@ int WebSocketServer::listen() {
         WebSocketHandler wsHandler = [this](Poco::Net::WebSocket &ws) { handleWebsocket(ws); };
         this->httpServer = std::make_shared<Poco::Net::HTTPServer>(new HTTPRequestHandlerFactory(wsHandler), socket, params);
         this->httpServer->start();
-        candy::logger().information(Poco::format("listen on: %s:%d", host, port));
+        candy::logger().information(Poco::format("listen on: %s:%hu", host, port));
         return 0;
     } catch (std::exception &e) {
         candy::logger().fatal(Poco::format("listen failed: %s", std::string(e.what())));
