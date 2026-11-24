@@ -5,6 +5,7 @@
 #include "core/net.h"
 #include "core/version.h"
 #include "utils/hex.h"
+#include "utils/hostname.h"
 #include "utils/log.h"
 #include "utils/time.h"
 #include "websocket/message.h"
@@ -384,14 +385,6 @@ void WebSocketClient::sendDiscoveryMsg(IP4 dst) {
     sendFrame(&buffer, sizeof(buffer));
 }
 
-std::string WebSocketClient::hostName() {
-    char hostname[64] = {0};
-    if (!gethostname(hostname, sizeof(hostname))) {
-        return std::string(hostname, strnlen(hostname, sizeof(hostname)));
-    }
-    return "";
-}
-
 void WebSocketClient::sendPingMessage() {
     int flags = (int)Poco::Net::WebSocket::FRAME_FLAG_FIN | (int)Poco::Net::WebSocket::FRAME_OP_PING;
     sendFrame(pingMessage, flags);
@@ -442,7 +435,7 @@ int WebSocketClient::connect() {
     // Blocking mode may cause receiveFrame to hang and use 100% CPU
     this->ws->setBlocking(false);
     this->timestamp = bootTime();
-    this->pingMessage = "candy::" + std::string(CANDY_SYSTEM) + "::" + std::string(CANDY_VERSION) + "::" + hostName();
+    this->pingMessage = "candy::" + std::string(CANDY_SYSTEM) + "::" + std::string(CANDY_VERSION) + "::" + hostnameUtf8();
     candy::logger().debug(Poco::format("client info: %s", this->pingMessage));
     return 0;
 }

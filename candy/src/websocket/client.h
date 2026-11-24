@@ -61,7 +61,6 @@ private:
     std::function<int(const std::string &)> addressUpdateCallback;
 
 private:
-    std::string hostName();
     void sendPingMessage();
 
 private:
