@@ -67,7 +67,9 @@ private:
     int connect();
     std::shared_ptr<Poco::Net::WebSocket> open();
     void handleMultiMsg(std::string buffer);
-    void connectData(std::string buffer);
+    void dataLoop(std::string join);
+    bool connectData(const std::string &join);
+    bool supervisorStarted = false;
     int connections = 1;
     std::shared_ptr<WsRelay> relay = std::make_shared<WsRelay>();
     std::vector<std::thread> dataThreads;
