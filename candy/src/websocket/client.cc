@@ -17,7 +17,9 @@
 #include <Poco/Timespan.h>
 #include <Poco/URI.h>
 #include <algorithm>
+#include <chrono>
 #include <memory>
+#include <random>
 
 namespace candy {
 
@@ -441,34 +443,72 @@ int WebSocketClient::connect() {
 }
 
 void WebSocketClient::handleMultiMsg(std::string buffer) {
-    if (buffer.size() != sizeof(WsMsg::Multi) || connections == 1 || !dataThreads.empty()) {
+    if (buffer.size() != sizeof(WsMsg::Multi) || connections == 1 || supervisorStarted) {
         return;
     }
     auto *header = (const WsMsg::Multi *)buffer.data();
-    for (int i = 0; i < std::min<int>(header->count, connections - 1); ++i) {
-        dataThreads.emplace_back([this, buffer] { connectData(buffer); });
+    int target = std::min<int>(header->count, connections - 1);
+    if (target <= 0) {
+        return;
+    }
+    supervisorStarted = true;
+    relay->key.assign(header->key, sizeof(header->key));
+    relay->target = target;
+    for (int i = 0; i < target; ++i) {
+        dataThreads.emplace_back([this, buffer] { dataLoop(buffer); });
     }
 }
 
-void WebSocketClient::connectData(std::string buffer) {
+void WebSocketClient::dataLoop(std::string join) {
+    join.front() = WsMsgKind::JOIN;
+    thread_local std::mt19937 generator(std::random_device{}());
+    int delay = 0;
+    int failures = 0;
+    while (relay->running.load() && getClient().isRunning()) {
+        int64_t begin = bootTime();
+        bool joined = connectData(join);
+        if (!relay->running.load() || !getClient().isRunning()) {
+            break;
+        }
+        if (joined && bootTime() - begin > 5000) {
+            delay = 0;
+            failures = 0;
+            continue;
+        }
+        ++failures;
+        delay = std::min(delay ? delay * 2 : 1000, failures > 5 ? 300000 : 30000);
+        int sleepMs = delay * std::uniform_int_distribution<int>(80, 120)(generator) / 100;
+        candy::logger().debug(Poco::format("data websocket reconnect in %d ms", sleepMs));
+        for (int slept = 0; slept < sleepMs; slept += 100) {
+            if (!relay->running.load() || !getClient().isRunning()) {
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::min(100, sleepMs - slept)));
+        }
+    }
+}
+
+bool WebSocketClient::connectData(const std::string &join) {
     try {
         auto socket = open();
-        if (!socket || !relay->running.load()) {
-            return;
+        if (!socket || !relay->running.load() || !getClient().isRunning()) {
+            return false;
         }
-        buffer.front() = WsMsgKind::JOIN;
-        socket->sendFrame(buffer.data(), buffer.size(), Poco::Net::WebSocket::FRAME_BINARY);
-        std::string response(buffer.size(), '\0');
+        socket->sendFrame(join.data(), join.size(), Poco::Net::WebSocket::FRAME_BINARY);
+        std::string response(join.size(), '\0');
         int flags = 0;
         int length = socket->receiveFrame(response.data(), response.size(), flags);
-        if (length != buffer.size() || flags != Poco::Net::WebSocket::FRAME_BINARY || response != buffer) {
-            return;
+        if (length != static_cast<int>(join.size()) ||
+            (flags & Poco::Net::WebSocket::FRAME_OP_BITMASK) != Poco::Net::WebSocket::FRAME_OP_BINARY || response != join) {
+            return false;
         }
         relay->run(
             *socket, [this](std::string packet) { handleForwardMsg(std::move(packet)); },
             [this] { return getClient().isRunning(); });
+        return true;
     } catch (const std::exception &e) {
         candy::logger().debug(std::string("data websocket connect failed: ") + e.what());
+        return false;
     }
 }
 
