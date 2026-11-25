@@ -203,21 +203,31 @@ void WebSocketServer::handleMultiMsg(WsCtx &ctx) {
             return;
         }
         relay->key.assign(header->key, sizeof(header->key));
-        relay->limit = header->count;
+        relay->target = header->count;
         ctx.relay = relay;
         ctx.sendFrame(ctx.buffer);
     } else if (ctx.ip.empty()) {
         std::string key(header->key, sizeof(header->key));
         for (auto &entry : ipCtxMap) {
             auto relay = entry.second->relay;
-            if (relay && relay->running.load() && relay->key == key && relay->limit > 0) {
-                ctx.ip = entry.first;
-                ctx.relay = relay;
-                ctx.data = true;
-                --relay->limit;
-                ctx.sendFrame(ctx.buffer);
-                return;
+            if (!relay || !relay->running.load() || relay->key != key) {
+                continue;
             }
+            uint64_t slot = relay->admit(ctx.ws, bootTime());
+            if (!slot) {
+                break;
+            }
+            ctx.ip = entry.first;
+            ctx.relay = relay;
+            ctx.data = true;
+            ctx.slot = slot;
+            try {
+                ctx.sendFrame(ctx.buffer);
+            } catch (...) {
+                relay->leave(slot);
+                throw;
+            }
+            return;
         }
         ctx.status.store(-1);
     } else {
@@ -587,7 +597,7 @@ void WebSocketServer::handleWebsocket(Poco::Net::WebSocket &ws) {
                             ctx.buffer = std::move(packet);
                             handleForwardMsg(ctx);
                         },
-                        [&] { return this->running.load(); });
+                        [&] { return this->running.load(); }, ctx.slot);
                     return;
                 }
 

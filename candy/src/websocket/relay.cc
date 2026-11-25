@@ -8,7 +8,8 @@
 
 namespace candy {
 
-void WsRelay::run(Poco::Net::WebSocket &ws, std::function<void(std::string)> receive, std::function<bool()> active) {
+void WsRelay::run(Poco::Net::WebSocket &ws, std::function<void(std::string)> receive, std::function<bool()> active,
+                  uint64_t slotId) {
     ws.setSendTimeout(Poco::Timespan(3, 0));
     ws.setReceiveTimeout(Poco::Timespan(3, 0));
     std::mutex sendMutex;
@@ -19,6 +20,13 @@ void WsRelay::run(Poco::Net::WebSocket &ws, std::function<void(std::string)> rec
             while (running.load() && connected.load() && active()) {
                 Msg msg = queue.read();
                 if (msg.kind == MsgKind::PACKET) {
+                    // The connection may have died while read() was waiting.
+                    // Put the packet back so another data connection can
+                    // deliver it instead of dropping it.
+                    if (!connected.load() || !running.load() || !active()) {
+                        queue.write(std::move(msg));
+                        break;
+                    }
                     std::unique_lock lock(sendMutex);
                     ws.sendFrame(msg.data.data(), msg.data.size(), Poco::Net::WebSocket::FRAME_BINARY);
                 }
@@ -51,6 +59,7 @@ void WsRelay::run(Poco::Net::WebSocket &ws, std::function<void(std::string)> rec
                 break;
             }
             timestamp = bootTime();
+            touch(slotId, timestamp);
             if (op == Poco::Net::WebSocket::FRAME_OP_PING) {
                 std::unique_lock lock(sendMutex);
                 ws.sendFrame(buffer.data(), length, Poco::Net::WebSocket::FRAME_FLAG_FIN | Poco::Net::WebSocket::FRAME_OP_PONG);
@@ -68,10 +77,72 @@ void WsRelay::run(Poco::Net::WebSocket &ws, std::function<void(std::string)> rec
         candy::logger().debug(std::string("data websocket receive failed: ") + e.what());
     }
     connected.store(false);
+    leave(slotId);
     sender.join();
     if (--connections == 0) {
         queue.clear();
     }
+}
+
+uint64_t WsRelay::admit(Poco::Net::WebSocket *ws, int64_t now) {
+    Poco::Net::WebSocket *evicted = nullptr;
+    uint64_t slotId = 0;
+    {
+        std::unique_lock lock(slotsMutex);
+        if (!running.load()) {
+            return 0;
+        }
+        if (slots.size() >= static_cast<size_t>(target)) {
+            uint64_t staleId = 0;
+            int64_t oldest = 0;
+            for (const auto &entry : slots) {
+                if (now - entry.second.lastActive > RELAY_STALE_CONNECTION_MS && (!staleId || entry.second.lastActive < oldest)) {
+                    staleId = entry.first;
+                    oldest = entry.second.lastActive;
+                }
+            }
+            if (staleId) {
+                evicted = slots[staleId].ws;
+                slots.erase(staleId);
+            } else if (slots.size() >= static_cast<size_t>(target + 1)) {
+                // Allow one temporary extra connection while the peer replaces
+                // a connection the server has not timed out yet.
+                return 0;
+            }
+        }
+        slotId = ++nextSlotId;
+        slots.emplace(slotId, Slot{ws, now});
+    }
+    if (evicted) {
+        try {
+            evicted->shutdown();
+        } catch (const std::exception &) {
+        }
+        try {
+            evicted->close();
+        } catch (const std::exception &) {
+        }
+    }
+    return slotId;
+}
+
+void WsRelay::touch(uint64_t slotId, int64_t now) {
+    if (!slotId) {
+        return;
+    }
+    std::unique_lock lock(slotsMutex);
+    auto it = slots.find(slotId);
+    if (it != slots.end()) {
+        it->second.lastActive = now;
+    }
+}
+
+void WsRelay::leave(uint64_t slotId) {
+    if (!slotId) {
+        return;
+    }
+    std::unique_lock lock(slotsMutex);
+    slots.erase(slotId);
 }
 
 } // namespace candy
