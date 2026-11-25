@@ -22,6 +22,7 @@ struct WsCtx {
     std::mutex sendMutex;
     std::shared_ptr<WsRelay> relay;
     bool data = false;
+    uint64_t slot = 0;
 
     IP4 ip;
     std::string vmac;
